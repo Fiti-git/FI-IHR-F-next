@@ -35,7 +35,7 @@ export default function PageNotFound() {
                   The page you're looking for isn't available. Try to search
                   again or use the go <br className="d-none d-lg-block" /> to.
                 </p>
-                <Link href="/" className="ud-btn btn-thm">
+                <Link href="/home-20" className="ud-btn btn-thm">
                   Go back to home
                   <i className="fal fa-arrow-right-long" />
                 </Link>

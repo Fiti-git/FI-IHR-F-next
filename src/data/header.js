@@ -1,4 +1,4 @@
-export const header1 = ["/"];
+export const header1 = ["/home-20"];
 export const header2 = ["/home-2"];
 export const header3 = [
     "/register",

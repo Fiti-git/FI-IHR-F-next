@@ -1,6 +1,6 @@
 "use client";
-import DashboardNavigation from "../header/DashboardNavigation";
-import BasicInformation2 from "./BasicInformation2";
+import DashboardNavigation from "../header/DashboardNavigationJP";
+import BasicInformation2 from "./BasicInformation2JP";
 import UploadAttachment from "./UploadAttachment";
 
 export default function CreateProjectInfo() {
@@ -14,7 +14,7 @@ export default function CreateProjectInfo() {
           <div className="col-lg-9">
             <div className="dashboard_title_area">
               <h2>Creat Project</h2>
-              <p className="text">Lorem ipsum dolor sit amet, consectetur.</p>
+         
             </div>
           </div>
           <div className="col-lg-3">
