@@ -19,8 +19,7 @@ export default function LoginPage() {
       return;
     }
 
-    // You can add your login logic here
-    // Example redirect based on email:
+    // Dummy login redirection
     if (email.toLowerCase() === 'freelancer@example.com') {
       router.push('/freelancer');
     } else if (email.toLowerCase() === 'jobprovider@example.com') {
@@ -112,15 +111,27 @@ export default function LoginPage() {
                   <span className="hr_top_text">OR</span>
                 </div>
 
-                {/* Social Logins */}
-                <div className="d-md-flex justify-content-between">
-                  <button className="ud-btn btn-google fz14 fw400 mb-2 mb-md-0" type="button">
-                    <i className="fab fa-google" /> Continue with Google
+                {/* Dummy Social Logins */}
+                <div className="d-md-flex justify-content-between gap-2">
+                  <button
+                    type="button"
+                    className="btn btn-outline-danger w-100 mb-2 mb-md-0 d-flex align-items-center justify-content-center"
+                    onClick={() => alert('Google login not implemented')}
+                  >
+                    <i className="fab fa-google me-2" />
+                    Continue with Google
                   </button>
-                  <button className="ud-btn btn-linkedin fz14 fw400" type="button">
-                    <i className="fab fa-linkedin" /> Continue with LinkedIn
+
+                  <button
+                    type="button"
+                    className="btn btn-outline-primary w-100 d-flex align-items-center justify-content-center"
+                    onClick={() => alert('LinkedIn login not implemented')}
+                  >
+                    <i className="fab fa-linkedin me-2" />
+                    Continue with LinkedIn
                   </button>
                 </div>
+
               </div>
             </div>
           </div>
