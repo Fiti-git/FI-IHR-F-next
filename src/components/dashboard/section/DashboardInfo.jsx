@@ -1,10 +1,5 @@
-import DoughnutChart from "../chart/DoughnutChart";
-import LineChart from "../chart/LineChart";
 import DashboardNavigation from "../header/DashboardNavigation";
-import { product1 } from "@/data/product";
-import { job1 } from "@/data/job";
-import MostViewServiceCard1 from "../card/MostViewServiceCard1";
-import RecentServiceCard1 from "../card/RecentServiceCard1";
+
 
 export default function DashboardFreelancer() {
   return (
