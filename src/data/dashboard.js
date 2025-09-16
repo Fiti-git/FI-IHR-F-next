@@ -1,104 +1,122 @@
 export const dasboardNavigation = [
+  // Common
   {
     id: 1,
     name: "Dashboard",
     icon: "flaticon-home",
-    path: "/dashboard",
-    roles: ["freelancer", "job-provider"], // both roles can see
+    pathByRole: {
+      "job-provider": "/job-provider",
+      freelancer: "/freelancer",
+    },
+    roles: ["freelancer", "job-provider"],
   },
   {
     id: 2,
-    name: "My Proposals",
-    icon: "flaticon-document",
-    path: "/proposal",
-    roles: ["freelancer"], // only freelancer can see
+    name: "Messages",
+    icon: "flaticon-chat",
+    path: "/messages",
+    roles: ["freelancer", "job-provider"],
+  },
+  {
+    id: 3,
+    name: "Notifications",
+    icon: "flaticon-bell",
+    path: "/notifications",
+    roles: ["freelancer", "job-provider"],
   },
   {
     id: 4,
-    name: "Message",
-    icon: "flaticon-chat",
-    path: "/message",
-    roles: ["freelancer", "job-provider"], // both roles can see
-  },
-  {
-    id: 5,
     name: "Reviews",
     icon: "flaticon-review-1",
     path: "/reviews",
-    roles: ["freelancer", "job-provider"], // both roles can see
-
+    roles: ["freelancer", "job-provider"],
   },
   {
+    id: 5,
+    name: "Wallet",
+    icon: "flaticon-wallet",
+    path: "/wallet",
+    roles: ["freelancer", "job-provider"],
+  },
+
+  // Freelancer
+  {
     id: 6,
-    name: "Invoice",
-    icon: "flaticon-receipt",
-    path: "/invoice",
-    roles: ["freelancer", "job-provider"], // both roles can see
+    name: "My Proposals",
+    icon: "flaticon-document",
+    path: "/proposals",
+    roles: ["freelancer"],
   },
   {
     id: 7,
-    name: "Payouts",
-    icon: "flaticon-dollar",
-    path: "/payouts",
-    roles: ["freelancer"], // only freelancer can see
+    name: "My Projects",
+    icon: "flaticon-content",
+    path: "/my-projects",
+    roles: ["freelancer"],
   },
   {
     id: 8,
-    name: "Statements",
-    icon: "flaticon-web",
-    path: "/statements",
-    roles: ["freelancer"], // only freelancer can see
-  },
-  {
-    id: 9,
     name: "Manage Services",
     icon: "flaticon-presentation",
     path: "/manage-services",
-    roles: ["freelancer"], // only freelancer can see
+    roles: ["freelancer"],
   },
+  {
+    id: 9,
+    name: "Add Service",
+    icon: "flaticon-document",
+    path: "/add-service",
+    roles: ["freelancer"],
+  },
+
+  // Job Provider
   {
     id: 10,
     name: "Manage Jobs",
     icon: "flaticon-briefcase",
     path: "/manage-jobs",
-    roles: ["job-provider"], // only job-provider can see
+    roles: ["job-provider"],
   },
   {
     id: 11,
     name: "Manage Project",
     icon: "flaticon-content",
-    path: "/manage-projects",
-    roles: ["job-provider"], // only job-provider can see
+    path: "/create-project",
+    roles: ["job-provider"],
   },
   {
     id: 12,
-    name: "Add Services",
-    icon: "flaticon-document",
-    path: "/add-services",
-    roles: ["freelancer"], // only freelancer can see
+    name: "Services",
+    icon: "flaticon-content",
+    path: "/manage-projects",
+    roles: ["job-provider"],
   },
+
+  // Common (Bottom)
   {
     id: 13,
-    name: "Create Project",
-    icon: "flaticon-content",
-    path: "/create-projects",
-    roles: ["job-provider"], // only job-provider can see
-  },
-  {
-    id: 14,
     name: "My Profile",
     icon: "flaticon-photo",
     path: "/my-profile",
-    roles: ["freelancer", "job-provider"], // both roles can see
+    roles: ["freelancer", "job-provider"],
   },
   {
-    id: 15,
+    id: 14,
     name: "Logout",
     icon: "flaticon-logout",
     path: "/login",
-    roles: ["freelancer", "job-provider"], // both roles can see
+    roles: ["freelancer", "job-provider"],
+  },
+    {
+    id: 15,
+    name: "Support",
+    icon: "flaticon-logout",
+    path: "/login",
+    roles: ["freelancer", "job-provider"],
   },
 ];
+
+
 
 export const invoice = [
   {

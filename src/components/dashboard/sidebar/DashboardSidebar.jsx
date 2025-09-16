@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, Fragment } from "react";
+import { useState, useEffect } from "react";
 import { dasboardNavigation } from "@/data/dashboard";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -14,42 +14,33 @@ export default function DashboardSidebar() {
     setRole(storedRole);
   }, []);
 
-  if (!role) {
-    return null; // or show a loading spinner here if you want
-  }
+  if (!role) return null;
 
-  // Filter navigation based on role
+  // Filter nav items by role
   const filteredNav = dasboardNavigation.filter((item) =>
     item.roles?.includes(role)
   );
 
-  const navSections = {
-    Start: filteredNav.filter((item) => item.id >= 1 && item.id <= 7),
-    "Organize and Manage": filteredNav.filter((item) => item.id >= 8 && item.id <= 13),
-    Account: filteredNav.filter((item) => item.id >= 14),
-  };
-
   return (
     <div className="dashboard__sidebar d-none d-lg-block">
       <div className="dashboard_sidebar_list">
-        {Object.entries(navSections).map(([sectionTitle, items]) => (
-          <Fragment key={sectionTitle}>
-            {items.length > 0 && (
-              <p className="fz15 fw400 ff-heading pl30 mt30">{sectionTitle}</p>
-            )}
-            {items.map((item) => (
-              <div key={item.id} className="sidebar_list_item mb-1">
-                <Link
-                  href={item.path}
-                  className={`items-center ${path === item.path ? "-is-active" : ""}`}
-                >
-                  <i className={`${item.icon} mr15`} />
-                  {item.name}
-                </Link>
-              </div>
-            ))}
-          </Fragment>
-        ))}
+        {filteredNav.map((item) => {
+          const href = item.pathByRole?.[role] || item.path;
+
+          if (!href) return null; // skip invalid link
+
+          return (
+            <div key={item.id} className="sidebar_list_item mb-1">
+              <Link
+                href={href}
+                className={`items-center ${path === href ? "-is-active" : ""}`}
+              >
+                <i className={`${item.icon} mr15`} />
+                {item.name}
+              </Link>
+            </div>
+          );
+        })}
       </div>
     </div>
   );

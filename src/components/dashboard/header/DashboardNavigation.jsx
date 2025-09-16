@@ -1,19 +1,25 @@
 "use client";
+
 import { dasboardNavigation } from "@/data/dashboard";
 import Link from "next/link";
-import { useState, Fragment } from "react";
+import { useState, useEffect } from "react";
 import { usePathname } from "next/navigation";
 
 export default function DashboardNavigation() {
   const [isActive, setActive] = useState(false);
+  const [role, setRole] = useState(null);
   const path = usePathname();
 
-  // Grouping the navigation by logical sections
-  const navSections = {
-    "Start": dasboardNavigation.filter((item) => item.id >= 1 && item.id <= 7),
-    "Organize and Manage": dasboardNavigation.filter((item) => item.id >= 8 && item.id <= 13),
-    "Account": dasboardNavigation.filter((item) => item.id >= 14),
-  };
+  // Get role from localStorage on mount
+  useEffect(() => {
+    const storedRole = localStorage.getItem("role");
+    setRole(storedRole);
+  }, []);
+
+  if (!role) return null; // or loading spinner
+
+  // Filter navigation items by role
+  const filteredNavItems = dasboardNavigation.filter(item => item.roles.includes(role));
 
   return (
     <div className="dashboard_navigationbar d-block d-lg-none">
@@ -22,25 +28,24 @@ export default function DashboardNavigation() {
           <i className="fa fa-bars pr10" /> Dashboard Navigation
         </button>
         <ul className={`dropdown-content ${isActive ? "show" : ""}`}>
-          {Object.entries(navSections).map(([sectionTitle, items]) => (
-            <Fragment key={sectionTitle}>
-              <li>
-                <p className="fz15 fw400 ff-heading mt30 pl30">{sectionTitle}</p>
+          {filteredNavItems.map((item) => {
+            const href = item.pathByRole?.[role] || item.path;
+
+            if (!href) return null; // skip invalid item
+
+            return (
+              <li
+                key={item.id}
+                className={path === href ? "mobile-dasboard-menu-active" : ""}
+                onClick={() => setActive(false)}
+              >
+                <Link href={href}>
+                  <i className={`${item.icon} mr10`} />
+                  {item.name}
+                </Link>
               </li>
-              {items.map((item) => (
-                <li
-                  key={item.id}
-                  className={path === item.path ? "mobile-dasboard-menu-active" : ""}
-                  onClick={() => setActive(false)}
-                >
-                  <Link href={item.path}>
-                    <i className={`${item.icon} mr10`} />
-                    {item.name}
-                  </Link>
-                </li>
-              ))}
-            </Fragment>
-          ))}
+            );
+          })}
         </ul>
       </div>
     </div>
