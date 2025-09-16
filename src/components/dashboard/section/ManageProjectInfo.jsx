@@ -490,22 +490,40 @@ function InReviewRow({ project }) {
 function InReview() {
 const projects = [
   {
-    name: "Logo Design",
-    client: "Client B",
-    completionDate: "2025-09-01",
-    outcome: "Successful",
+    id: 1,
+    name: "Landing Page Build",
+    reviews: [
+      {
+        milestone: "Final Deployment",
+        reviewer: "Client A",
+        status: "Needs Payout",
+        comments: "Looks great!",
+      },
+      {
+        milestone: "Design Approval",
+        reviewer: "Client A",
+        status: "Approved",
+        comments: "Excellent work on the design.",
+      },
+    ],
   },
   {
-    name: "Social Media Campaign",
-    client: "Client C",
-    completionDate: "2025-08-15",
-    outcome: "Successful",
-  },
-  {
-    name: "Product Launch Website",
-    client: "Client D",
-    completionDate: "2025-07-30",
-    outcome: "Successful",
+    id: 2,
+    name: "Blog Platform",
+    reviews: [
+      {
+        milestone: "Content Review",
+        reviewer: "Client B",
+        status: "Pending",
+        comments: "Waiting for client feedback.",
+      },
+      {
+        milestone: "SEO Optimization",
+        reviewer: "Client B",
+        status: "Approved",
+        comments: "Well optimized content.",
+      },
+    ],
   },
 ];
 
@@ -547,15 +565,27 @@ function CompletedProjectsRow({ project }) {
 }
 
 function CompletedProjects() {
-  const projects = [
-    {
-      name: "Logo Design",
-      client: "Client B",
-      completionDate: "2025-09-01",
-      outcome: "Successful",
-    },
-    // Add more completed projects as needed
-  ];
+const projects = [
+  {
+    name: "Logo Design",
+    client: "Client B",
+    completionDate: "2025-09-01",
+    outcome: "Successful",
+  },
+  {
+    name: "Social Media Campaign",
+    client: "Client C",
+    completionDate: "2025-08-15",
+    outcome: "Successful",
+  },
+  {
+    name: "Product Launch Website",
+    client: "Client D",
+    completionDate: "2025-07-30",
+    outcome: "Successful",
+  },
+];
+
 
   return (
     <div className="table-responsive">
@@ -602,8 +632,8 @@ export default function ManageProjectInfo() {
           </div>
           <div className="col-lg-3">
             <div className="text-lg-end">
-              <Link href="/create-project" className="ud-btn btn-dark default-box-shadow2">
-                Create Project <i className="fal fa-arrow-right-long" />
+              <Link href="/create-projects" className="ud-btn btn-dark default-box-shadow2">
+                Post Project <i className="fal fa-arrow-right-long" />
               </Link>
             </div>
           </div>
