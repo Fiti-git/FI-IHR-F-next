@@ -285,7 +285,7 @@ export default function DashboardHeader() {
                             <p className="fz15 fw400 ff-heading mb10 pl30">
                               Start
                             </p>
-                            {dasboardNavigation.slice(0, 8).map((item,i) => (
+                            {dasboardNavigation.slice(0, 6).map((item,i) => (
                               <Link
                                 key={i}
                                 className={`dropdown-item ${

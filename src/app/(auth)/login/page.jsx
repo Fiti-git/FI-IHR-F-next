@@ -19,10 +19,14 @@ export default function LoginPage() {
       return;
     }
 
-    // Dummy login redirection
-    if (email.toLowerCase() === 'freelancer@example.com') {
+    const lowerEmail = email.toLowerCase();
+
+    // Dummy role check
+    if (lowerEmail === 'freelancer@example.com') {
+      localStorage.setItem('role', 'freelancer');
       router.push('/freelancer');
-    } else if (email.toLowerCase() === 'jobprovider@example.com') {
+    } else if (lowerEmail === 'jobprovider@example.com') {
+      localStorage.setItem('role', 'job-provider');
       router.push('/job-provider');
     } else {
       alert('Invalid email or password.');

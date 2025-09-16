@@ -4,90 +4,99 @@ export const dasboardNavigation = [
     name: "Dashboard",
     icon: "flaticon-home",
     path: "/dashboard",
+    roles: ["freelancer", "job-provider"], // both roles can see
   },
   {
     id: 2,
     name: "My Proposals",
     icon: "flaticon-document",
     path: "/proposal",
-  },
-  {
-    id: 3,
-    name: "Saved",
-    icon: "flaticon-like",
-    path: "/saved",
+    roles: ["freelancer"], // only freelancer can see
   },
   {
     id: 4,
     name: "Message",
     icon: "flaticon-chat",
     path: "/message",
+    roles: ["freelancer", "job-provider"], // both roles can see
   },
   {
     id: 5,
     name: "Reviews",
     icon: "flaticon-review-1",
     path: "/reviews",
+    roles: ["freelancer", "job-provider"], // both roles can see
+
   },
   {
     id: 6,
     name: "Invoice",
     icon: "flaticon-receipt",
     path: "/invoice",
+    roles: ["freelancer", "job-provider"], // both roles can see
   },
   {
     id: 7,
     name: "Payouts",
     icon: "flaticon-dollar",
     path: "/payouts",
+    roles: ["freelancer"], // only freelancer can see
   },
   {
     id: 8,
     name: "Statements",
     icon: "flaticon-web",
     path: "/statements",
+    roles: ["freelancer"], // only freelancer can see
   },
   {
     id: 9,
     name: "Manage Services",
     icon: "flaticon-presentation",
     path: "/manage-services",
+    roles: ["freelancer"], // only freelancer can see
   },
   {
     id: 10,
     name: "Manage Jobs",
     icon: "flaticon-briefcase",
     path: "/manage-jobs",
+    roles: ["job-provider"], // only job-provider can see
   },
   {
     id: 11,
     name: "Manage Project",
     icon: "flaticon-content",
     path: "/manage-projects",
+    roles: ["job-provider"], // only job-provider can see
   },
   {
     id: 12,
     name: "Add Services",
     icon: "flaticon-document",
     path: "/add-services",
+    roles: ["freelancer"], // only freelancer can see
   },
   {
     id: 13,
     name: "Create Project",
     icon: "flaticon-content",
     path: "/create-projects",
+    roles: ["job-provider"], // only job-provider can see
   },
   {
     id: 14,
     name: "My Profile",
     icon: "flaticon-photo",
     path: "/my-profile",
+    roles: ["freelancer", "job-provider"], // both roles can see
   },
   {
     id: 15,
     name: "Logout",
     icon: "flaticon-logout",
     path: "/login",
+    roles: ["freelancer", "job-provider"], // both roles can see
   },
 ];
 
