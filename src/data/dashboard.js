@@ -81,7 +81,7 @@ export const dasboardNavigation = [
     id: 12,
     name: "Services",
     icon: "flaticon-content",
-    path: "/manage-projects",
+    path: "/request-services",
     roles: ["job-provider"],
   },
 
