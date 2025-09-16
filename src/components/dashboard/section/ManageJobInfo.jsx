@@ -6,11 +6,12 @@ import Pagination1 from "@/components/section/Pagination1";
 import ProposalModal1 from "../modal/ProposalModal1";
 import DeleteModal from "../modal/DeleteModal";
 
-const tab = [
-  "Posted Jobs",
-  "Applications",
-  "In Progress",
-  "Closed Jobs",
+// Dummy job data
+const jobs = [
+  { id: 1, title: "Frontend Developer", category: "Web Development", date: "2025-09-10", status: "Open" },
+  { id: 2, title: "UI/UX Designer", category: "Design", date: "2025-09-08", status: "Closed" },
+  { id: 3, title: "Backend Developer", category: "Web Development", date: "2025-09-01", status: "Open" },
+  { id: 4, title: "Marketing Specialist", category: "Marketing", date: "2025-08-28", status: "Closed" },
 ];
 
 // Icon button component for consistent style
@@ -25,8 +26,13 @@ const IconButton = ({ onClick, title, iconClass, colorClass }) => (
   </button>
 );
 
-// Row components with icon buttons
+// Status badge component
+const StatusBadge = ({ status }) => {
+  const colorClass = status === "Open" ? "badge bg-success" : "badge bg-danger";
+  return <span className={colorClass}>{status}</span>;
+};
 
+// Row component for Posted Jobs
 function PostedJobsRow({ job }) {
   return (
     <tr>
@@ -34,207 +40,23 @@ function PostedJobsRow({ job }) {
       <td>{job.category}</td>
       <td>{job.date}</td>
       <td>
-        <IconButton title="Edit Job" iconClass="fal fa-edit" colorClass="text-primary" onClick={() => alert(`Edit ${job.title}`)} />
-        <IconButton title="Delete Job" iconClass="fal fa-trash-alt" colorClass="text-danger" onClick={() => alert(`Delete ${job.title}`)} />
+        <StatusBadge status={job.status} />
       </td>
-    </tr>
-  );
-}
-
-function ApplicationsRow({ app }) {
-  return (
-    <tr>
-      <td>{app.jobTitle}</td>
-      <td>{app.appliedCount}</td>
       <td>
-        <IconButton
-          title="View Application List"
-          iconClass="fal fa-users"
-          colorClass="text-info"
-          onClick={() => alert(`View applications for ${app.jobTitle}`)}
-        />
+        <Link href={`/jobs/${job.id}`} className="btn btn-sm btn-outline-primary me-2">
+          View
+        </Link>
+        
       </td>
     </tr>
   );
 }
 
-function InProgressRow({ job }) {
-  return (
-    <tr>
-      <td>{job.title}</td>
-      <td>{job.progress}</td>
-      <td>{job.interviewCalled}</td>
-      <td>
-        <IconButton
-          title="Manage Hiring"
-          iconClass="fal fa-tasks"
-          colorClass="text-secondary"
-          onClick={() => alert(`Manage hiring for ${job.title}`)}
-        />
-      </td>
-    </tr>
-  );
-}
+export default function PostedJobs() {
+  const [filter, setFilter] = useState("All");
 
-function ClosedJobsRow({ job }) {
-  return (
-    <tr>
-      <td>{job.title}</td>
-      <td>{job.status}</td>
-      <td>
-        <IconButton
-          title="View Job Details"
-          iconClass="fal fa-eye"
-          colorClass="text-muted"
-          onClick={() => alert(`View details for ${job.title}`)}
-        />
-      </td>
-    </tr>
-  );
-}
-
-// More dummy data added
-
-function PostedJobs() {
-  const jobs = [
-    { title: "Frontend Developer", category: "Web Development", date: "2025-09-10" },
-    { title: "UI/UX Designer", category: "Design", date: "2025-09-08" },
-    { title: "Backend Developer", category: "Web Development", date: "2025-09-01" },
-    { title: "Marketing Specialist", category: "Marketing", date: "2025-08-28" },
-    { title: "Data Scientist", category: "Data Analysis", date: "2025-08-20" },
-    { title: "Product Manager", category: "Management", date: "2025-08-15" },
-    { title: "QA Engineer", category: "Quality Assurance", date: "2025-08-12" },
-  ];
-
-  return (
-    <div className="packages_table table-responsive">
-      <table className="table-style3 table at-savesearch">
-        <thead className="t-head">
-          <tr>
-            <th>Job Title</th>
-            <th>Category</th>
-            <th>Date</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody className="t-body">
-          {jobs.map((job, i) => (
-            <PostedJobsRow key={i} job={job} />
-          ))}
-        </tbody>
-      </table>
-      <div className="mt30">
-        <Pagination1 />
-      </div>
-    </div>
-  );
-}
-
-function Applications() {
-  const applications = [
-    { jobTitle: "Frontend Developer", appliedCount: 25 },
-    { jobTitle: "Backend Developer", appliedCount: 18 },
-    { jobTitle: "UI/UX Designer", appliedCount: 15 },
-    { jobTitle: "Data Scientist", appliedCount: 7 },
-    { jobTitle: "Product Manager", appliedCount: 12 },
-    { jobTitle: "QA Engineer", appliedCount: 5 },
-    { jobTitle: "Marketing Specialist", appliedCount: 9 },
-  ];
-
-  return (
-    <div className="packages_table table-responsive">
-      <table className="table-style3 table at-savesearch">
-        <thead className="t-head">
-          <tr>
-            <th>Job Title</th>
-            <th>Applied Count</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody className="t-body">
-          {applications.map((app, i) => (
-            <ApplicationsRow key={i} app={app} />
-          ))}
-        </tbody>
-      </table>
-      <div className="mt30">
-        <Pagination1 />
-      </div>
-    </div>
-  );
-}
-
-function InProgress() {
-  const jobsInProgress = [
-    { title: "Mobile App Developer", progress: "Hiring", interviewCalled: 5 },
-    { title: "QA Engineer", progress: "Interviewing", interviewCalled: 3 },
-    { title: "Sales Executive", progress: "Interview Scheduled", interviewCalled: 2 },
-    { title: "DevOps Engineer", progress: "Hiring", interviewCalled: 6 },
-    { title: "Content Writer", progress: "Interviewing", interviewCalled: 4 },
-    { title: "Graphic Designer", progress: "Hiring", interviewCalled: 3 },
-    { title: "Support Specialist", progress: "Interview Scheduled", interviewCalled: 1 },
-  ];
-
-  return (
-    <div className="packages_table table-responsive">
-      <table className="table-style3 table at-savesearch">
-        <thead className="t-head">
-          <tr>
-            <th>Job Title</th>
-            <th>Progress</th>
-            <th>Interview Called</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody className="t-body">
-          {jobsInProgress.map((job, i) => (
-            <InProgressRow key={i} job={job} />
-          ))}
-        </tbody>
-      </table>
-      <div className="mt30">
-        <Pagination1 />
-      </div>
-    </div>
-  );
-}
-
-function ClosedJobs() {
-  const closedJobs = [
-    { title: "Project Manager", status: "Hired" },
-    { title: "Content Writer", status: "Manually Closed" },
-    { title: "HR Specialist", status: "Hired" },
-    { title: "Business Analyst", status: "Manually Closed" },
-    { title: "Marketing Manager", status: "Hired" },
-    { title: "Frontend Developer", status: "Manually Closed" },
-    { title: "Backend Developer", status: "Hired" },
-  ];
-
-  return (
-    <div className="packages_table table-responsive">
-      <table className="table-style3 table at-savesearch">
-        <thead className="t-head">
-          <tr>
-            <th>Job Title</th>
-            <th>Job Status</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody className="t-body">
-          {closedJobs.map((job, i) => (
-            <ClosedJobsRow key={i} job={job} />
-          ))}
-        </tbody>
-      </table>
-      <div className="mt30">
-        <Pagination1 />
-      </div>
-    </div>
-  );
-}
-
-export default function ManageJobInfo() {
-  const [selectedTab, setSelectedTab] = useState(0);
+  const filteredJobs =
+    filter === "All" ? jobs : jobs.filter((job) => job.status === filter);
 
   return (
     <>
@@ -245,8 +67,8 @@ export default function ManageJobInfo() {
           </div>
           <div className="col-lg-9">
             <div className="dashboard_title_area">
-              <h2>Manage Job Listings</h2>
-              <p className="text">View and manage all job postings, applications, and hiring stages.</p>
+              <h2>Posted Jobs</h2>
+              <p className="text">Manage all your posted job listings.</p>
             </div>
           </div>
           <div className="col-lg-3">
@@ -261,31 +83,58 @@ export default function ManageJobInfo() {
         <div className="row">
           <div className="col-xl-12">
             <div className="ps-widget bgc-white bdrs4 p30 mb30 overflow-hidden position-relative">
-              <div className="navtab-style1">
-                <nav>
-                  <div className="nav nav-tabs mb30">
-                    {tab.map((item, i) => (
-                      <button
-                        key={i}
-                        className={`nav-link fw500 ps-0 ${selectedTab === i ? "active" : ""}`}
-                        onClick={() => setSelectedTab(i)}
-                      >
-                        {item}
-                      </button>
-                    ))}
-                  </div>
-                </nav>
+              {/* Filter */}
+              <div className="mb-3 d-flex justify-content-between align-items-center">
+                <h4 className="mb-0">Job Listings</h4>
+                <select
+                  className="form-select w-auto"
+                  value={filter}
+                  onChange={(e) => setFilter(e.target.value)}
+                >
+                  <option value="All">All</option>
+                  <option value="Open">Open</option>
+                  <option value="Closed">Closed</option>
+                </select>
+              </div>
 
-                {selectedTab === 0 && <PostedJobs />}
-                {selectedTab === 1 && <Applications />}
-                {selectedTab === 2 && <InProgress />}
-                {selectedTab === 3 && <ClosedJobs />}
+              {/* Jobs Table */}
+              <div className="packages_table table-responsive">
+                <table className="table-style3 table at-savesearch">
+                  <thead className="t-head">
+                    <tr>
+                      <th>Job Title</th>
+                      <th>Category</th>
+                      <th>Date</th>
+                      <th>Status</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="t-body">
+                    {filteredJobs.length > 0 ? (
+                      filteredJobs.map((job) => (
+                        <PostedJobsRow key={job.id} job={job} />
+                      ))
+                    ) : (
+                      <tr>
+                        <td colSpan="5" className="text-center">
+                          No jobs found.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Pagination */}
+              <div className="mt30">
+                <Pagination1 />
               </div>
             </div>
           </div>
         </div>
       </div>
 
+      {/* Modals */}
       <ProposalModal1 />
       <DeleteModal />
     </>

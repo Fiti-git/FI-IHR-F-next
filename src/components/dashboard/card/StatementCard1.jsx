@@ -1,20 +1,21 @@
 export default function StatementCard1({ data }) {
+  // Map type to generic status label
+  // Assuming data.type === 1 means success, else failed
+  const typeLabel = data.type === 1 ? "Success" : "Failed";
+
+  // Choose one name to display (try client first, then freelancer)
+  const nameToShow = data.client || data.freelancer || "N/A";
+
   return (
-    <>
-      <tr>
-        <th scope="row">{data.date}</th>
-        <td className="vam">
-          {data.type === 1 && (
-            <span className="pending-style style4">Service Purchased</span>
-          )}
-          {data.type === 2 && (
-            <span className="pending-style style5">Wallet Topup</span>
-          )}
-        </td>
-        <td className="vam">{data.detail}</td>
-        <td className="vam">${data.price}</td>
-        <td className="vam">${data.amount}</td>
-      </tr>
-    </>
+    <tr>
+      <td>{data.date}</td>
+      <td>
+        <span className={typeLabel === "Failed" ? "pending-style style5" : "pending-style style4"}>
+          {typeLabel}
+        </span>
+      </td>
+      <td>{nameToShow}</td>
+      <td>${data.amount}</td>
+    </tr>
   );
 }

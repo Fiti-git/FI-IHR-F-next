@@ -53,7 +53,7 @@ export default function DashboardJobProvider() {
           <div className="ps-widget bgc-white bdrs4 p30 mb30 text-center">
             <h5 className="title">Post a New Job</h5>
             <p>Find the right talent for your job openings.</p>
-            <a href="/post-job" className="btn btn-thm btn-sm mt15">
+            <a href="/create-jobs" className="btn btn-thm btn-sm mt15">
               Post Job
             </a>
           </div>
