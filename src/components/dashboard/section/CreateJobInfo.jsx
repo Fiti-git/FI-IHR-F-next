@@ -1,9 +1,9 @@
 "use client";
 import DashboardNavigation from "../header/DashboardNavigation";
-import BasicInformation2 from "./BasicInformation2";
+import Jobform from "./JobFormInformation";
 import UploadAttachment from "./UploadAttachment";
 
-export default function CreateProjectInfo() {
+export default function CreateJobInfo() {
   return (
     <>
       <div className="dashboard__content hover-bgc-color">
@@ -13,8 +13,9 @@ export default function CreateProjectInfo() {
           </div>
           <div className="col-lg-9">
             <div className="dashboard_title_area">
-              <h2>Creat Project</h2>
-              <p className="text">Lorem ipsum dolor sit amet, consectetur.</p>
+              <h2>Post a Job</h2>
+              <p className="text">Fill in the details below to create a new job listing.</p>
+         
             </div>
           </div>
           <div className="col-lg-3">
@@ -28,7 +29,7 @@ export default function CreateProjectInfo() {
         </div>
         <div className="row">
           <div className="col-xl-12">
-            <BasicInformation2 />
+            <Jobform />
             <UploadAttachment />
           </div>
         </div>

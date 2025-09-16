@@ -18,13 +18,6 @@ export const dasboardNavigation = [
     roles: ["freelancer", "job-provider"],
   },
   {
-    id: 3,
-    name: "Notifications",
-    icon: "flaticon-bell",
-    path: "/notifications",
-    roles: ["freelancer", "job-provider"],
-  },
-  {
     id: 4,
     name: "Reviews",
     icon: "flaticon-review-1",
@@ -80,8 +73,8 @@ export const dasboardNavigation = [
   {
     id: 11,
     name: "Manage Project",
-    icon: "flaticon-content",
-    path: "/create-project",
+    icon: "flaticon-working",
+    path: "/manage-projects",
     roles: ["job-provider"],
   },
   {
@@ -110,10 +103,11 @@ export const dasboardNavigation = [
     {
     id: 15,
     name: "Support",
-    icon: "flaticon-logout",
+    icon: "flaticon-question",
     path: "/login",
     roles: ["freelancer", "job-provider"],
   },
+  
 ];
 
 

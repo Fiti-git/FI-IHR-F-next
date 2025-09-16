@@ -1,11 +1,11 @@
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
-import ManageJobInfo from "@/components/dashboard/section/ManageJobInfo";
+import CreateJobInfo from "@/components/dashboard/section/CreateJobInfo";
 
 import MobileNavigation2 from "@/components/header/MobileNavigation2";
 
 export const metadata = {
   title:
-    "IHRHUB | Manage Jobs",
+    "IHRHUB | Create Jobs",
 };
 
 export default function page() {
@@ -14,7 +14,7 @@ export default function page() {
     
     <MobileNavigation2 />
       <DashboardLayout>
-        <ManageJobInfo />
+        <CreateJobInfo />
       </DashboardLayout>
     </>
   );
