@@ -34,33 +34,30 @@ export default function Header20() {
                                     </div>
                                 </div>
                             </div>
-                            <div className="col-auto">
-                                <div className="d-flex align-items-center">
-                                    <Navigation />
-                                    <a
-                                        className="login-info bdrl1 pl15-lg pl30"
-                                        data-bs-toggle="modal"
-                                        href="#exampleModalToggle"
-                                    >
-                                        <span className="flaticon-loupe" />
-                                    </a>
-                                    
-                                    <Link
-                                        className={`login-info mr15-lg mr30 ${
-                                            path === "/login" ? "ui-active" : ""
-                                        }`}
-                                        href="/login"
-                                    >
-                                        Sign in
-                                    </Link>
-                                    <Link
-                                        className="ud-btn btn-thm add-joining"
-                                        href="/register"
-                                    >
-                                        Join
-                                    </Link>
-                                </div>
-                            </div>
+<div className="col-auto">
+    <div className="d-flex align-items-center gap-3">
+        <Navigation />
+
+        {/* Sign In Link */}
+        <Link
+            className={`login-info small-text ${
+                path === "/login" ? "ui-active" : ""
+            }`}
+            href="/login"
+        >
+            Sign in
+        </Link>
+
+        {/* Join Button */}
+        <Link
+            className="ud-btn btn-thm btn-sm join-btn"
+            href="/register"
+        >
+            Join
+        </Link>
+    </div>
+</div>
+
                         </div>
                     </div>
                 </nav>

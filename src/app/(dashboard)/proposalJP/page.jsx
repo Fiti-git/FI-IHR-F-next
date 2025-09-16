@@ -1,10 +1,10 @@
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
-import ReviewsInfo from "@/components/dashboard/section/ReviewsInfo";
+import ProposalInfo from "@/components/dashboard/section/ProposalInfo";
 
 import MobileNavigation2 from "@/components/header/MobileNavigation2";
 
 export const metadata = {
-  title: "IHRHUB | Review",
+  title: "IHRHUB| Proposal",
 };
 
 export default function page() {
@@ -13,7 +13,7 @@ export default function page() {
     
     <MobileNavigation2 />
       <DashboardLayout>
-        <ReviewsInfo />
+        <ProposalInfo />
       </DashboardLayout>
     </>
   );

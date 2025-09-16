@@ -7,7 +7,7 @@ import GoogleMap1 from "@/components/section/GoogleMap1";
 import OurFaq1 from "@/components/section/OurFaq1";
 
 export const metadata = {
-    title: "Freeio - Freelance Marketplace React/Next Js Template | Contact",
+    title: "IHRHUB | Contact",
 };
 
 export default function page() {
