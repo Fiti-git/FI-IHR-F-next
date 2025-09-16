@@ -90,9 +90,13 @@ export const dasboardNavigation = [
     id: 13,
     name: "My Profile",
     icon: "flaticon-photo",
-    path: "/my-profile",
+    pathByRole: {
+      "job-provider": "/jp-profile",
+      freelancer: "/profile",
+    },
     roles: ["freelancer", "job-provider"],
   },
+
   {
     id: 14,
     name: "Logout",
