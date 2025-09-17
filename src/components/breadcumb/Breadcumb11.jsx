@@ -35,21 +35,6 @@ export default function Breadcumb11() {
                   ) : (
                     <h2>Website Designer Required For Directory Theme</h2>
                   )}
-
-                  <div className="list-meta mt15">
-                    <p className="mb-0 dark-color fz15 fw500 list-inline-item mb5-sm">
-                      <i className="flaticon-place vam fz20 text-thm2 me-2" />{" "}
-                      London, UK
-                    </p>
-                    <p className="mb-0 dark-color fz15 fw500 list-inline-item ml15 mb5-sm ml0-xs">
-                      <i className="flaticon-calendar text-thm2 vam fz20 me-2" />{" "}
-                      January 15, 2022
-                    </p>
-                    <p className="mb-0 dark-color fz15 fw500 list-inline-item ml15 mb5-sm ml0-xs">
-                      <i className="flaticon-website text-thm2 vam fz20 me-2" />{" "}
-                      902 Views
-                    </p>
-                  </div>
                 </div>
               </div>
             </div>

@@ -30,74 +30,7 @@ export default function ProjectDetail1() {
             <div className="col-lg-8">
               <div className="column">
                 <div className="scrollbalance-inner">
-                  <div className="row">
-                    <div className="col-sm-6 col-xl-4">
-                      <div className="iconbox-style1 contact-style d-flex align-items-start mb30">
-                        <div className="icon flex-shrink-0">
-                          <span className="flaticon-notification-1" />
-                        </div>
-                        <div className="details">
-                          <h5 className="title">Seller Type</h5>
-                          <p className="mb-0 text">Company</p>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="col-sm-6 col-xl-4">
-                      <div className="iconbox-style1 contact-style d-flex align-items-start mb30">
-                        <div className="icon flex-shrink-0">
-                          <span className="flaticon-dollar" />
-                        </div>
-                        <div className="details">
-                          <h5 className="title">Project type</h5>
-                          <p className="mb-0 text">Hourly</p>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="col-sm-6 col-xl-4">
-                      <div className="iconbox-style1 contact-style d-flex align-items-start mb30">
-                        <div className="icon flex-shrink-0">
-                          <span className="flaticon-fifteen" />
-                        </div>
-                        <div className="details">
-                          <h5 className="title">Project Duration</h5>
-                          <p className="mb-0 text">10-15 Hours</p>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="col-sm-6 col-xl-4">
-                      <div className="iconbox-style1 contact-style d-flex align-items-start mb30">
-                        <div className="icon flex-shrink-0">
-                          <span className="flaticon-like-1" />
-                        </div>
-                        <div className="details">
-                          <h5 className="title">Project Level</h5>
-                          <p className="mb-0 text">Expensive</p>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="col-sm-6 col-xl-4">
-                      <div className="iconbox-style1 contact-style d-flex align-items-start mb30">
-                        <div className="icon flex-shrink-0">
-                          <span className="flaticon-translator" />
-                        </div>
-                        <div className="details">
-                          <h5 className="title">Languages</h5>
-                          <p className="mb-0 text">20</p>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="col-sm-6 col-xl-4">
-                      <div className="iconbox-style1 contact-style d-flex align-items-start mb30">
-                        <div className="icon flex-shrink-0">
-                          <span className="flaticon-goal" />
-                        </div>
-                        <div className="details">
-                          <h5 className="title">English Level</h5>
-                          <p className="mb-0 text">Professional</p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
+                  
                   <div className="service-about">
                     <h4>Description</h4>
                     <p className="text mb30">
@@ -149,39 +82,19 @@ export default function ProjectDetail1() {
                       ))}
                     </div>
                     <hr className="opacity-100 mb60" />
-                    <h4 className="mb30">Project Proposals (3)</h4>
-                    <div className="row">
-                      {projectProposal1.slice(0, 3).map((item, i) => (
-                        <div key={i} className="col-md-6 col-lg-12">
-                          <ProjectProposalCard1 data={item} />
-                        </div>
-                      ))}
-                    </div>
                     <div className="bsp_reveiw_wrt mt25">
                       <h4>Send Your Proposal</h4>
                       <form className="comments_form mt30 mb30-md">
                         <div className="row">
-                          <div className="col-md-6">
+                          <div className="col-md-0">
                             <div className="mb20">
                               <label className="fw500 ff-heading dark-color mb-2">
-                                Your hourly price
+                                Your Budget
                               </label>
                               <input
                                 type="text"
                                 className="form-control"
                                 placeholder="$99"
-                              />
-                            </div>
-                          </div>
-                          <div className="col-md-6">
-                            <div className="mb20">
-                              <label className="fw500 ff-heading dark-color mb-2">
-                                Estimated Hours
-                              </label>
-                              <input
-                                type="text"
-                                className="form-control"
-                                placeholder={4}
                               />
                             </div>
                           </div>
@@ -198,7 +111,6 @@ export default function ProjectDetail1() {
                             </div>
                           </div>
                           <div className="col-md-12">
-                            <ServiceDetailExtra1 />
                           </div>
                           <div className="col-md-12">
                             <div className="d-grid">

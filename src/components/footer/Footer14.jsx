@@ -32,7 +32,7 @@ export default function Footer14() {
                                         </button>
                                     </div>
                                 </div>
-                                <div className="row justify-content-between">
+                                {/* <div className="row justify-content-between">
                                     <div className="col-auto">
                                         <div className="link-style1 at-home8 mb-3">
                                             <h6 className="mb25">About</h6>
@@ -76,7 +76,7 @@ export default function Footer14() {
                                             </ul>
                                         </div>
                                     </div>
-                                </div>
+                                </div> */}
                             </div>
                         </div>
                         <div className="col-lg-6 col-xl-4 offset-xl-2">
@@ -94,11 +94,11 @@ export default function Footer14() {
                                     <div className="col-auto">
                                         <div className="contact-info">
                                             <p className="info-title mb-2">
-                                                Toll Free Customer Care
+                                                Customer Care
                                             </p>
                                             <h5 className="info-phone">
                                                 <Link href="#">
-                                                    +(1) 123 456 7890
+                                                    +(94) 123 456 7890
                                                 </Link>
                                             </h5>
                                         </div>
@@ -165,7 +165,7 @@ export default function Footer14() {
                         <div className="col-sm-6">
                             <div className="text-center text-lg-start">
                                 <p className="copyright-text mb-0 at-home8 ff-heading">
-                                    © Freeio. 2023{" "}
+                                    © IHRHUB. 2023{" "}
                                     <Link
                                         href="https://themeforest.net/user/ib-themes/portfolio"
                                         target="_blank"

@@ -56,7 +56,7 @@ export default function Breadcumb13() {
                         ) : (
                           <h4 className="title">UX/UI Designer</h4>
                         )}
-                        <h6 className="mb-3 text-thm">Medium</h6>
+                        
                         <h6 className="list-inline-item mb-0">
                           $125k-$135k Hourly
                         </h6>
@@ -71,10 +71,7 @@ export default function Breadcumb13() {
                         </h6>
                       </div>
                     </div>
-                    <Link href="/contact" className="ud-btn btn-thm2">
-                      Apply For Job
-                      <i className="fal fa-arrow-right-long" />
-                    </Link>
+                    
                   </div>
                 </div>
               </div>

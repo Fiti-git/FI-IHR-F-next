@@ -24,9 +24,13 @@ export default function LoginPage() {
     // Dummy role check
     if (lowerEmail === 'freelancer@example.com') {
       localStorage.setItem('role', 'freelancer');
+      localStorage.setItem('isLoggedIn', 'true');
+      localStorage.setItem('userProfilePic', '/images/freelancer.jpg');  // Example profile picture
       router.push('/freelancer');
     } else if (lowerEmail === 'jobprovider@example.com') {
       localStorage.setItem('role', 'job-provider');
+      localStorage.setItem('isLoggedIn', 'true');
+      localStorage.setItem('userProfilePic', '/images/jobprovider.jpg'); // Example profile picture
       router.push('/job-provider');
     } else {
       alert('Invalid email or password.');
