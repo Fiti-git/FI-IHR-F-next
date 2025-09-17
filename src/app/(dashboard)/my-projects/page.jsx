@@ -1,11 +1,11 @@
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
-import Help from "@/components/dashboard/section/help";
+import FreelancerProjects from "@/components/dashboard/section/FreelancerProjects";
 
 import MobileNavigation2 from "@/components/header/MobileNavigation2";
 
 export const metadata = {
   title:
-    "IHRHUB | Support",
+    "IHRHUB | My Project",
 };
 
 export default function page() {
@@ -14,7 +14,7 @@ export default function page() {
     
     <MobileNavigation2 />
       <DashboardLayout>
-        <Help />
+        <FreelancerProjects />
       </DashboardLayout>
     </>
   );

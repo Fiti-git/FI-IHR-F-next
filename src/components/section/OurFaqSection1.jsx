@@ -1,52 +1,60 @@
-import { browserCategory } from "@/data/project";
-import BrowserCategoryCard1 from "../card/BrowserCategoryCard1";
-import OurFaq1 from "./OurFaq1";
+"use client";
 
-export default function OurFaqSection1() {
+import { useState } from "react";
+
+export default function ContactUsForm() {
+  const [contactMethod, setContactMethod] = useState("");
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    alert(`Contact Method: ${contactMethod}`);
+  };
+
   return (
-    <>
-      <section className="our-faq pb50">
-        <div className="container">
-          <div className="row">
-            <div
-              className="col-lg-6 m-auto wow fadeInUp"
-              data-wow-delay="300ms"
-            >
-              <div className="main-title text-center">
-                <h2 className="title">How can we help you?</h2>
-                <p className="paragraph mt10">
-                  Give your visitor a smooth online experience with a solid UX
-                  design
-                </p>
-                <div className="search_widgets mt30">
-                  <form>
-                    <div className="form-group">
-                      <input
-                        type="text"
-                        className="form-control"
-                        placeholder="Search"
-                      />
-                    </div>
-                    <div className="help_search_btn">
-                      <button type="submit" className="btn search-btn">
-                        <span className="far fa-magnifying-glass" />
-                      </button>
-                    </div>
-                  </form>
-                </div>
-              </div>
-            </div>
-          </div>
-          <div className="row">
-            {browserCategory.slice(0, 8).map((item,i) => (
-              <div key={ i } className="col-sm-6 col-lg-4 col-xl-3">
-                <BrowserCategoryCard1 data={item} />
-              </div>
-            ))}
-          </div>
-          <OurFaq1 />
-        </div>
-      </section>
-    </>
+    <form onSubmit={handleSubmit} className="contact-us-form" style={{ maxWidth: 400, margin: "auto", fontFamily: "Arial, sans-serif" }}>
+      <div style={{ marginBottom: 20 }}>
+        <label style={{ display: "block", marginBottom: 10 }}>
+          <input
+            type="radio"
+            name="contactMethod"
+            value="Phone"
+            checked={contactMethod === "Phone"}
+            onChange={() => setContactMethod("Phone")}
+            style={{ marginRight: 8 }}
+          />
+          Phone
+        </label>
+        <small style={{ display: "block", marginBottom: 15, color: "#555" }}>
+          We'll call you back at your number.
+        </small>
+
+        <label style={{ display: "block", marginBottom: 10 }}>
+          <input
+            type="radio"
+            name="contactMethod"
+            value="Chat"
+            checked={contactMethod === "Chat"}
+            onChange={() => setContactMethod("Chat")}
+            style={{ marginRight: 8 }}
+          />
+          Chat
+        </label>
+        <small style={{ color: "#555" }}>
+          Chat online with a representative.
+        </small>
+      </div>
+
+      <div style={{ display: "flex", justifyContent: "space-between" }}>
+        <button type="button" onClick={() => alert("Cancelled")} style={{ padding: "8px 16px" }}>
+          Cancel
+        </button>
+        <button type="button" onClick={() => alert("Previous clicked")} style={{ padding: "8px 16px" }}>
+          Previous
+        </button>
+        <button type="submit" style={{ padding: "8px 16px", backgroundColor: "#ff9900", color: "white", border: "none" }}>
+          Submit
+        </button>
+      </div>
+    </form>
   );
 }

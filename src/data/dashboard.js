@@ -33,25 +33,25 @@ export const dasboardNavigation = [
   },
 
   // Freelancer
-  {
-    id: 6,
-    name: "My Proposals",
-    icon: "flaticon-document",
-    path: "/proposals",
-    roles: ["freelancer"],
-  },
+  // {
+  //   id: 6,
+  //   name: "My Proposals",
+  //   icon: "flaticon-document",
+  //   path: "/proposals",
+  //   roles: ["freelancer"],
+  // },
   {
     id: 7,
-    name: "My Projects",
+    name: "Mange Projects",
     icon: "flaticon-content",
     path: "/my-projects",
     roles: ["freelancer"],
   },
   {
     id: 8,
-    name: "Manage Services",
+    name: "Manage Jobs",
     icon: "flaticon-presentation",
-    path: "/manage-services",
+    path: "/manage-myjobs",
     roles: ["freelancer"],
   },
   // {
@@ -108,7 +108,7 @@ export const dasboardNavigation = [
     id: 15,
     name: "Support",
     icon: "flaticon-question",
-    path: "/login",
+    path: "/help",
     roles: ["freelancer", "job-provider"],
   },
   
