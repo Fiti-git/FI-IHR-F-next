@@ -13,6 +13,7 @@
     "@babel/core": "^7.27.1",
     "@popperjs/core": "^2.11.8",
     "@react-google-maps/api": "^2.20.6",
+    "@react-oauth/google": "^0.12.2",
     "bootstrap": "5.3.6",
     "chart.js": "^4.4.9",
     "eslint": "9.27.0",

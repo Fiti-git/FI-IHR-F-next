@@ -9,6 +9,7 @@ import toggleStore from "@/store/toggleStore";
 import "react-tooltip/dist/react-tooltip.css";
 import "rc-slider/assets/index.css";
 import NavSidebar from "@/components/sidebar/NavSidebar";
+import { GoogleOAuthProvider } from '@react-oauth/google';
 if (typeof window !== "undefined") {
   import("bootstrap");
 }
@@ -36,8 +37,10 @@ export default function RootLayout({ children }) {
   return (
     <html lang="en">
       <body className={`${dmSans.className}`}>
-        
-        {children}
+
+        <GoogleOAuthProvider clientId={'83527250157-gj5j6bn1k0bsg8peps3eqguapbbbjp15.apps.googleusercontent.com'}>
+          {children}
+        </GoogleOAuthProvider>
 
         {/* bottom to top */}
         <BottomToTop />
