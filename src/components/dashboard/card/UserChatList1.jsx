@@ -16,7 +16,7 @@ export default function UserChatList1({ data }) {
             <div className="fz15 fw500 dark-color ff-heading mb-0">
               {data.name}
             </div>
-            <p className="preview">{data.title}</p>
+            
           </div>
           <div className="iul_notific">
             <small>35 mins</small>

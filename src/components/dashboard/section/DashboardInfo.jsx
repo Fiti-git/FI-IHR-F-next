@@ -1,10 +1,5 @@
-import DoughnutChart from "../chart/DoughnutChart";
-import LineChart from "../chart/LineChart";
 import DashboardNavigation from "../header/DashboardNavigation";
-import { product1 } from "@/data/product";
-import { job1 } from "@/data/job";
-import MostViewServiceCard1 from "../card/MostViewServiceCard1";
-import RecentServiceCard1 from "../card/RecentServiceCard1";
+
 
 export default function DashboardFreelancer() {
   return (
@@ -27,7 +22,7 @@ export default function DashboardFreelancer() {
         {[
           { title: "Proposals Sent", count: 14, newCount: 3, icon: "flaticon-contract" },
           { title: "Jobs Applied", count: 10, newCount: 2, icon: "flaticon-resume" },
-          { title: "Services Created", count: 6, newCount: 1, icon: "flaticon-layer" },
+          { title: "Ongoing Projects", count: 6, newCount: 1, icon: "flaticon-layer" },
           { title: "Completed Projects", count: 8, newCount: 1, icon: "flaticon-success" },
         ].map((item, i) => (
           <div key={i} className="col-sm-6 col-xxl-3">
@@ -51,10 +46,10 @@ export default function DashboardFreelancer() {
       <div className="row mt30">
         <div className="col-md-6">
           <div className="ps-widget bgc-white bdrs4 p30 mb30 text-center">
-            <h5 className="title">Create a New Service</h5>
+            <h5 className="title">Bid For Projects</h5>
             <p>Offer your expertise and start earning.</p>
-            <a href="/create-service" className="btn btn-thm btn-sm mt15">
-              Create Service
+            <a href="/project-1" className="btn btn-thm btn-sm mt15">
+              Find a Project
             </a>
           </div>
         </div>
@@ -62,7 +57,7 @@ export default function DashboardFreelancer() {
           <div className="ps-widget bgc-white bdrs4 p30 mb30 text-center">
             <h5 className="title">Find New Jobs</h5>
             <p>Browse job listings and send proposals.</p>
-            <a href="/jobs" className="btn btn-thm btn-sm mt15">
+            <a href="/job-1" className="btn btn-thm btn-sm mt15">
               Browse Jobs
             </a>
           </div>

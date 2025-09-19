@@ -3,21 +3,45 @@ import Link from "next/link";
 import DashboardNavigation from "../header/DashboardNavigation";
 import { useState } from "react";
 import Pagination1 from "@/components/section/Pagination1";
-import ManageProjectCard from "../card/ManageProjectCard";
 import ProposalModal1 from "../modal/ProposalModal1";
 import DeleteModal from "../modal/DeleteModal";
 
-const tab = [
-  "Posted Projects",
-  "Pending Projects",
-  "Ongoing Services",
-  "Expired Projects",
-  "Completed Services",
-  "Canceled Services",
+// Dummy projects data
+const projects = [
+  { id: 1, name: "Website Redesign", postedDate: "2025-09-01", status: "Open" },
+  { id: 2, name: "SEO Optimization", postedDate: "2025-08-25", status: "Open" },
+  { id: 3, name: "Content Marketing Plan", postedDate: "2025-08-15", status: "Closed" },
+  { id: 4, name: "Brand Identity Refresh", postedDate: "2025-07-30", status: "Open" },
+  { id: 5, name: "Backend API Development", postedDate: "2025-07-15", status: "Open" },
 ];
 
-export default function ManageProjectInfo() {
-  const [selectedTab, setSelectedTab] = useState(0);
+// Status badge component for consistency
+const StatusBadge = ({ status }) => {
+  const colorClass = status === "Open" ? "badge bg-success" : "badge bg-danger";
+  return <span className={colorClass}>{status}</span>;
+};
+
+// Row for a project
+function ProjectRow({ project }) {
+  return (
+    <tr>
+      <td>{project.name}</td>
+      <td>{project.postedDate}</td>
+      <td><StatusBadge status={project.status} /></td>
+      <td>
+        <Link href={`/projects/${project.id}`} className="btn btn-sm btn-outline-primary">
+          View
+        </Link>
+      </td>
+    </tr>
+  );
+}
+
+export default function ManageProjects() {
+  const [filter, setFilter] = useState("All");
+
+  const filteredProjects =
+    filter === "All" ? projects : projects.filter((p) => p.status === filter);
 
   return (
     <>
@@ -28,190 +52,74 @@ export default function ManageProjectInfo() {
           </div>
           <div className="col-lg-9">
             <div className="dashboard_title_area">
-              <h2>Manage Project</h2>
-              <p className="text">Lorem ipsum dolor sit amet, consectetur.</p>
+              <h2>Projects</h2>
+              <p className="text">Manage all your posted projects.</p>
             </div>
           </div>
           <div className="col-lg-3">
             <div className="text-lg-end">
-              <Link
-                href="/create-projects"
-                className="ud-btn btn-dark default-box-shadow2"
-              >
-                Create Project
-                <i className="fal fa-arrow-right-long" />
+              <Link href="/create-projects" className="ud-btn btn-dark default-box-shadow2">
+                Post Project <i className="fal fa-arrow-right-long" />
               </Link>
             </div>
           </div>
         </div>
+
         <div className="row">
           <div className="col-xl-12">
             <div className="ps-widget bgc-white bdrs4 p30 mb30 overflow-hidden position-relative">
-              <div className="navtab-style1">
-                <nav>
-                  <div className="nav nav-tabs mb30">
-                    {tab.map((item, i) => (
-                      <button
-                        key={i}
-                        className={`nav-link fw500 ps-0 ${
-                          selectedTab == i ? "active" : ""
-                        }`}
-                        onClick={() => setSelectedTab(i)}
-                      >
-                        {item}
-                      </button>
-                    ))}
-                  </div>
-                </nav>
-                {selectedTab === 0 && (
-                  <div className="packages_table table-responsive">
-                    <table className="table-style3 table at-savesearch">
-                      <thead className="t-head">
-                        <tr>
-                          <th scope="col">Title</th>
-                          <th scope="col">Category</th>
-                          <th scope="col">Type/Cost</th>
-                          <th scope="col">Actions</th>
-                        </tr>
-                      </thead>
-                      <tbody className="t-body">
-                        {Array(7)
-                          .fill(7)
-                          .map((_, i) => (
-                            <ManageProjectCard key={i} />
-                          ))}
-                      </tbody>
-                    </table>
-                    <div className="mt30">
-                      <Pagination1 />
-                    </div>
-                  </div>
-                )}
-                {selectedTab === 1 && (
-                  <div className="packages_table table-responsive">
-                    <table className="table-style3 table at-savesearch">
-                      <thead className="t-head">
-                        <tr>
-                          <th scope="col">Title</th>
-                          <th scope="col">Category</th>
-                          <th scope="col">Type/Cost</th>
-                          <th scope="col">Actions</th>
-                        </tr>
-                      </thead>
-                      <tbody className="t-body">
-                        {Array(7)
-                          .fill(7)
-                          .map((_, i) => (
-                            <ManageProjectCard key={i} />
-                          ))}
-                      </tbody>
-                    </table>
-                    <div className="mt30">
-                      <Pagination1 />
-                    </div>
-                  </div>
-                )}
-                {selectedTab === 2 && (
-                  <div className="packages_table table-responsive">
-                    <table className="table-style3 table at-savesearch">
-                      <thead className="t-head">
-                        <tr>
-                          <th scope="col">Title</th>
-                          <th scope="col">Category</th>
-                          <th scope="col">Type/Cost</th>
-                          <th scope="col">Actions</th>
-                        </tr>
-                      </thead>
-                      <tbody className="t-body">
-                        {Array(7)
-                          .fill(7)
-                          .map((_, i) => (
-                            <ManageProjectCard key={i} />
-                          ))}
-                      </tbody>
-                    </table>
-                    <div className="mt30">
-                      <Pagination1 />
-                    </div>
-                  </div>
-                )}
-                {selectedTab === 3 && (
-                  <div className="packages_table table-responsive">
-                    <table className="table-style3 table at-savesearch">
-                      <thead className="t-head">
-                        <tr>
-                          <th scope="col">Title</th>
-                          <th scope="col">Category</th>
-                          <th scope="col">Type/Cost</th>
-                          <th scope="col">Actions</th>
-                        </tr>
-                      </thead>
-                      <tbody className="t-body">
-                        {Array(7)
-                          .fill(7)
-                          .map((_, i) => (
-                            <ManageProjectCard key={i} />
-                          ))}
-                      </tbody>
-                    </table>
-                    <div className="mt30">
-                      <Pagination1 />
-                    </div>
-                  </div>
-                )}
-                {selectedTab === 4 && (
-                  <div className="packages_table table-responsive">
-                    <table className="table-style3 table at-savesearch">
-                      <thead className="t-head">
-                        <tr>
-                          <th scope="col">Title</th>
-                          <th scope="col">Category</th>
-                          <th scope="col">Type/Cost</th>
-                          <th scope="col">Actions</th>
-                        </tr>
-                      </thead>
-                      <tbody className="t-body">
-                        {Array(7)
-                          .fill(7)
-                          .map((_, i) => (
-                            <ManageProjectCard key={i} />
-                          ))}
-                      </tbody>
-                    </table>
-                    <div className="mt30">
-                      <Pagination1 />
-                    </div>
-                  </div>
-                )}
-                {selectedTab === 5 && (
-                  <div className="packages_table table-responsive">
-                    <table className="table-style3 table at-savesearch">
-                      <thead className="t-head">
-                        <tr>
-                          <th scope="col">Title</th>
-                          <th scope="col">Category</th>
-                          <th scope="col">Type/Cost</th>
-                          <th scope="col">Actions</th>
-                        </tr>
-                      </thead>
-                      <tbody className="t-body">
-                        {Array(7)
-                          .fill(7)
-                          .map((_, i) => (
-                            <ManageProjectCard key={i} />
-                          ))}
-                      </tbody>
-                    </table>
-                    <div className="mt30">
-                      <Pagination1 />
-                    </div>
-                  </div>
-                )}
+
+              {/* Filter */}
+              <div className="mb-3 d-flex justify-content-between align-items-center">
+                <h4 className="mb-0">Project Listings</h4>
+                <select
+                  className="form-select w-auto"
+                  value={filter}
+                  onChange={(e) => setFilter(e.target.value)}
+                >
+                  <option value="All">All</option>
+                  <option value="Open">Open</option>
+                  <option value="Closed">Closed</option>
+                </select>
+              </div>
+
+              {/* Projects Table */}
+              <div className="table-responsive">
+                <table className="table table-style3 at-savesearch">
+                  <thead className="t-head">
+                    <tr>
+                      <th>Project Name</th>
+                      <th>Posted Date</th>
+                      <th>Status</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="t-body">
+                    {filteredProjects.length > 0 ? (
+                      filteredProjects.map((project) => (
+                        <ProjectRow key={project.id} project={project} />
+                      ))
+                    ) : (
+                      <tr>
+                        <td colSpan="4" className="text-center">
+                          No projects found.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Pagination */}
+              <div className="mt-3">
+                <Pagination1 />
               </div>
             </div>
           </div>
         </div>
       </div>
+
+      {/* Modals */}
       <ProposalModal1 />
       <DeleteModal />
     </>

@@ -55,7 +55,24 @@ export default function LoginPage() {
       localStorage.setItem('refresh_token', data.refresh_token);
       localStorage.setItem('user', JSON.stringify(data.user));
 
-      router.push('/dashboard');
+
+      const lowerEmail = email.toLowerCase();
+      // Dummy role check
+      if (lowerEmail === 'freelancer@example.com') {
+        localStorage.setItem('role', 'freelancer');
+        localStorage.setItem('isLoggedIn', 'true');
+        localStorage.setItem('userProfilePic', '/images/freelancer.jpg');  // Example profile picture
+        router.push('/freelancer');
+      } else if (lowerEmail === 'jobprovider@example.com') {
+        localStorage.setItem('role', 'job-provider');
+        localStorage.setItem('isLoggedIn', 'true');
+        localStorage.setItem('userProfilePic', '/images/jobprovider.jpg'); // Example profile picture
+        router.push('/job-provider');
+      } else {
+        alert('Invalid email or password.');
+      }
+
+
     } catch (err) {
       console.error('Login request failed:', err);
       setError('Could not connect to the server. Please try again later.');

@@ -35,25 +35,25 @@ const menus = [
     id: 2,
     name: "Browse",
     children: [
-      {
-        id: 1,
-        name: "Services",
-        path: "/service-4",
+      // {
+      //   id: 1,
+      //   name: "Services",
+      //   path: "/service-4",
 
-       /* children: [
-          { id: 1, name: "Service v1", path: "/service-1" },
-          { id: 2, name: "Service v2", path: "/service-2" },
-          { id: 3, name: "Service v3", path: "/service-3" },
-          { id: 4, name: "Service v4", path: "/service-4" },
-          { id: 5, name: "Service v5", path: "/service-5" },
-          { id: 6, name: "Service v6", path: "/service-6" },
-          { id: 7, name: "Service v7", path: "/service-7" },
-          { id: 8, name: "Service All", path: "/service-all" },
-          { id: 9, name: "Service Single v1", path: "/service-single" },
-          { id: 10, name: "Service Single v2", path: "/service-single-v2" },
-          { id: 11, name: "Service Single v3", path: "/service-single-v3" },
-        ],*/
-      },
+      //  /* children: [
+      //     { id: 1, name: "Service v1", path: "/service-1" },
+      //     { id: 2, name: "Service v2", path: "/service-2" },
+      //     { id: 3, name: "Service v3", path: "/service-3" },
+      //     { id: 4, name: "Service v4", path: "/service-4" },
+      //     { id: 5, name: "Service v5", path: "/service-5" },
+      //     { id: 6, name: "Service v6", path: "/service-6" },
+      //     { id: 7, name: "Service v7", path: "/service-7" },
+      //     { id: 8, name: "Service All", path: "/service-all" },
+      //     { id: 9, name: "Service Single v1", path: "/service-single" },
+      //     { id: 10, name: "Service Single v2", path: "/service-single-v2" },
+      //     { id: 11, name: "Service Single v3", path: "/service-single-v3" },
+      //   ],*/
+      // },
       {
         id: 2,
         name: "Projects",

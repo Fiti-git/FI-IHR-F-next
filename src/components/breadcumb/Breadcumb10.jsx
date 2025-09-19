@@ -52,14 +52,6 @@ export default function Breadcumb10({ path }) {
                   )}
                 </a>
                 <a onClick={() => setSaveToggle(!saveToggle)}>
-                  <div
-                    className={`share-save-widget d-flex align-items-center ml15 ${
-                      saveToggle ? "active" : ""
-                    }`}
-                  >
-                    <span className="icon flaticon-like dark-color fz12 mr10" />
-                    <div className="h6 mb-0">Save</div>
-                  </div>
                 </a>
               </div>
             </div>

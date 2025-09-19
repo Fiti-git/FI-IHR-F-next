@@ -12,7 +12,7 @@ import TrendingService3 from "@/components/section/TrendingService3";
 import React from "react";
 
 export const metadata = {
-    title: "Freeio - Freelance Marketplace React/Next Js Template | Home 18",
+    title: "IHRHUB | Home 18",
 };
 
 export default function page() {

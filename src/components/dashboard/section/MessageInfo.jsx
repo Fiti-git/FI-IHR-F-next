@@ -13,8 +13,8 @@ export default function MessageInfo() {
           </div>
           <div className="col-lg-12">
             <div className="dashboard_title_area">
-              <h2>Dashboard</h2>
-              <p className="text">Lorem ipsum dolor sit amet, consectetur.</p>
+              <h2>Message Center</h2>
+              <p className="text">Stay connected and collaborate effectively in real time.</p>
             </div>
           </div>
         </div>

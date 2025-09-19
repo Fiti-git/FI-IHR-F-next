@@ -1,95 +1,120 @@
 export const dasboardNavigation = [
+  // Common
   {
     id: 1,
     name: "Dashboard",
     icon: "flaticon-home",
-    path: "/dashboard",
+    pathByRole: {
+      "job-provider": "/job-provider",
+      freelancer: "/freelancer",
+    },
+    roles: ["freelancer", "job-provider"],
   },
   {
     id: 2,
-    name: "My Proposals",
-    icon: "flaticon-document",
-    path: "/proposal",
-  },
-  {
-    id: 3,
-    name: "Saved",
-    icon: "flaticon-like",
-    path: "/saved",
-  },
-  {
-    id: 4,
-    name: "Message",
+    name: "Messages",
     icon: "flaticon-chat",
     path: "/message",
+    roles: ["freelancer", "job-provider"],
   },
+  // {
+  //   id: 4,
+  //   name: "Reviews",
+  //   icon: "flaticon-review-1",
+  //   path: "/reviews",
+  //   roles: ["freelancer", "job-provider"],
+  // },
   {
     id: 5,
-    name: "Reviews",
-    icon: "flaticon-review-1",
-    path: "/reviews",
+    name: "Wallet",
+    icon: "flaticon-wallet",
+    path: "/statements",
+    roles: ["freelancer", "job-provider"],
   },
-  {
-    id: 6,
-    name: "Invoice",
-    icon: "flaticon-receipt",
-    path: "/invoice",
-  },
+
+  // Freelancer
+  // {
+  //   id: 6,
+  //   name: "My Proposals",
+  //   icon: "flaticon-document",
+  //   path: "/proposals",
+  //   roles: ["freelancer"],
+  // },
   {
     id: 7,
-    name: "Payouts",
-    icon: "flaticon-dollar",
-    path: "/payouts",
+    name: "Mange Projects",
+    icon: "flaticon-content",
+    path: "/my-projects",
+    roles: ["freelancer"],
   },
   {
     id: 8,
-    name: "Statements",
-    icon: "flaticon-web",
-    path: "/statements",
-  },
-  {
-    id: 9,
-    name: "Manage Services",
+    name: "Manage Jobs",
     icon: "flaticon-presentation",
-    path: "/manage-services",
+    path: "/manage-myjobs",
+    roles: ["freelancer"],
   },
+  // {
+  //   id: 9,
+  //   name: "Add Service",
+  //   icon: "flaticon-document",
+  //   path: "/add-service",
+  //   roles: ["freelancer"],
+  // },
+
+  // Job Provider
   {
     id: 10,
     name: "Manage Jobs",
     icon: "flaticon-briefcase",
     path: "/manage-jobs",
+    roles: ["job-provider"],
   },
   {
     id: 11,
     name: "Manage Project",
-    icon: "flaticon-content",
+    icon: "flaticon-working",
     path: "/manage-projects",
+    roles: ["job-provider"],
   },
-  {
-    id: 12,
-    name: "Add Services",
-    icon: "flaticon-document",
-    path: "/add-services",
-  },
+  // {
+  //   id: 12,
+  //   name: "Services",
+  //   icon: "flaticon-content",
+  //   path: "/request-services",
+  //   roles: ["job-provider"],
+  // },
+
+  // Common (Bottom)
   {
     id: 13,
-    name: "Create Project",
-    icon: "flaticon-content",
-    path: "/create-projects",
-  },
-  {
-    id: 14,
     name: "My Profile",
     icon: "flaticon-photo",
-    path: "/my-profile",
+    pathByRole: {
+      "job-provider": "/jp-profile",
+      freelancer: "/profile",
+    },
+    roles: ["freelancer", "job-provider"],
   },
+
   {
-    id: 15,
+    id: 14,
     name: "Logout",
     icon: "flaticon-logout",
     path: "/login",
+    roles: ["freelancer", "job-provider"],
   },
+    {
+    id: 15,
+    name: "Support",
+    icon: "flaticon-question",
+    path: "/help",
+    roles: ["freelancer", "job-provider"],
+  },
+  
 ];
+
+
 
 export const invoice = [
   {
@@ -244,67 +269,71 @@ export const statement = [
     id: 1,
     date: "April 9, 2023",
     type: 1,
-    detail: "I will design website UI UX in adobe xd or figma",
-    price: 829,
+    freelancer: "Jane Smith",
+    client: "Acme Corp",
     amount: 829,
   },
   {
     id: 2,
-    date: "April 9, 2023",
+    date: "April 10, 2023",
     type: 1,
-    detail: "I will design website UI UX in adobe xd or figma",
-    price: 829,
-    amount: 829,
+    freelancer: "Mike Johnson",
+    client: "Beta LLC",
+    amount: 1200,
   },
   {
     id: 3,
-    date: "April 9, 2023",
+    date: "April 11, 2023",
     type: 2,
-    detail: "I will design website UI UX in adobe xd or figma",
-    price: 829,
-    amount: 829,
+    freelancer: "Anna Lee",
+    client: "Gamma Inc",
+    amount: 300,
   },
   {
     id: 4,
-    date: "April 9, 2023",
-    type: 2,
-    detail: "I will design website UI UX in adobe xd or figma",
-    price: 829,
-    amount: 829,
+    date: "April 12, 2023",
+    type: 1,
+    freelancer: "Chris Martin",
+    client: "Delta Co",
+    amount: 450,
   },
   {
     id: 5,
-    date: "April 9, 2023",
+    date: "April 13, 2023",
     type: 2,
-    detail: "I will design website UI UX in adobe xd or figma",
-    price: 829,
-    amount: 829,
+    freelancer: "Sara Parker",
+    client: "Epsilon Ltd",
+    amount: 600,
   },
   {
     id: 6,
-    date: "April 9, 2023",
+    date: "April 14, 2023",
     type: 1,
-    detail: "I will design website UI UX in adobe xd or figma",
-    price: 829,
-    amount: 829,
+    freelancer: "David Green",
+    client: "Zeta Solutions",
+    amount: 950,
   },
   {
     id: 7,
-    date: "April 9, 2023",
-    type: 2,
-    detail: "I will design website UI UX in adobe xd or figma",
-    price: 829,
-    amount: 829,
+    date: "April 15, 2023",
+    type: 1,
+    freelancer: "Emily Brown",
+    client: "Eta Enterprises",
+    amount: 400,
   },
   {
     id: 8,
-    date: "April 9, 2023",
+    date: "April 16, 2023",
     type: 2,
-    detail: "I will design website UI UX in adobe xd or figma",
-    price: 829,
-    amount: 829,
+    freelancer: "Tom Wilson",
+    client: "Theta Partners",
+    amount: 700,
   },
 ];
+
+
+
+
 
 export const manageService = [
   {

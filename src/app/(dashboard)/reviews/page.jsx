@@ -4,7 +4,7 @@ import ReviewsInfo from "@/components/dashboard/section/ReviewsInfo";
 import MobileNavigation2 from "@/components/header/MobileNavigation2";
 
 export const metadata = {
-  title: "Freeio - Freelance Marketplace React/Next Js Template | Review",
+  title: "IHRHUB | Review",
 };
 
 export default function page() {

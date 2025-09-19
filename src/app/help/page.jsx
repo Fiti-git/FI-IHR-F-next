@@ -1,17 +1,21 @@
-import Footer from "@/components/footer/Footer";
-import Header20 from "@/components/header/Header20";
-import OurFaqSection1 from "@/components/section/OurFaqSection1";
+import DashboardLayout from "@/components/dashboard/DashboardLayout";
+import Help from "@/components/dashboard/section/help";
+
+import MobileNavigation2 from "@/components/header/MobileNavigation2";
 
 export const metadata = {
-    title: "Freeio - Freelance Marketplace React/Next Js Template | Help",
+  title:
+    "IHRHUB | Support",
 };
 
 export default function page() {
-    return (
-        <>
-            <Header20 />
-            <OurFaqSection1 />
-            <Footer />
-        </>
-    );
+  return (
+    <>
+    
+    <MobileNavigation2 />
+      <DashboardLayout>
+        <Help />
+      </DashboardLayout>
+    </>
+  );
 }

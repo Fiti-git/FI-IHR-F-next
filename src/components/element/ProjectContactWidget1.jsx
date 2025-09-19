@@ -5,7 +5,7 @@ export default function ProjectContactWidget1() {
   return (
     <>
       <div className="freelancer-style1 service-single mb-0 bdrs8">
-        <h4>About Buyer</h4>
+        <h4>About Client</h4>
         <div className="wrapper d-flex align-items-center mt20">
           <div className="thumb position-relative mb25">
             <Image
@@ -49,7 +49,7 @@ export default function ProjectContactWidget1() {
         </div>
         <div className="d-grid mt30">
           <Link href="/contact" className="ud-btn btn-thm-border">
-            Contact Buyer
+            Contact
             <i className="fal fa-arrow-right-long" />
           </Link>
         </div>

@@ -12,52 +12,7 @@ export default function FreelancerDetail1() {
         <div className="container">
           <div className="row wow fadeInUp">
             <div className="col-lg-8">
-              <div className="row">
-                <div className="col-sm-6 col-xl-3">
-                  <div className="iconbox-style1 contact-style d-flex align-items-start mb30">
-                    <div className="icon flex-shrink-0">
-                      <span className="flaticon-target" />
-                    </div>
-                    <div className="details">
-                      <h5 className="title">Job Success</h5>
-                      <p className="mb-0 text">98%</p>
-                    </div>
-                  </div>
-                </div>
-                <div className="col-sm-6 col-xl-3">
-                  <div className="iconbox-style1 contact-style d-flex align-items-start mb30">
-                    <div className="icon flex-shrink-0">
-                      <span className="flaticon-goal" />
-                    </div>
-                    <div className="details">
-                      <h5 className="title">Total Jobs</h5>
-                      <p className="mb-0 text">921</p>
-                    </div>
-                  </div>
-                </div>
-                <div className="col-sm-6 col-xl-3">
-                  <div className="iconbox-style1 contact-style d-flex align-items-start mb30">
-                    <div className="icon flex-shrink-0">
-                      <span className="flaticon-fifteen" />
-                    </div>
-                    <div className="details">
-                      <h5 className="title">Total Hours</h5>
-                      <p className="mb-0 text">1,499</p>
-                    </div>
-                  </div>
-                </div>
-                <div className="col-sm-6 col-xl-3">
-                  <div className="iconbox-style1 contact-style d-flex align-items-start mb30">
-                    <div className="icon flex-shrink-0">
-                      <span className="flaticon-file-1" />
-                    </div>
-                    <div className="details">
-                      <h5 className="title">In Queue Service</h5>
-                      <p className="mb-0 text">20</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
+
               <div className="service-about">
                 <h4>Description</h4>
                 <p className="text mb30">
@@ -124,34 +79,6 @@ export default function FreelancerDetail1() {
                       Lorem ipsum dolor sit amet, consectetur adipiscing elit.
                       Proin a ipsum tellus. Interdum et malesuada fames ac ante
                       ipsum primis in faucibus.
-                    </p>
-                  </div>
-                </div>
-                <hr className="opacity-100 mb60" />
-                <h4 className="mb30">Awards adn Certificates</h4>
-                <div className="educational-quality ps-0">
-                  <div className="wrapper mb40">
-                    <span className="tag">2012 - 2014</span>
-                    <h5 className="mt15">UI UX Design</h5>
-                    <h6 className="text-thm">Udemy</h6>
-                    <p>
-                      Lorem ipsum dolor sit amet, consectetur adipiscing elit.
-                      Proin a ipsum tellus. Interdum et malesuada fames ac ante
-                      ipsum
-                      <br className="d-none d-lg-block" />
-                      primis in faucibus.
-                    </p>
-                  </div>
-                  <div className="wrapper mb60">
-                    <span className="tag">2008 - 2012</span>
-                    <h5 className="mt15">App Design</h5>
-                    <h6 className="text-thm">Google</h6>
-                    <p>
-                      Lorem ipsum dolor sit amet, consectetur adipiscing elit.
-                      Proin a ipsum tellus. Interdum et malesuada fames ac ante
-                      ipsum
-                      <br className="d-none d-lg-block" />
-                      primis in faucibus.
                     </p>
                   </div>
                 </div>

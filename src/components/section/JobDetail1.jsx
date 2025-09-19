@@ -1,60 +1,23 @@
+"use client";  // Add this at the top to mark the component as a client-side component
+
 import { job1 } from "@/data/job";
 import Link from "next/link";
 import JobCard5 from "../card/JobCard5";
+import { useState } from "react";
 
 export default function JobDetail1() {
+  const [applied, setApplied] = useState(false);
+
+  const handleApply = () => {
+    setApplied(true);
+  };
+
   return (
     <>
       <section className="pt10 pb90 pb30-md">
         <div className="container">
           <div className="row wow fadeInUp">
             <div className="col-lg-8 mx-auto">
-              <div className="row">
-                <div className="col-sm-6 col-xl-3">
-                  <div className="iconbox-style1 contact-style d-flex align-items-start mb30">
-                    <div className="icon flex-shrink-0">
-                      <span className="flaticon-calendar" />
-                    </div>
-                    <div className="details">
-                      <h5 className="title">Date Posted</h5>
-                      <p className="mb-0 text">Posted 1 days ago</p>
-                    </div>
-                  </div>
-                </div>
-                <div className="col-sm-6 col-xl-3">
-                  <div className="iconbox-style1 contact-style d-flex align-items-start mb30">
-                    <div className="icon flex-shrink-0">
-                      <span className="flaticon-place" />
-                    </div>
-                    <div className="details">
-                      <h5 className="title">Location</h5>
-                      <p className="mb-0 text">London</p>
-                    </div>
-                  </div>
-                </div>
-                <div className="col-sm-6 col-xl-3">
-                  <div className="iconbox-style1 contact-style d-flex align-items-start mb30">
-                    <div className="icon flex-shrink-0">
-                      <span className="flaticon-fifteen" />
-                    </div>
-                    <div className="details">
-                      <h5 className="title">Hours</h5>
-                      <p className="mb-0 text">50h / week</p>
-                    </div>
-                  </div>
-                </div>
-                <div className="col-sm-6 col-xl-3">
-                  <div className="iconbox-style1 contact-style d-flex align-items-start mb30">
-                    <div className="icon flex-shrink-0">
-                      <span className="flaticon-pay-day" />
-                    </div>
-                    <div className="details">
-                      <h5 className="title">Salary</h5>
-                      <p className="mb-0 text">$35 - $45K</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
               <div className="service-about">
                 <h4 className="mb-4">Description</h4>
                 <p className="text mb30">
@@ -62,7 +25,7 @@ export default function JobDetail1() {
                   by the readable content of a page when looking at its layout.
                   The point of using Lorem Ipsum is that it has a more-or-less
                   normal distribution of letters, as opposed to using 'Content
-                  here, content here', making it look like readable English.{" "}
+                  here, content here', making it look like readable English.
                 </p>
                 <p className="text mb60">
                   Many desktop publishing packages and web page editors now use
@@ -72,6 +35,7 @@ export default function JobDetail1() {
                   sometimes by accident, sometimes on purpose (injected humour
                   and the like).
                 </p>
+
                 <h4 className="mb30">Key Responsibilities</h4>
                 <div className="list-style1 mb60 pr50 pr0-lg">
                   <ul>
@@ -99,24 +63,22 @@ export default function JobDetail1() {
                     </li>
                     <li>
                       <i className="far fa-check text-thm3 bgc-thm3-light" />
-                      Contribute to sketching sessions involving
-                      non-designersCreate, iterate and maintain UI deliverables
-                      including sketch files, style guides, high fidelity
-                      prototypes, micro interaction specifications and pattern
-                      libraries.
+                      Contribute to sketching sessions involving non-designers
+                      Create, iterate and maintain UI deliverables including
+                      sketch files, style guides, high fidelity prototypes, micro
+                      interaction specifications and pattern libraries.
                     </li>
                     <li>
                       <i className="far fa-check text-thm3 bgc-thm3-light" />
                       Ensure design choices are data led by identifying
-                      assumptions to test each sprint, and work with the
-                      analysts in your team to plan moderated usability test
-                      sessions.
+                      assumptions to test each sprint, and work with the analysts
+                      in your team to plan moderated usability test sessions.
                     </li>
                     <li>
                       <i className="far fa-check text-thm3 bgc-thm3-light" />
                       Design pixel perfect responsive UI’s and understand that
                       adopting common interface patterns is better for UX than
-                      reinventing the wheel
+                      reinventing the wheel.
                     </li>
                     <li>
                       <i className="far fa-check text-thm3 bgc-thm3-light" />
@@ -125,6 +87,7 @@ export default function JobDetail1() {
                     </li>
                   </ul>
                 </div>
+
                 <h4 className="mb30">Work &amp; Experience</h4>
                 <ul className="list-style-type-bullet ps-3 mb60">
                   <li>
@@ -132,29 +95,45 @@ export default function JobDetail1() {
                     Designer.
                   </li>
                   <li>
-                    You have experience using Sketch and InVision or Framer X
+                    You have experience using Sketch and InVision or Framer X.
                   </li>
                   <li>
                     You have some previous experience working in an agile
                     environment – Think two-week sprints.
                   </li>
                   <li>
-                    You are familiar using Jira and Confluence in your workflow
+                    You are familiar using Jira and Confluence in your workflow.
                   </li>
                 </ul>
+
                 <div className="d-grid mb60">
-                  <Link href="/contact" className="ud-btn btn-thm2">
-                    Apply For Job
-                    <i className="fal fa-arrow-right-long" />
-                  </Link>
+                  {!applied ? (
+                    <Link
+                      href="/contact"
+                      className="ud-btn btn-thm2"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        handleApply();
+                      }}
+                    >
+                      Apply For Job
+                      <i className="fal fa-arrow-right-long" />
+                    </Link>
+                  ) : (
+                    <div className="success-message">
+                      Successfully Applied!
+                    </div>
+                  )}
                 </div>
+
                 <div className="main-title mb30">
                   <h2>Related Jobs</h2>
                   <p className="text">2022 jobs live - 293 added today</p>
                 </div>
+
                 <div className="row">
-                  {job1.slice(0, 3).map((item,i) => (
-                    <div key={ i } className="col-sm-6 col-xl-12">
+                  {job1.slice(0, 3).map((item, i) => (
+                    <div key={i} className="col-sm-6 col-xl-12">
                       <JobCard5 data={item} />
                     </div>
                   ))}

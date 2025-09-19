@@ -6,7 +6,7 @@ import Header20 from "@/components/header/Header20";
 import BlogArea2 from "@/components/section/BlogArea2";
 
 export const metadata = {
-    title: "Freeio - Freelance Marketplace React/Next Js Template | Blog 2",
+    title: "IHRHUB | Blog 2",
 };
 
 export default function page() {

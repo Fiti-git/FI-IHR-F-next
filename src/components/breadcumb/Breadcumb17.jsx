@@ -64,14 +64,6 @@ export default function Breadcumb17() {
                         <h5 className="title mb-1">Leslie Alexander</h5>
                       )}
                       <p className="mb-0">UI/UX Designer</p>
-                      <p className="mb-0 dark-color fz15 fw500 list-inline-item mb5-sm">
-                        <i className="fas fa-star vam fz10 review-color me-2" />{" "}
-                        4.82 94 reviews
-                      </p>
-                      <p className="mb-0 dark-color fz15 fw500 list-inline-item ml15 mb5-sm ml0-xs">
-                        <i className="flaticon-place vam fz20 me-2" /> London,
-                        UK
-                      </p>
                       <p className="mb-0 dark-color fz15 fw500 list-inline-item ml15 mb5-sm ml0-xs">
                         <i className="flaticon-30-days vam fz20 me-2" /> Member
                         since April 1, 2022

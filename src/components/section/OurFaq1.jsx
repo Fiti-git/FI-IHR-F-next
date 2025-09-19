@@ -18,7 +18,7 @@ export default function OurFaq1() {
               <div className="main-title text-center">
                 <h2 className="title">Frequently Asked Questions</h2>
                 <p className="paragraph mt10">
-                  Lorem ipsum dolor sit amet, consectetur.
+                  Answers to common questions about using our freelance and job platform.
                 </p>
               </div>
             </div>
@@ -28,6 +28,7 @@ export default function OurFaq1() {
               <div className="ui-content">
                 <div className="accordion-style1 faq-page mb-4 mb-lg-5">
                   <div className="accordion" id="accordionExample">
+                    {/* 1 */}
                     <div className="accordion-item active">
                       <h2 className="accordion-header" id="headingOne">
                         <button
@@ -38,7 +39,7 @@ export default function OurFaq1() {
                           aria-expanded="true"
                           aria-controls="collapseOne"
                         >
-                          What methods of payments are supported?
+                          How can freelancers apply for jobs on the platform?
                         </button>
                       </h2>
                       <div
@@ -48,13 +49,12 @@ export default function OurFaq1() {
                         data-parent="#accordionExample"
                       >
                         <div className="accordion-body">
-                          Cras vitae ac nunc orci. Purus amet tortor non at
-                          phasellus ultricies hendrerit. Eget a, sit morbi nunc
-                          sit id massa. Metus, scelerisque volutpat nec sit vel
-                          donec. Sagittis, id volutpat erat vel.
+                          Freelancers can browse available jobs and projects, then submit their proposals or bids directly through the platform. Make sure your profile is complete to increase your chances of getting hired.
                         </div>
                       </div>
                     </div>
+
+                    {/* 2 */}
                     <div className="accordion-item">
                       <h2 className="accordion-header" id="headingTwo">
                         <button
@@ -65,7 +65,7 @@ export default function OurFaq1() {
                           aria-expanded="false"
                           aria-controls="collapseTwo"
                         >
-                          Can I cancel at anytime?
+                          How do job providers post jobs or projects?
                         </button>
                       </h2>
                       <div
@@ -75,13 +75,12 @@ export default function OurFaq1() {
                         data-parent="#accordionExample"
                       >
                         <div className="accordion-body">
-                          Cras vitae ac nunc orci. Purus amet tortor non at
-                          phasellus ultricies hendrerit. Eget a, sit morbi nunc
-                          sit id massa. Metus, scelerisque volutpat nec sit vel
-                          donec. Sagittis, id volutpat erat vel.
+                          Job providers can create job or project listings by filling out the required details and posting them on the platform. Once posted, freelancers can view and bid on these jobs.
                         </div>
                       </div>
                     </div>
+
+                    {/* 3 */}
                     <div className="accordion-item">
                       <h2 className="accordion-header" id="headingThree">
                         <button
@@ -92,7 +91,7 @@ export default function OurFaq1() {
                           aria-expanded="false"
                           aria-controls="collapseThree"
                         >
-                          How do I get a receipt for my purchase?
+                          Can freelancers offer services directly without bidding?
                         </button>
                       </h2>
                       <div
@@ -102,13 +101,12 @@ export default function OurFaq1() {
                         data-parent="#accordionExample"
                       >
                         <div className="accordion-body">
-                          Cras vitae ac nunc orci. Purus amet tortor non at
-                          phasellus ultricies hendrerit. Eget a, sit morbi nunc
-                          sit id massa. Metus, scelerisque volutpat nec sit vel
-                          donec. Sagittis, id volutpat erat vel.
+                          Yes, freelancers can create service listings showcasing their skills. Job providers can then browse and purchase these services directly without the need for bidding.
                         </div>
                       </div>
                     </div>
+
+                    {/* 4 */}
                     <div className="accordion-item">
                       <h2 className="accordion-header" id="headingFour">
                         <button
@@ -119,7 +117,7 @@ export default function OurFaq1() {
                           aria-expanded="false"
                           aria-controls="collapseFour"
                         >
-                          Which license do I need?
+                          How do payments work on the platform?
                         </button>
                       </h2>
                       <div
@@ -129,13 +127,12 @@ export default function OurFaq1() {
                         data-parent="#accordionExample"
                       >
                         <div className="accordion-body">
-                          Cras vitae ac nunc orci. Purus amet tortor non at
-                          phasellus ultricies hendrerit. Eget a, sit morbi nunc
-                          sit id massa. Metus, scelerisque volutpat nec sit vel
-                          donec. Sagittis, id volutpat erat vel.
+                          Payments are securely handled through the platform. Job providers pay for services or projects upfront, and funds are released to freelancers upon successful completion and approval.
                         </div>
                       </div>
                     </div>
+
+                    {/* 5 */}
                     <div className="accordion-item">
                       <h2 className="accordion-header" id="headingFive">
                         <button
@@ -146,7 +143,7 @@ export default function OurFaq1() {
                           aria-expanded="false"
                           aria-controls="collapseFive"
                         >
-                          How do I get access to a theme I purchased?
+                          How can I get support if I encounter issues?
                         </button>
                       </h2>
                       <div
@@ -156,10 +153,7 @@ export default function OurFaq1() {
                         data-parent="#accordionExample"
                       >
                         <div className="accordion-body">
-                          Cras vitae ac nunc orci. Purus amet tortor non at
-                          phasellus ultricies hendrerit. Eget a, sit morbi nunc
-                          sit id massa. Metus, scelerisque volutpat nec sit vel
-                          donec. Sagittis, id volutpat erat vel.
+                          Our support team is available 24/7. You can reach out through the Contact page or use the help center within your dashboard for assistance.
                         </div>
                       </div>
                     </div>
