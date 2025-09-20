@@ -1,197 +1,275 @@
 "use client";
-import { useState } from "react";
+
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import Footer from "@/components/footer/Footer";
 import Header20 from "@/components/header/Header20";
 import Link from "next/link";
 
 export default function RegisterPage() {
-  const [formData, setFormData] = useState({
-    fullName: "",
-    email: "",
-    password: "",
-    confirmPassword: "",
-    role: "",
-    phone: "",
-    country: "",
-    agree: false,
-  });
+  const router = useRouter();
 
-  const handleChange = (e) => {
-    const { name, value, type, checked } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: type === "checkbox" ? checked : value,
-    }));
+  const [loading, setLoading] = useState(false);
+  const [user, setUser] = useState(null);
+  const [message, setMessage] = useState(null);
+
+  // Google OAuth Client ID
+  const GOOGLE_CLIENT_ID =
+    "858134682989-mav50sd3csolb7u8tbc1susrhm5uvk49.apps.googleusercontent.com";
+
+  // LinkedIn OAuth config
+  const LINKEDIN_CLIENT_ID = "78hekwwmkag96p"; // replace with your LinkedIn client ID
+  const LINKEDIN_REDIRECT_URI = "http://localhost:3000/linkedin/callback";
+
+  // Generate LinkedIn login URL
+  const getLinkedInLoginURL = () => {
+    const baseURL = "https://www.linkedin.com/oauth/v2/authorization";
+    const params = new URLSearchParams({
+      response_type: "code",
+      client_id: LINKEDIN_CLIENT_ID,
+      redirect_uri: LINKEDIN_REDIRECT_URI,
+      scope: "openid profile email",
+      state: "linkedin_oauth_state_123", // replace with random string in prod
+    });
+    return `${baseURL}?${params.toString()}`;
   };
 
-  const handleSubmit = () => {
-    // Submit logic
-    console.log(formData);
+  // Handle Google login response
+  const handleGoogleResponse = async (response) => {
+    const { credential } = response;
+    if (!credential) {
+      setMessage("Google sign-in failed");
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const res = await fetch("http://localhost:8000/myapi/google-login/", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token: credential }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setMessage(data.error || "Google login failed");
+      } else {
+        setMessage("Google login successful!");
+        setUser(data.user);
+        if (data.tokens?.access)
+          localStorage.setItem("accessToken", data.tokens.access);
+        if (data.tokens?.refresh)
+          localStorage.setItem("refreshToken", data.tokens.refresh);
+        localStorage.setItem("user", JSON.stringify(data.user));
+
+        router.push("/dashboard");
+      }
+    } catch (error) {
+      console.error("Google login error:", error);
+      setMessage("Google login error");
+    } finally {
+      setLoading(false);
+    }
   };
 
-  return (
-    <div className="bgc-thm4">
-      <Header20 />
+  // Load Google script on mount
+  useEffect(() => {
+    const script = document.createElement("script");
+    script.src = "https://accounts.google.com/gsi/client";
+    script.async = true;
+    script.defer = true;
+    document.body.appendChild(script);
 
-      <section className="our-register">
-        <div className="container">
-          <div className="row">
-            <div className="col-lg-6 m-auto text-center">
-              <div className="main-title">
-                <h2 className="title">Register</h2>
-                <p className="paragraph">
-                  Give your visitor a smooth online experience with a solid UX design
-                </p>
-              </div>
-            </div>
-          </div>
+    script.onload = () => {
+      if (window.google) {
+        window.google.accounts.id.initialize({
+          client_id: GOOGLE_CLIENT_ID,
+          callback: handleGoogleResponse,
+          auto_select: false,
+          cancel_on_tap_outside: false,
+        });
 
-          <div className="row">
-            <div className="col-xl-8 mx-auto">
-              <div className="log-reg-form form-style1 bgc-white p50 p30-sm default-box-shadow1 bdrs12">
-                <h4>Create Your Account</h4>
-                <p className="text mt20">
-                  Already have an account?{" "}
-                  <Link href="/login" className="text-thm">Log In!</Link>
-                </p>
+        window.google.accounts.id.renderButton(
+          document.getElementById("google-signin-btn"),
+          {
+            theme: "outline",
+            size: "large",
+            width: "100%",
+          }
+        );
+      }
+    };
 
-                {/* FORM GRID */}
-                <div className="row">
+    return () => {
+      document.body.removeChild(script);
+    };
+  }, []);
 
-                  {/* Full Name */}
-                  <div className="mb25 col-md-6">
-                    <label className="form-label fw500 dark-color">Full Name</label>
-                    <input
-                      type="text"
-                      name="fullName"
-                      className="form-control"
-                      placeholder="John Doe"
-                      value={formData.fullName}
-                      onChange={handleChange}
-                    />
-                  </div>
+  const handleLogout = () => {
+    setUser(null);
+    setMessage("Logged out");
+    localStorage.removeItem("accessToken");
+    localStorage.removeItem("refreshToken");
+    localStorage.removeItem("user");
+    router.push("/");
+  };
 
-                  {/* Email */}
-                  <div className="mb25 col-md-6">
-                    <label className="form-label fw500 dark-color">Email</label>
-                    <input
-                      type="email"
-                      name="email"
-                      className="form-control"
-                      placeholder="you@example.com"
-                      value={formData.email}
-                      onChange={handleChange}
-                    />
-                  </div>
-
-                  {/* Password */}
-                  <div className="mb25 col-md-6">
-                    <label className="form-label fw500 dark-color">Password</label>
-                    <input
-                      type="password"
-                      name="password"
-                      className="form-control"
-                      placeholder="********"
-                      value={formData.password}
-                      onChange={handleChange}
-                    />
-                  </div>
-
-                  {/* Confirm Password */}
-                  <div className="mb25 col-md-6">
-                    <label className="form-label fw500 dark-color">Confirm Password</label>
-                    <input
-                      type="password"
-                      name="confirmPassword"
-                      className="form-control"
-                      placeholder="********"
-                      value={formData.confirmPassword}
-                      onChange={handleChange}
-                    />
-                  </div>
-
-
-                  {/* Country */}
-                  <div className="mb25 col-md-6">
-                    <label className="form-label fw500 dark-color">Country / Location</label>
-                    <input
-                      type="text"
-                      name="country"
-                      className="form-control"
-                      placeholder="United States"
-                      value={formData.country}
-                      onChange={handleChange}
-                    />
-                  </div>
-
-                  {/* Phone (optional) */}
-                  <div className="mb25 col-md-6">
-                    <label className="form-label fw500 dark-color">Phone Number (optional)</label>
-                    <input
-                      type="tel"
-                      name="phone"
-                      className="form-control"
-                      placeholder="+1234567890"
-                      value={formData.phone}
-                      onChange={handleChange}
-                    />
-                  </div>
-
-{/* Role */}
-<div className="mb25 col-12">
-  <label className="form-label fw500 dark-color">Select Role</label>
-  <select
-    name="role"
-    className="form-control"
-    value={formData.role}
-    onChange={handleChange}
-  >
-    <option value="">-- Choose Role --</option>
-    <option value="freelancer">Freelancer</option>
-    <option value="jobProvider">Job Provider</option>
-  </select>
-</div>
-
-
-                  {/* Terms & Conditions */}
-                  <div className="mb25 col-12">
-                    <div className="form-check">
-                      <input
-                        className="form-check-input"
-                        type="checkbox"
-                        id="agree"
-                        name="agree"
-                        checked={formData.agree}
-                        onChange={handleChange}
-                      />
-                      <label className="form-check-label ms-2" htmlFor="agree">
-                        I agree to the{" "}
-                        <Link href="/terms" className="text-thm">Terms & Conditions</Link>
-                      </label>
-                    </div>
-                  </div>
-
-                </div>
-
-                {/* Submit */}
-                <div className="d-grid mb20">
-                  <button
-                    className="ud-btn btn-thm default-box-shadow2"
-                    type="button"
-                    onClick={handleSubmit}
-                    disabled={!formData.agree}
-                  >
-                    Create Account <i className="fal fa-arrow-right-long" />
-                  </button>
-                </div>
-
-              </div>
+return (
+  <div className="bgc-thm4">
+    <Header20 />
+    <section className="our-register">
+      <div className="container">
+        <div className="row">
+          <div className="col-lg-6 m-auto text-center">
+            <div className="main-title">
+              <h2 className="title">Register</h2>
+              <p className="paragraph">
+                Don’t miss out — create your free account today and start exploring what’s possible.
+              </p>
             </div>
           </div>
         </div>
-      </section>
 
-      <Footer />
-    </div>
-  );
+        <div className="row">
+          <div className="col-xl-8 mx-auto">
+            <div className="log-reg-form form-style1 bgc-white p50 p30-sm default-box-shadow1 bdrs12">
+              <h4>Create Your Account</h4>
+              <p className="text mt20">
+                Already have an account?{" "}
+                <Link href="/login" className="text-thm">
+                  Log In!
+                </Link>
+              </p>
+
+              {/* Email/Password Form */}
+              <div className="row">
+                <div className="mb25 col-md-6">
+                  <label className="form-label fw500 dark-color">Email</label>
+                  <input
+                    type="email"
+                    className="form-control"
+                    placeholder="you@example.com"
+                    disabled={loading}
+                  />
+                </div>
+                <div className="mb25 col-md-6">
+                  <label className="form-label fw500 dark-color">Password</label>
+                  <input
+                    type="password"
+                    className="form-control"
+                    placeholder="********"
+                    disabled={loading}
+                  />
+                </div>
+              </div>
+
+              <div style={{ textAlign: "center", margin: "16px 0" }}>
+                — or sign up with —
+              </div>
+
+              {/* Google Button */}
+              <div
+                onClick={() => handleOAuthLogin("google")}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  border: "1px solid #ddd",
+                  borderRadius: "4px",
+                  height: "48px",
+                  cursor: "pointer",
+                  backgroundColor: "#fff",
+                  width: "100%",
+                  fontWeight: 500,
+                  fontSize: "16px",
+                  marginBottom: "15px",
+                  transition: "all 0.2s ease",
+                }}
+                onMouseEnter={(e) =>
+                  (e.currentTarget.style.boxShadow = "0 2px 6px rgba(0,0,0,0.2)")
+                }
+                onMouseLeave={(e) =>
+                  (e.currentTarget.style.boxShadow = "none")
+                }
+              >
+                <img
+                  src="https://www.svgrepo.com/show/303108/google-icon-logo.svg"
+                  alt="Google"
+                  style={{ width: 20, height: 20, marginRight: 10 }}
+                />
+                Sign up with Google
+              </div>
+
+              {/* LinkedIn Button */}
+              <div
+                onClick={() => (window.location.href = getLinkedInLoginURL())}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  border: "1px solid #ddd",
+                  borderRadius: "4px",
+                  height: "48px",
+                  cursor: "pointer",
+                  backgroundColor: "#fff",
+                  width: "100%",
+                  fontWeight: 500,
+                  fontSize: "16px",
+                  marginBottom: "20px",
+                  transition: "all 0.2s ease",
+                }}
+                onMouseEnter={(e) =>
+                  (e.currentTarget.style.boxShadow = "0 2px 6px rgba(0,0,0,0.2)")
+                }
+                onMouseLeave={(e) =>
+                  (e.currentTarget.style.boxShadow = "none")
+                }
+              >
+                <img
+                  src="https://cdn-icons-png.flaticon.com/512/174/174857.png"
+                  alt="LinkedIn"
+                  style={{ width: 20, height: 20, marginRight: 10 }}
+                />
+                Sign up with LinkedIn
+              </div>
+
+              {/* Submit Button */}
+              <div className="d-grid mb20">
+                <button
+                  className="ud-btn btn-thm default-box-shadow2"
+                  type="button"
+                  disabled={loading}
+                >
+                  {loading ? "Processing..." : "Create Account"}{" "}
+                  <i className="fal fa-arrow-right-long" />
+                </button>
+              </div>
+
+              {message && (
+                <div className="alert alert-info mt-3" role="alert">
+                  {message}
+                </div>
+              )}
+
+              {user && (
+                <div style={{ marginTop: 20 }}>
+                  <p>
+                    Logged in as <strong>{user.full_name || user.email}</strong>
+                  </p>
+                  <button className="btn btn-danger" onClick={handleLogout}>
+                    Logout
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+    <Footer />
+  </div>
+);
+
+
 }

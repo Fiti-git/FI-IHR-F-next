@@ -111,6 +111,22 @@ export const dasboardNavigation = [
     path: "/help",
     roles: ["freelancer", "job-provider"],
   },
+  {
+  id: 99,
+  name: "Explore",
+  icon: "flaticon-search",
+  path: "/explore",
+  roles: [], // <-- Show to everyone, including users with no role
+},
+{
+  id: 100,
+  name: "Login",
+  icon: "flaticon-user",
+  path: "/login",
+  roles: ["undefined"], // Visible even without a role
+}
+
+
   
 ];
 
