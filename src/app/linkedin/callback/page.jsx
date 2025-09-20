@@ -17,11 +17,16 @@ export default function LinkedInCallback() {
     }
 
     if (code) {
-      fetch(
-        `http://localhost:8000/myapi/linkedin-oauth-callback/?code=${code}`
-      )
-        .then((res) => res.json())
-        .then((data) => {
+      fetch(`http://localhost:8000/myapi/linkedin-oauth-callback/?code=${code}`)
+        .then(async (res) => {
+          const data = await res.json();
+
+          if (!res.ok) {
+            // Backend returned an error response
+            setMessage(`LinkedIn login failed: ${data.error || "Unknown error"}`);
+            return;
+          }
+
           if (data.tokens?.access) {
             localStorage.setItem("accessToken", data.tokens.access);
           }

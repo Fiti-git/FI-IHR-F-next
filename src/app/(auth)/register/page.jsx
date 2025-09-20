@@ -169,37 +169,9 @@ return (
               </div>
 
               {/* Google Button */}
-              <div
-                onClick={() => handleOAuthLogin("google")}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  border: "1px solid #ddd",
-                  borderRadius: "4px",
-                  height: "48px",
-                  cursor: "pointer",
-                  backgroundColor: "#fff",
-                  width: "100%",
-                  fontWeight: 500,
-                  fontSize: "16px",
-                  marginBottom: "15px",
-                  transition: "all 0.2s ease",
-                }}
-                onMouseEnter={(e) =>
-                  (e.currentTarget.style.boxShadow = "0 2px 6px rgba(0,0,0,0.2)")
-                }
-                onMouseLeave={(e) =>
-                  (e.currentTarget.style.boxShadow = "none")
-                }
-              >
-                <img
-                  src="https://www.svgrepo.com/show/303108/google-icon-logo.svg"
-                  alt="Google"
-                  style={{ width: 20, height: 20, marginRight: 10 }}
-                />
-                Sign up with Google
-              </div>
+              {/* Google Sign-In Button rendered by Google SDK */}
+<div id="google-signin-btn" style={{ width: "100%", marginBottom: "15px" }} />
+
 
               {/* LinkedIn Button */}
               <div
