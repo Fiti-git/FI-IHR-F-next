@@ -29,6 +29,7 @@ export default function LoginPage() {
     }
   };
 
+  // Load Google script on mount
   useEffect(() => {
     // Check if the user was just redirected from a successful verification
     if (searchParams.get('verified') === 'true') {
