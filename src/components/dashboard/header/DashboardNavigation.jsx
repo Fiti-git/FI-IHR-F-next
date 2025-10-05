@@ -13,7 +13,7 @@ export default function DashboardNavigation() {
   // Get role from localStorage on mount
   useEffect(() => {
     const storedRole = localStorage.getItem("role");
-    setRole(storedRole);
+    setRole(storedRole, "freelancer");
   }, []);
 
   if (!role) return null; // or loading spinner

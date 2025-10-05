@@ -15,7 +15,7 @@ export default function DashboardHeader() {
 
   useEffect(() => {
     const storedRole = localStorage.getItem("role");
-    setRole(storedRole);
+    setRole(storedRole, "freelancer");
   }, []);
 
   if (!role) return null; // or a spinner
@@ -103,9 +103,8 @@ export default function DashboardHeader() {
                               return (
                                 <Link
                                   key={i}
-                                  className={`dropdown-item ${
-                                    path === href ? "active" : ""
-                                  }`}
+                                  className={`dropdown-item ${path === href ? "active" : ""
+                                    }`}
                                   href={href}
                                 >
                                   <i className={`${item.icon} mr10`} />

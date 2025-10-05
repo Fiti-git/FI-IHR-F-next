@@ -5,100 +5,110 @@ import { useRouter } from "next/navigation";
 import Footer from "@/components/footer/Footer";
 import Header20 from "@/components/header/Header20";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 
-export default function RegisterPage() {
+export default function LoginPage() {
   const router = useRouter();
 
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  const [user, setUser] = useState(null); // Store Google user info
-  const [message, setMessage] = useState(null);
+  const [message, setMessage] = useState("");
+  const searchParams = useSearchParams();
 
-  // Google Client ID for OAuth
   const GOOGLE_CLIENT_ID = "858134682989-mav50sd3csolb7u8tbc1susrhm5uvk49.apps.googleusercontent.com";
 
-  // Handle Google login response
-  const handleGoogleResponse = async (response) => {
-    const { credential } = response;
-
-    if (!credential) {
-      setMessage("Google sign-in failed");
-      return;
-    }
-
-    try {
-      // Send the credential token (id_token) to your backend for verification
-      const res = await fetch("http://localhost:8000/myapi/google-login/", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ token: credential }),
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        setMessage(data.error || "Google login failed");
-      } else {
-        setMessage("Google login successful!");
-        setUser(data.user); // Save user info to state
-
-        // Store your own JWT tokens if backend sends them
-        if (data.access) {
-          localStorage.setItem("accessToken", data.access);
-        }
-        if (data.refresh) {
-          localStorage.setItem("refreshToken", data.refresh);
-        }
-
-        // Redirect to dashboard
-        router.push("/dashboard");
-      }
-    } catch (error) {
-      console.error("Google login error:", error);
-      setMessage("Google login error");
+  // Redirect based on user role from backend
+  const handleRedirect = (user) => {
+    if (user.role === 'employer') {
+      router.push('/employer-dashboard');
+    } else if (user.role === 'employee') {
+      router.push('/employee-dashboard');
+    } else {
+      router.push('/select-role');
     }
   };
 
   useEffect(() => {
-    // Load Google Identity Services script
+    // Check if the user was just redirected from a successful verification
+    if (searchParams.get('verified') === 'true') {
+      setMessage("Email verified successfully! Please log in to continue.");
+    }
+  }, [searchParams]);
+
+  // 1. Handle Email & Password Login
+  const handleEmailLogin = async () => {
+    if (!email || !password) {
+      setMessage("Please enter both email and password.");
+      return;
+    }
+    setLoading(true);
+    setMessage("");
+
+    try {
+      const res = await fetch("http://localhost:8000/myapi/login/", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setMessage(data.error || "Login failed. Please check your credentials.");
+      } else {
+        localStorage.setItem("accessToken", data.tokens.access);
+        localStorage.setItem("refreshToken", data.tokens.refresh);
+        handleRedirect(data.user);
+      }
+    } catch (error) {
+      setMessage("An error occurred during login.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 2. Handle Google Login Response
+  const handleGoogleResponse = async (response) => {
+    setLoading(true);
+    try {
+      const res = await fetch("http://localhost:8000/myapi/google-login/", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token: response.credential }),
+      });
+      const data = await res.json();
+
+      if (!res.ok) {
+        setMessage(data.error || "Google login failed.");
+      } else {
+        localStorage.setItem("accessToken", data.tokens.access);
+        localStorage.setItem("refreshToken", data.tokens.refresh);
+        handleRedirect(data.user);
+      }
+    } catch (error) {
+      setMessage("An error occurred with Google Login.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Load Google script
+  useEffect(() => {
     const script = document.createElement("script");
     script.src = "https://accounts.google.com/gsi/client";
     script.async = true;
-    script.defer = true;
     document.body.appendChild(script);
-
     script.onload = () => {
-      if (window.google) {
-        window.google.accounts.id.initialize({
-          client_id: GOOGLE_CLIENT_ID,
-          callback: handleGoogleResponse,
-          auto_select: false,
-          cancel_on_tap_outside: false,
-        });
-
-        window.google.accounts.id.renderButton(
-          document.getElementById("google-signin-btn"),
-          {
-            theme: "outline",
-            size: "large",
-            width: "100%",
-          }
-        );
-      }
+      window.google.accounts.id.initialize({
+        client_id: GOOGLE_CLIENT_ID,
+        callback: handleGoogleResponse,
+      });
+      window.google.accounts.id.renderButton(
+        document.getElementById("google-login-btn"),
+        { theme: "outline", size: "large", width: "100%" }
+      );
     };
-
-    return () => {
-      // Cleanup script tag when component unmounts
-      document.body.removeChild(script);
-    };
+    return () => { document.body.removeChild(script); };
   }, []);
-
-  const handleLogout = () => {
-    setUser(null);
-    setMessage("Logged out");
-    localStorage.removeItem("accessToken");
-    localStorage.removeItem("refreshToken");
-    router.push("/");
-  };
 
   return (
     <div className="bgc-thm4">
@@ -109,71 +119,46 @@ export default function RegisterPage() {
             <div className="col-lg-6 m-auto text-center">
               <div className="main-title">
                 <h2 className="title">Login</h2>
-                <p className="paragraph">
-                   Welcome back! Please enter your credentials to access your account
-                </p>
+                <p className="paragraph">Welcome back! Please enter your credentials.</p>
               </div>
             </div>
           </div>
-
           <div className="row">
             <div className="col-xl-8 mx-auto">
               <div className="log-reg-form form-style1 bgc-white p50 p30-sm default-box-shadow1 bdrs12">
                 <h4>Welcome Back</h4>
                 <p className="text mt20">
-        Don't have an account?{" "}
-        <Link href="/register" className="text-thm">Create one!</Link>
-      </p>
+                  Don't have an account?{" "}
+                  <Link href="/register" className="text-thm">Create one!</Link>
+                </p>
 
-
-
-
-                {/* Form Fields (Email, Password only) */}
                 <div className="row">
-                  {/* Email */}
                   <div className="mb25 col-md-6">
                     <label className="form-label fw500 dark-color">Email</label>
-                    <input
-                      type="email"
-                      name="email"
-                      className="form-control"
-                      placeholder="you@example.com"
-                    />
+                    <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="form-control" />
                   </div>
-                  {/* Password */}
                   <div className="mb25 col-md-6">
                     <label className="form-label fw500 dark-color">Password</label>
-                    <input
-                      type="password"
-                      name="password"
-                      className="form-control"
-                      placeholder="********"
-                    />
+                    <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="form-control" />
                   </div>
                 </div>
-                                <div style={{ textAlign: "center", marginBottom: 16 }}>
-                  — or sign up —
-                </div>
-                {/* Google Sign-In Button */}
-                <div id="google-signin-btn" className="mb25" style={{ width: "100%" }} />
 
-                {/* Submit Button (Disabled, no email/password submit logic) */}
                 <div className="d-grid mb20">
-                  <button
-                    className="ud-btn btn-thm default-box-shadow2"
-                    type="button"
-                    disabled={loading}
-                  >
-                    {loading ? "Processing..." : "Create Account"} <i className="fal fa-arrow-right-long" />
+                  <button className="ud-btn btn-thm" type="button" onClick={handleEmailLogin} disabled={loading}>
+                    {loading ? "Logging in..." : "Login"} <i className="fal fa-arrow-right-long" />
                   </button>
                 </div>
 
+                <div style={{ textAlign: "center", marginBottom: 16 }}>— or sign in with —</div>
+
+                <div id="google-login-btn" />
+
+                {message && <div className="alert alert-danger mt-3">{message}</div>}
               </div>
             </div>
           </div>
         </div>
       </section>
-
       <Footer />
     </div>
   );

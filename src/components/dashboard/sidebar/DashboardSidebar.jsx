@@ -11,7 +11,7 @@ export default function DashboardSidebar() {
 
   useEffect(() => {
     const storedRole = localStorage.getItem("role");
-    setRole(storedRole);
+    setRole(storedRole, "freelancer");
   }, []);
 
   if (!role) return null;
