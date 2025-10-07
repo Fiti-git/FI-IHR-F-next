@@ -5,18 +5,17 @@ import { useRouter } from "next/navigation";
 import Header20 from "@/components/header/Header20";
 import Footer from "@/components/footer/Footer";
 
-// You can create these as separate components for cleaner code
+// Note: I've updated this form to use <select> dropdowns for fields with choices.
 const EmployerForm = ({ onSubmit, loading }) => {
     const [formData, setFormData] = useState({
-        logo: null,
-        name: "",
-        email: "",
-        phone: "",
-        overview: "",
-        jobType: "",
+        profile_image: null,
+        company_name: "",
+        email_address: "",
+        phone_number: "",
+        company_overview: "",
+        job_type: "",
         industry: "",
         country: "",
-        city: "",
     });
 
     const handleChange = (e) => {
@@ -25,7 +24,7 @@ const EmployerForm = ({ onSubmit, loading }) => {
     };
 
     const handleFileChange = (e) => {
-        setFormData((prev) => ({ ...prev, logo: e.target.files[0] }));
+        setFormData((prev) => ({ ...prev, profile_image: e.target.files[0] }));
     };
 
     const handleSubmit = (e) => {
@@ -38,43 +37,57 @@ const EmployerForm = ({ onSubmit, loading }) => {
             <h4 className="text-center mb30">Complete Your Employer Profile</h4>
             <div className="mb-3">
                 <label className="form-label">Upload Logo</label>
-                <input type="file" className="form-control" onChange={handleFileChange} />
-                <div className="form-text">Max 1MB, 330x300, .jpg & .png</div>
+                <input type="file" name="profile_image" className="form-control" onChange={handleFileChange} />
+                <div className="form-text">Max 1MB, .jpg & .png</div>
             </div>
             <div className="mb-3">
-                <label className="form-label">Name</label>
-                <input type="text" name="name" className="form-control" placeholder="Your Company Name or Your Name" value={formData.name} onChange={handleChange} required />
-            </div>
-            <div className="mb-3">
-                <label className="form-label">Email Address</label>
-                <input type="email" name="email" className="form-control" placeholder="company@domain.com" value={formData.email} onChange={handleChange} required />
-            </div>
-            <div className="mb-3">
-                <label className="form-label">Phone Number</label>
-                <input type="tel" name="phone" className="form-control" placeholder="+1 234 567 890" value={formData.phone} onChange={handleChange} />
-            </div>
-            <div className="mb-3">
-                <label className="form-label">Company Overview</label>
-                <textarea name="overview" className="form-control" rows="4" placeholder="Describe your company and your hiring needs." value={formData.overview} onChange={handleChange}></textarea>
+                <label className="form-label">Company Name</label>
+                <input type="text" name="company_name" className="form-control" placeholder="Your Company Name" value={formData.company_name} onChange={handleChange} required />
             </div>
             <div className="row">
                 <div className="col-md-6 mb-3">
-                    <label className="form-label">Job Type</label>
-                    <input type="text" name="jobType" className="form-control" value={formData.jobType} onChange={handleChange} />
+                    <label className="form-label">Email Address</label>
+                    <input type="email" name="email_address" className="form-control" placeholder="contact@company.com" value={formData.email_address} onChange={handleChange} required />
+                </div>
+                <div className="col-md-6 mb-3">
+                    <label className="form-label">Phone Number</label>
+                    <input type="tel" name="phone_number" className="form-control" placeholder="+1 234 567 890" value={formData.phone_number} onChange={handleChange} />
+                </div>
+            </div>
+            <div className="mb-3">
+                <label className="form-label">Company Overview</label>
+                <textarea name="company_overview" className="form-control" rows="4" placeholder="Describe your company and your hiring needs." value={formData.company_overview} onChange={handleChange}></textarea>
+            </div>
+            <div className="row">
+                <div className="col-md-6 mb-3">
+                    <label className="form-label">Default Job Type</label>
+                    <select name="job_type" className="form-select" value={formData.job_type} onChange={handleChange}>
+                        <option value="">Select Job Type</option>
+                        <option value="full-time">Full-time</option>
+                        <option value="part-time">Part-time</option>
+                        <option value="remote">Remote</option>
+                    </select>
                 </div>
                 <div className="col-md-6 mb-3">
                     <label className="form-label">Industry</label>
-                    <input type="text" name="industry" className="form-control" value={formData.industry} onChange={handleChange} />
+                    <select name="industry" className="form-select" value={formData.industry} onChange={handleChange}>
+                        <option value="">Select Industry</option>
+                        <option value="technology">Technology</option>
+                        <option value="healthcare">Healthcare</option>
+                        <option value="finance">Finance</option>
+                        <option value="education">Education</option>
+                    </select>
                 </div>
             </div>
             <div className="row">
                 <div className="col-md-6 mb-3">
                     <label className="form-label">Country</label>
-                    <input type="text" name="country" className="form-control" value={formData.country} onChange={handleChange} />
-                </div>
-                <div className="col-md-6 mb-3">
-                    <label className="form-label">City</label>
-                    <input type="text" name="city" className="form-control" value={formData.city} onChange={handleChange} />
+                    <select name="country" className="form-select" value={formData.country} onChange={handleChange}>
+                        <option value="">Select Country</option>
+                        <option value="usa">United States</option>
+                        <option value="canada">Canada</option>
+                        <option value="uk">United Kingdom</option>
+                    </select>
                 </div>
             </div>
             <div className="d-grid">
@@ -86,23 +99,23 @@ const EmployerForm = ({ onSubmit, loading }) => {
     );
 };
 
+// Note: I've updated this form to use <select> dropdowns for fields with choices.
 const EmployeeForm = ({ onSubmit, loading }) => {
     const [formData, setFormData] = useState({
-        profileImage: null,
-        fullName: "",
-        email: "",
-        phone: "",
-        title: "",
-        hourlyRate: "",
+        profile_image: null,
+        full_name: "",
+        phone_number: "",
+        professional_title: "",
+        hourly_rate: "",
         gender: "",
-        experience: "",
+        experience_level: "",
         specialization: "",
         skills: [],
         country: "",
         city: "",
         language: "",
-        proficiency: "",
-        socialLink: "",
+        language_proficiency: "",
+        linkedin_or_github: "",
         bio: "",
     });
     const [currentSkill, setCurrentSkill] = useState("");
@@ -113,14 +126,14 @@ const EmployeeForm = ({ onSubmit, loading }) => {
     };
 
     const handleFileChange = (e) => {
-        setFormData((prev) => ({ ...prev, profileImage: e.target.files[0] }));
+        setFormData((prev) => ({ ...prev, profile_image: e.target.files[0] }));
     };
 
     const handleSkillKeyDown = (e) => {
-        if (e.key === 'Enter' && currentSkill) {
+        if (e.key === 'Enter' && currentSkill.trim() !== "") {
             e.preventDefault();
-            if (!formData.skills.includes(currentSkill)) {
-                setFormData(prev => ({ ...prev, skills: [...prev.skills, currentSkill] }));
+            if (!formData.skills.includes(currentSkill.trim())) {
+                setFormData(prev => ({ ...prev, skills: [...prev.skills, currentSkill.trim()] }));
             }
             setCurrentSkill("");
         }
@@ -142,58 +155,66 @@ const EmployeeForm = ({ onSubmit, loading }) => {
     return (
         <form onSubmit={handleSubmit} className="form-style1 bgc-white p50 p30-sm default-box-shadow1 bdrs12">
             <h4 className="text-center mb30">Complete Your Employee Profile</h4>
-             <div className="mb-3">
-                <label className="form-label">Upload Image</label>
-                <input type="file" className="form-control" onChange={handleFileChange} />
-                <div className="form-text">Max 1MB, 330x300, .jpg, .png</div>
+            <div className="mb-3">
+                <label className="form-label">Upload Profile Image</label>
+                <input type="file" name="profile_image" className="form-control" onChange={handleFileChange} />
+                <div className="form-text">Max 1MB, .jpg, .png</div>
             </div>
             <div className="mb-3">
                 <label className="form-label">Full Name</label>
-                <input type="text" name="fullName" className="form-control" placeholder="Jane Doe" value={formData.fullName} onChange={handleChange} required />
+                <input type="text" name="full_name" className="form-control" placeholder="Jane Doe" value={formData.full_name} onChange={handleChange} required />
             </div>
-             <div className="row">
-                <div className="col-md-6 mb-3">
-                    <label className="form-label">Email Address</label>
-                    <input type="email" name="email" className="form-control" placeholder="jane@example.com" value={formData.email} onChange={handleChange} required />
-                </div>
+            <div className="row">
                 <div className="col-md-6 mb-3">
                     <label className="form-label">Phone Number</label>
-                    <input type="tel" name="phone" className="form-control" placeholder="+971 50 123 4567" value={formData.phone} onChange={handleChange} />
+                    <input type="tel" name="phone_number" className="form-control" placeholder="+971 50 123 4567" value={formData.phone_number} onChange={handleChange} />
+                </div>
+                <div className="col-md-6 mb-3">
+                    <label className="form-label">Professional Title</label>
+                    <input type="text" name="professional_title" className="form-control" placeholder="Full Stack Developer" value={formData.professional_title} onChange={handleChange} />
                 </div>
             </div>
             <div className="row">
                 <div className="col-md-6 mb-3">
-                    <label className="form-label">Professional Title</label>
-                    <input type="text" name="title" className="form-control" placeholder="Full Stack Developer" value={formData.title} onChange={handleChange} />
+                    <label className="form-label">Hourly Rate</label>
+                    <select name="hourly_rate" className="form-select" value={formData.hourly_rate} onChange={handleChange}>
+                        <option value="">Select Rate</option>
+                        <option value="30">$30/hr</option>
+                        <option value="40">$40/hr</option>
+                        <option value="50">$50/hr</option>
+                        <option value="60">$60/hr</option>
+                        <option value="70">$70/hr</option>
+                    </select>
                 </div>
-                <div className="col-md-6 mb-3">
-                    <label className="form-label">Hourly Rate ($)</label>
-                    <input type="number" name="hourlyRate" className="form-control" placeholder="50" value={formData.hourlyRate} onChange={handleChange} />
-                </div>
-            </div>
-             <div className="row">
                 <div className="col-md-6 mb-3">
                     <label className="form-label">Gender</label>
-                     <select name="gender" className="form-select" value={formData.gender} onChange={handleChange}>
+                    <select name="gender" className="form-select" value={formData.gender} onChange={handleChange}>
                         <option value="">Select Gender</option>
                         <option value="male">Male</option>
                         <option value="female">Female</option>
                         <option value="other">Other</option>
                     </select>
                 </div>
+            </div>
+            <div className="row">
                 <div className="col-md-6 mb-3">
                     <label className="form-label">Experience Level</label>
-                     <select name="experience" className="form-select" value={formData.experience} onChange={handleChange}>
+                    <select name="experience_level" className="form-select" value={formData.experience_level} onChange={handleChange}>
                         <option value="">Select Level</option>
-                        <option value="entry">Entry</option>
-                        <option value="intermediate">Intermediate</option>
-                        <option value="expert">Expert</option>
+                        <option value="beginner">Beginner</option>
+                        <option value="mid">Mid-Level</option>
+                        <option value="senior">Senior</option>
                     </select>
                 </div>
-            </div>
-             <div className="mb-3">
-                <label className="form-label">Specialization</label>
-                <input type="text" name="specialization" className="form-control" placeholder="e.g., Frontend, Backend, DevOps" value={formData.specialization} onChange={handleChange} />
+                <div className="col-md-6 mb-3">
+                    <label className="form-label">Specialization</label>
+                    <select name="specialization" className="form-select" value={formData.specialization} onChange={handleChange}>
+                        <option value="">Select Specialization</option>
+                        <option value="web-dev">Web Development</option>
+                        <option value="design">Design</option>
+                        <option value="marketing">Marketing</option>
+                    </select>
+                </div>
             </div>
             <div className="mb-3">
                 <label className="form-label">Skills (press Enter to add)</label>
@@ -213,37 +234,55 @@ const EmployeeForm = ({ onSubmit, loading }) => {
                     ))}
                 </div>
             </div>
-             <div className="row">
+            <div className="row">
                 <div className="col-md-6 mb-3">
                     <label className="form-label">Country</label>
-                    <input type="text" name="country" className="form-control" value={formData.country} onChange={handleChange} />
+                    <select name="country" className="form-select" value={formData.country} onChange={handleChange}>
+                        <option value="">Select Country</option>
+                        <option value="uae">UAE</option>
+                        <option value="uk">UK</option>
+                        <option value="usa">USA</option>
+                        <option value="india">India</option>
+                    </select>
                 </div>
                 <div className="col-md-6 mb-3">
                     <label className="form-label">City</label>
-                    <input type="text" name="city" className="form-control" value={formData.city} onChange={handleChange} />
+                    <select name="city" className="form-select" value={formData.city} onChange={handleChange}>
+                        <option value="">Select City</option>
+                        <option value="dubai">Dubai</option>
+                        <option value="london">London</option>
+                        <option value="new-york">New York</option>
+                        <option value="toronto">Toronto</option>
+                    </select>
                 </div>
             </div>
             <div className="row">
                 <div className="col-md-6 mb-3">
                     <label className="form-label">Language</label>
-                    <input type="text" name="language" className="form-control" placeholder="e.g., English, Spanish" value={formData.language} onChange={handleChange} />
+                    <select name="language" className="form-select" value={formData.language} onChange={handleChange}>
+                        <option value="">Select Language</option>
+                        <option value="english">English</option>
+                        <option value="arabic">Arabic</option>
+                        <option value="french">French</option>
+                        <option value="spanish">Spanish</option>
+                    </select>
                 </div>
                 <div className="col-md-6 mb-3">
                     <label className="form-label">Language Proficiency</label>
-                    <select name="proficiency" className="form-select" value={formData.proficiency} onChange={handleChange}>
+                    <select name="language_proficiency" className="form-select" value={formData.language_proficiency} onChange={handleChange}>
                         <option value="">Select Proficiency</option>
-                        <option value="basic">Basic</option>
-                        <option value="conversational">Conversational</option>
+                        <option value="beginner">Beginner</option>
+                        <option value="intermediate">Intermediate</option>
+                        <option value="advanced">Advanced</option>
                         <option value="fluent">Fluent</option>
-                        <option value="native">Native</option>
                     </select>
                 </div>
             </div>
             <div className="mb-3">
-                <label className="form-label">LinkedIn / GitHub</label>
-                <input type="url" name="socialLink" className="form-control" placeholder="https://linkedin.com/in/..." value={formData.socialLink} onChange={handleChange} />
+                <label className="form-label">LinkedIn / GitHub URL</label>
+                <input type="url" name="linkedin_or_github" className="form-control" placeholder="https://linkedin.com/in/..." value={formData.linkedin_or_github} onChange={handleChange} />
             </div>
-             <div className="mb-3">
+            <div className="mb-3">
                 <label className="form-label">Short Bio / Summary</label>
                 <textarea name="bio" className="form-control" rows="4" placeholder="Tell us about your professional background." value={formData.bio} onChange={handleChange}></textarea>
             </div>
@@ -261,40 +300,28 @@ export default function SelectRolePage() {
     const router = useRouter();
     const [loading, setLoading] = useState(false);
     const [message, setMessage] = useState("");
-    const [selectedRole, setSelectedRole] = useState(null); // 'employer', 'employee', or null
+    const [selectedRole, setSelectedRole] = useState(null);
+    const accessToken = localStorage.getItem("accessToken");
 
     const handleRoleSelection = async (role) => {
-        setLoading(true);
-        setMessage("");
-
-        const accessToken = localStorage.getItem("accessToken");
-        if (!accessToken) {
-            setMessage("Authentication error. Please log in again.");
-            setLoading(false);
-            router.push("/login");
-            return;
-        }
-
         try {
             const res = await fetch("http://localhost:8000/myapi/set-role/", {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
-                    "Authorization": `Bearer ${accessToken}`,
+                    "Authorization": `Bearer ${accessToken}`, // Send token to authenticate the user
                 },
                 body: JSON.stringify({ role }),
             });
 
             if (!res.ok) {
                 const data = await res.json();
-                throw new Error(data.error || "Failed to save role.");
+                setMessage(data.error || "Failed to save role.");
+            } else {
+                setSelectedRole(role);
             }
-            
-            // Role saved, now show the profile form
-            setSelectedRole(role);
-
         } catch (error) {
-            setMessage(error.message || "An error occurred. Please try again.");
+            setMessage("An error occurred. Please try again.");
             console.error("Set role error:", error);
         } finally {
             setLoading(false);
@@ -304,19 +331,62 @@ export default function SelectRolePage() {
     const handleProfileSubmit = async (profileData) => {
         setLoading(true);
         setMessage("");
+        console.log(localStorage.getItem("accessToken"))
+        console.log(localStorage)
 
-        // Here you would send the profileData to your backend.
-        // The endpoint will depend on your API design.
-        // For example: `http://localhost:8000/myapi/complete-profile/`
-        console.log("Submitting profile:", profileData);
+        const accessToken = localStorage.getItem("accessToken");
+        if (!accessToken) {
+            setMessage("Authentication error. Please log in again.");
+            setLoading(false);
+            router.push("/login");
+            return;
+        }
 
-        // This is a placeholder for your API call.
-        // Replace it with your actual fetch logic.
+        const dataToSend = new FormData();
+        let apiUrl = "";
+
+        // Populate FormData with all key-value pairs from profileData
+        for (const key in profileData) {
+            // Handle the 'skills' array separately
+            if (key === 'skills') {
+                dataToSend.append('skills', profileData.skills.join(','));
+            } else if (profileData[key]) { // Append only if the value is not null/empty
+                dataToSend.append(key, profileData[key]);
+            }
+        }
+
+        if (selectedRole === 'employee') {
+            apiUrl = "http://localhost:8000/api/profile/freelancer/";
+        } else if (selectedRole === 'employer') {
+            apiUrl = "http://localhost:8000/api/profile/job-provider/";
+        } else {
+            setMessage("No role selected.");
+            setLoading(false);
+            return;
+        }
+
         try {
-            // Simulate API call
-            await new Promise(resolve => setTimeout(resolve, 1500));
+            const res = await fetch(apiUrl, {
+                method: "POST",
+                headers: {
+                    "Authorization": `Bearer ${accessToken}`,
+                    // IMPORTANT: Do NOT set 'Content-Type'.
+                    // The browser will automatically set it to 'multipart/form-data'
+                    // with the correct boundary when the body is a FormData object.
+                },
+                body: dataToSend,
+            });
 
-            // After successful submission, redirect to the dashboard
+            if (!res.ok) {
+                const errorData = await res.json();
+                // Create a readable error message from the backend's response
+                const errorMessages = Object.entries(errorData)
+                    .map(([field, errors]) => `${field}: ${errors.join(' ')}`)
+                    .join('\n');
+                throw new Error(errorMessages || "Failed to save profile. Please check the form.");
+            }
+
+            // On success, redirect to the appropriate dashboard
             if (selectedRole === 'employer') {
                 router.push("/employer-dashboard");
             } else {
@@ -324,13 +394,13 @@ export default function SelectRolePage() {
             }
 
         } catch (error) {
-             setMessage("Failed to save profile. Please try again.");
-             console.error("Profile submission error:", error);
+            setMessage(error.message);
+            console.error("Profile submission error:", error);
         } finally {
             setLoading(false);
         }
     };
-    
+
     const renderContent = () => {
         if (selectedRole === 'employer') {
             return <EmployerForm onSubmit={handleProfileSubmit} loading={loading} />;
@@ -347,21 +417,20 @@ export default function SelectRolePage() {
                 <p className="text mt20 mb30">
                     This helps us customize your experience. This cannot be changed later.
                 </p>
-
                 <div className="d-grid gap-3">
                     <button
                         className="ud-btn btn-thm"
                         onClick={() => handleRoleSelection('employer')}
                         disabled={loading}
                     >
-                        {loading ? "Saving..." : "I am an Employer (Hiring)"}
+                        {loading ? "..." : "I am an Employer (Hiring)"}
                     </button>
                     <button
                         className="ud-btn btn-dark"
                         onClick={() => handleRoleSelection('employee')}
                         disabled={loading}
                     >
-                        {loading ? "Saving..." : "I am an Employee (Offering Services)"}
+                        {loading ? "..." : "I am a Freelancer (Offering Services)"}
                     </button>
                 </div>
             </div>
@@ -385,8 +454,12 @@ export default function SelectRolePage() {
                     </div>
                     <div className="row">
                         <div className="col-xl-8 mx-auto">
-                           {renderContent()}
-                           {message && <div className="alert alert-danger mt-3 text-center">{message}</div>}
+                            {renderContent()}
+                            {message && (
+                                <div className="alert alert-danger mt-3 text-center" style={{ whiteSpace: 'pre-line' }}>
+                                    {message}
+                                </div>
+                            )}
                         </div>
                     </div>
                 </div>
