@@ -20,10 +20,10 @@ export default function CreateJobInfo() {
           </div>
           <div className="col-lg-3">
             <div className="text-lg-end">
-              <a className="ud-btn btn-dark">
+              <button type="submit" form="jobPostForm" className="ud-btn btn-dark">
                 Save &amp; Publish
                 <i className="fal fa-arrow-right-long" />
-              </a>
+              </button>
             </div>
           </div>
         </div>
