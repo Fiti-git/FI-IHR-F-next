@@ -56,8 +56,14 @@ export default function LoginPage() {
       if (!res.ok) {
         setMessage(data.error || "Login failed. Please check your credentials.");
       } else {
+        // Store tokens in localStorage
         localStorage.setItem("accessToken", data.tokens.access);
         localStorage.setItem("refreshToken", data.tokens.refresh);
+        
+        // Decode the access token to extract the user_id
+        const decodedUserId = decodeJwt(data.tokens.access);
+        localStorage.setItem("user_id", decodedUserId); // Store user_id in localStorage
+
         handleRedirect(data.user);
       }
     } catch (error) {
@@ -81,8 +87,14 @@ export default function LoginPage() {
       if (!res.ok) {
         setMessage(data.error || "Google login failed.");
       } else {
+        // Store tokens in localStorage
         localStorage.setItem("accessToken", data.tokens.access);
         localStorage.setItem("refreshToken", data.tokens.refresh);
+
+        // Decode the access token to extract the user_id
+        const decodedUserId = decodeJwt(data.tokens.access);
+        localStorage.setItem("user_id", decodedUserId); // Store user_id in localStorage
+
         handleRedirect(data.user);
       }
     } catch (error) {
@@ -90,6 +102,21 @@ export default function LoginPage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  // Decode JWT token (no external libraries)
+  const decodeJwt = (token) => {
+    const parts = token.split(".");
+    if (parts.length !== 3) {
+      throw new Error("Invalid token");
+    }
+
+    const payload = parts[1];
+    // Base64 decode the payload and parse it as JSON
+    const decodedPayload = JSON.parse(atob(payload));
+
+    // Return the user_id from the decoded payload
+    return decodedPayload.user_id; // or any other data you need from the payload
   };
 
   // Load Google script
