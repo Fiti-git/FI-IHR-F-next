@@ -88,13 +88,15 @@ export default function JobPostForm() {
           .filter(([_, value]) => value === null)
           .map(([key]) => key)
       });
-
-      // TEMPORARY: Removed authentication for testing
+      //authentication
+      const accessToken = localStorage.getItem("accessToken");
+      console.log('Access Token:', accessToken);
       const response = await fetch("http://127.0.0.1:8000/api/job-posting/", {
         method: "POST",
         headers: {
           'Content-Type': 'application/json',
-          'Accept': 'application/json'
+          'Accept': 'application/json',
+          "Authorization": `Bearer ${accessToken}`
         },
         body: JSON.stringify(dataToSend),
       });
