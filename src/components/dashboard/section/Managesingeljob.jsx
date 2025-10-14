@@ -2,123 +2,118 @@
 
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
-const jobs = [
-  {
-    id: 1,
-    title: "Frontend Developer",
-    department: "Engineering",
-    jobType: "Full-time",
-    workLocation: "Dubai Office",
-    workMode: "On-site",
-    roleOverview: "Responsible for building responsive web interfaces.",
-    keyResponsibilities: [
-      "Develop UI components with React and Next.js",
-      "Collaborate with backend team",
-      "Maintain code quality"
-    ],
-    requiredQualifications: [
-      "3+ years experience in frontend development",
-      "Proficiency in React",
-      "Knowledge of CSS and JavaScript"
-    ],
-    preferredQualifications: [
-      "Experience with Next.js",
-      "Familiarity with UI/UX principles"
-    ],
-    languagesRequired: ["English"],
-    category: "Web Development",
-    salaryFrom: 15000,
-    salaryTo: 22000,
-    currency: "AED",
-    applicationDeadline: "2025-09-15",
-    applicationMethod: "Portal",
-    interviewMode: "In-person",
-    hiringManager: "Sarah Connor",
-    numberOfOpenings: 2,
-    expectedStartDate: "2025-10-01",
-    screeningQuestions: [
-      "Do you have experience with React hooks?",
-      "Are you willing to relocate?"
-    ],
-    benefits: {
-      healthInsurance: true,
-      remoteWork: false,
-      paidLeave: true,
-      bonus: true,
-    },
-    date: "2025-09-10",
-    status: "Open",
-    description: "Build and maintain UI components with React and Next.js.",
-    selectedCandidate: "John Doe",
-    applicants: [
-      { id: 1, name: "Alice Smith" },
-      { id: 2, name: "Bob Johnson" },
-    ],
-  },
-  {
-    id: 2,
-    title: "UI/UX Designer",
-    department: "Design",
-    jobType: "Full-time",
-    workLocation: "Remote",
-    workMode: "Remote",
-    roleOverview: "Design intuitive and engaging user experiences.",
-    keyResponsibilities: [
-      "Create wireframes and prototypes",
-      "Conduct user research",
-      "Collaborate with developers"
-    ],
-    requiredQualifications: [
-      "2+ years experience in UI/UX",
-      "Strong portfolio",
-      "Knowledge of design tools"
-    ],
-    preferredQualifications: [
-      "Experience with Figma",
-      "Understanding of accessibility standards"
-    ],
-    languagesRequired: ["English", "Arabic"],
-    category: "Design",
-    salaryFrom: 12000,
-    salaryTo: 18000,
-    currency: "AED",
-    applicationDeadline: "2025-09-12",
-    applicationMethod: "Portal",
-    interviewMode: "Online",
-    hiringManager: "Michael Scott",
-    numberOfOpenings: 1,
-    expectedStartDate: "2025-10-15",
-    screeningQuestions: [
-      "Are you familiar with Figma?",
-      "Can you share your design portfolio?"
-    ],
-    benefits: {
-      healthInsurance: true,
-      remoteWork: true,
-      paidLeave: true,
-      bonus: false,
-    },
-    date: "2025-09-08",
-    status: "Closed",
-    description: "Design user interfaces and ensure great user experience.",
-    selectedCandidate: "Jane Williams",
-    applicants: [
-      { id: 3, name: "Mark Benson" },
-      { id: 4, name: "Lisa Ray" },
-    ],
-  },
-];
+const fetchJobDetails = async (jobId) => {
+  try {
+    let accessToken;
+    if (typeof window !== 'undefined') {
+      accessToken = localStorage.getItem("accessToken");
+    }
+    
+    if (!accessToken) {
+      console.error('No access token found');
+      return null;
+    }
+
+    const response = await fetch(`http://127.0.0.1:8000/api/job-posting/${jobId}/`, {
+      method: "GET",
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        "Authorization": `Bearer ${accessToken}`
+      }
+    });
+
+    if (!response.ok) {
+      console.error('API Error:', response.status);
+      return null;
+    }
+
+    const jobData = await response.json();
+    console.log('API Response:', jobData);
+    console.log('Key Responsibilities type:', typeof jobData.key_responsibilities);
+    console.log('Key Responsibilities value:', jobData.key_responsibilities);
+    return jobData;
+  } catch (error) {
+    console.error('Error fetching job:', error);
+    return null;
+  }
+};
 
 export default function JobDetailPage() {
   const params = useParams();
   const jobId = parseInt(params.id, 10);
-  const job = jobs.find((j) => j.id === jobId);
-
+  const [job, setJob] = useState(null);
+  const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("overview");
   const [showApplicants, setShowApplicants] = useState(true);
   const [showSelected, setShowSelected] = useState(true);
+
+  useEffect(() => {
+    const loadJobDetails = async () => {
+      const jobData = await fetchJobDetails(jobId);
+      if (jobData) {
+        // Transform API data to match our component's expected structure
+        const transformedJob = {
+          id: jobData.job_id,
+          title: jobData.job_title,
+          department: jobData.department,
+          jobType: jobData.job_type,
+          workLocation: jobData.work_location,
+          workMode: jobData.work_mode,
+          roleOverview: jobData.role_overview,
+          keyResponsibilities: Array.isArray(jobData.key_responsibilities) ? 
+            jobData.key_responsibilities : 
+            jobData.key_responsibilities ? [jobData.key_responsibilities] : [],
+          requiredQualifications: Array.isArray(jobData.required_qualifications) ? 
+            jobData.required_qualifications : 
+            jobData.required_qualifications ? [jobData.required_qualifications] : [],
+          preferredQualifications: Array.isArray(jobData.preferred_qualifications) ? 
+            jobData.preferred_qualifications : 
+            jobData.preferred_qualifications ? [jobData.preferred_qualifications] : [],
+          languagesRequired: Array.isArray(jobData.language_required) ? 
+            jobData.language_required : 
+            jobData.language_required ? [jobData.language_required] : [], // Note: backend uses language_required
+          category: jobData.category,
+          salaryFrom: jobData.salary_from, // Note: backend has typo in 'salarty_from'
+          salaryTo: jobData.salary_to,
+          currency: jobData.currency,
+          applicationDeadline: jobData.application_deadline,
+          interviewMode: jobData.interview_mode,
+          hiringManager: jobData.hiring_manager,
+          numberOfOpenings: jobData.number_of_openings,
+          expectedStartDate: jobData.expected_start_date,
+          screeningQuestions: Array.isArray(jobData.screening_questions) ? 
+            jobData.screening_questions : 
+            jobData.screening_questions ? [jobData.screening_questions] : [],
+          benefits: {
+            healthInsurance: jobData.health_insurance || false,
+            remoteWork: jobData.remote_work || false,
+            paidLeave: jobData.paid_leave || false,
+            bonus: jobData.bonus || false,
+          },
+          date: jobData.date_posted,
+          status: jobData.job_status || "Open",
+          description: jobData.role_overview || "", // Using role_overview as description
+          applicants: [], // Add empty array as default for applicants since it's not in the API
+          selectedCandidate: null // Add null as default for selectedCandidate
+        };
+        setJob(transformedJob);
+      }
+      setLoading(false);
+    };
+
+    loadJobDetails();
+  }, [jobId]);
+
+  if (loading) {
+    return (
+      <div className="dashboard__content hover-bgc-color container mt-5">
+        <h2>Loading job details...</h2>
+      </div>
+    );
+  }
 
   if (!job) {
     return (
@@ -155,9 +150,17 @@ export default function JobDetailPage() {
       case "responsibilities":
         return (
           <ul className="mt-3 text-muted">
-            {job.keyResponsibilities.map((item, i) => (
-              <li key={i}>{item}</li>
-            ))}
+            {job.keyResponsibilities ? (
+              typeof job.keyResponsibilities === 'string' ? 
+                <li>{job.keyResponsibilities}</li> :
+                Array.isArray(job.keyResponsibilities) ? 
+                  job.keyResponsibilities.map((item, i) => (
+                    <li key={i}>{item}</li>
+                  )) :
+                  <li>No responsibilities listed</li>
+            ) : (
+              <li>No responsibilities listed</li>
+            )}
           </ul>
         );
       case "qualifications":
@@ -165,17 +168,40 @@ export default function JobDetailPage() {
           <div className="mt-3 text-muted">
             <p><strong>Required Qualifications:</strong></p>
             <ul>
-              {job.requiredQualifications.map((item, i) => (
-                <li key={i}>{item}</li>
-              ))}
+              {job.requiredQualifications ? (
+                typeof job.requiredQualifications === 'string' ? 
+                  <li>{job.requiredQualifications}</li> :
+                  Array.isArray(job.requiredQualifications) ? 
+                    job.requiredQualifications.map((item, i) => (
+                      <li key={i}>{item}</li>
+                    )) :
+                    <li>No required qualifications listed</li>
+              ) : (
+                <li>No required qualifications listed</li>
+              )}
             </ul>
             <p><strong>Preferred Qualifications:</strong></p>
             <ul>
-              {job.preferredQualifications.map((item, i) => (
-                <li key={i}>{item}</li>
-              ))}
+              {job.preferredQualifications ? (
+                typeof job.preferredQualifications === 'string' ? 
+                  <li>{job.preferredQualifications}</li> :
+                  Array.isArray(job.preferredQualifications) ? 
+                    job.preferredQualifications.map((item, i) => (
+                      <li key={i}>{item}</li>
+                    )) :
+                    <li>No preferred qualifications listed</li>
+              ) : (
+                <li>No preferred qualifications listed</li>
+              )}
             </ul>
-            <p><strong>Languages Required:</strong> {job.languagesRequired.join(", ")}</p>
+            <p><strong>Languages Required:</strong>{' '}
+              {job.languagesRequired ? 
+                (Array.isArray(job.languagesRequired) ? 
+                  job.languagesRequired.join(", ") : 
+                  job.languagesRequired
+                ) : 
+                "None specified"}
+            </p>
           </div>
         );
       case "application":
@@ -189,9 +215,17 @@ export default function JobDetailPage() {
             <p><strong>Expected Start Date:</strong> {job.expectedStartDate}</p>
             <p><strong>Screening Questions:</strong></p>
             <ul>
-              {job.screeningQuestions.map((q, i) => (
-                <li key={i}>{q}</li>
-              ))}
+              {job.screeningQuestions ? (
+                typeof job.screeningQuestions === 'string' ? 
+                  <li>{job.screeningQuestions}</li> :
+                  Array.isArray(job.screeningQuestions) ? 
+                    job.screeningQuestions.map((q, i) => (
+                      <li key={i}>{q}</li>
+                    )) :
+                    <li>No screening questions listed</li>
+              ) : (
+                <li>No screening questions listed</li>
+              )}
             </ul>
           </div>
         );
