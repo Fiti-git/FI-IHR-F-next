@@ -1,18 +1,55 @@
 "use client";
 import Link from "next/link";
 import DashboardNavigation from "../header/DashboardNavigation";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Pagination1 from "@/components/section/Pagination1";
 import ProposalModal1 from "../modal/ProposalModal1";
 import DeleteModal from "../modal/DeleteModal";
 
-// Dummy job data
-const jobs = [
-  { id: 1, title: "Frontend Developer", category: "Web Development", date: "2025-09-10", status: "Open" },
-  { id: 2, title: "UI/UX Designer", category: "Design", date: "2025-09-08", status: "Closed" },
-  { id: 3, title: "Backend Developer", category: "Web Development", date: "2025-09-01", status: "Open" },
-  { id: 4, title: "Marketing Specialist", category: "Marketing", date: "2025-08-28", status: "Closed" },
-];
+const fetchJobs = async () => {
+  try {
+    let accessToken;
+    
+    // Get token safely in client-side
+    if (typeof window !== 'undefined') {
+      accessToken = localStorage.getItem("accessToken");
+    }
+
+    if (!accessToken) {
+      console.error('No access token found');
+      return [];
+    }
+
+    const response = await fetch("http://127.0.0.1:8000/api/job-posting/", {
+      method: "GET",
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        "Authorization": `Bearer ${accessToken}`
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
+    
+    // Transform the data to match the component's expected format
+    return data.jobs.map(job => ({
+      id: job.job_id,
+      title: job.job_title,
+      category: job.job_category,
+      date: job.date_posted,
+      status: job.job_status || "Open", // Default to "Open" if status is not provided
+      salary: job.salary_range,
+      location: job.location
+    }));
+  } catch (error) {
+    console.error('Error fetching jobs:', error);
+    return [];
+  }
+};
 
 // Icon button component for consistent style
 const IconButton = ({ onClick, title, iconClass, colorClass }) => (
@@ -38,7 +75,7 @@ function PostedJobsRow({ job }) {
     <tr>
       <td>{job.title}</td>
       <td>{job.category}</td>
-      <td>{job.date}</td>
+      <td>{job.date ? new Date(job.date).toLocaleDateString() : 'N/A'}</td>
       <td>
         <StatusBadge status={job.status} />
       </td>
@@ -46,7 +83,6 @@ function PostedJobsRow({ job }) {
         <Link href={`/jobs/${job.id}`} className="btn btn-sm btn-outline-primary me-2">
           View
         </Link>
-        
       </td>
     </tr>
   );
@@ -54,6 +90,19 @@ function PostedJobsRow({ job }) {
 
 export default function PostedJobs() {
   const [filter, setFilter] = useState("All");
+  const [jobs, setJobs] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const loadJobs = async () => {
+      setLoading(true);
+      const jobsData = await fetchJobs();
+      setJobs(jobsData);
+      setLoading(false);
+    };
+
+    loadJobs();
+  }, []);
 
   const filteredJobs =
     filter === "All" ? jobs : jobs.filter((job) => job.status === filter);
@@ -110,7 +159,13 @@ export default function PostedJobs() {
                     </tr>
                   </thead>
                   <tbody className="t-body">
-                    {filteredJobs.length > 0 ? (
+                    {loading ? (
+                      <tr>
+                        <td colSpan="5" className="text-center">
+                          Loading jobs...
+                        </td>
+                      </tr>
+                    ) : filteredJobs.length > 0 ? (
                       filteredJobs.map((job) => (
                         <PostedJobsRow key={job.id} job={job} />
                       ))
