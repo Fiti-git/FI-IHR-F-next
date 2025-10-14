@@ -76,7 +76,7 @@ export default function JobDetailPage() {
             jobData.language_required : 
             jobData.language_required ? [jobData.language_required] : [], // Note: backend uses language_required
           category: jobData.category,
-          salaryFrom: jobData.salary_from, // Note: backend has typo in 'salarty_from'
+          salaryFrom: jobData.salary_from, 
           salaryTo: jobData.salary_to,
           currency: jobData.currency,
           applicationDeadline: jobData.application_deadline,
