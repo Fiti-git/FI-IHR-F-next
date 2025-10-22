@@ -10,15 +10,9 @@ import { usePathname } from "next/navigation";
 export default function DashboardHeader() {
   const toggle = toggleStore((state) => state.dashboardSlidebarToggleHandler);
   const path = usePathname();
-  const [role, setRole] = useState(null); // ✅ Valid in .jsx
-
-
-  useEffect(() => {
-    const storedRole = localStorage.getItem("role");
-    setRole(storedRole, "freelancer");
-  }, []);
-
-  if (!role) return null; // or a spinner
+  
+  // Hardcode role as 'freelancer'
+  const [role] = useState("freelancer");
 
   // Filter based on role
   const filteredNav = dasboardNavigation.filter((item) =>
@@ -103,8 +97,7 @@ export default function DashboardHeader() {
                               return (
                                 <Link
                                   key={i}
-                                  className={`dropdown-item ${path === href ? "active" : ""
-                                    }`}
+                                  className={`dropdown-item ${path === href ? "active" : ""}`}
                                   href={href}
                                 >
                                   <i className={`${item.icon} mr10`} />
