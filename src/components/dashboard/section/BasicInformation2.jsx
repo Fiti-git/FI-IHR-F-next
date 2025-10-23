@@ -13,6 +13,10 @@ export default function BasicInformation2() {
   const [projectType, setProjectType] = useState({ option: "Select", value: "select" });
   const [visibility, setVisibility] = useState({ option: "Public", value: "public" });
   
+  // Image state
+  const [image, setImage] = useState(null);
+  const [imagePreview, setImagePreview] = useState(null);
+  
   // Loading and error states
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -27,6 +31,39 @@ export default function BasicInformation2() {
     const token = localStorage.getItem('accessToken');
     setIsAuthenticated(!!token);
   }, []);
+
+  // Handle image change
+  const handleImageChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      // Validate file size (max 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        setError("Image size must be less than 5MB");
+        return;
+      }
+
+      // Validate file type
+      if (!file.type.startsWith('image/')) {
+        setError("Please select a valid image file");
+        return;
+      }
+
+      setImage(file);
+      setImagePreview(URL.createObjectURL(file));
+      setError(null);
+    }
+  };
+
+  // Remove image
+  const handleRemoveImage = () => {
+    setImage(null);
+    setImagePreview(null);
+    // Reset file input
+    const fileInput = document.getElementById('projectImage');
+    if (fileInput) {
+      fileInput.value = '';
+    }
+  };
 
   // Handle form submission
   const handleSubmit = async (e) => {
@@ -109,27 +146,31 @@ export default function BasicInformation2() {
       return;
     }
 
-    // Prepare data for API - ONLY send fields that backend accepts
-    const projectData = {
-      title: title.trim(),
-      description: description.trim(),
-      category: category.option,
-      budget: numericBudget,
-      project_type: projectType.value === "fixed" ? "fixed_price" : "hourly",
-      deadline: deadline,
-      visibility: visibility.value
-    };
+    // Prepare data for API using FormData (required for file upload)
+    const formData = new FormData();
+    formData.append('title', title.trim());
+    formData.append('description', description.trim());
+    formData.append('category', category.option);
+    formData.append('budget', numericBudget);
+    formData.append('project_type', projectType.value === "fixed_price" ? "fixed_price" : "hourly");
+    formData.append('deadline', deadline);
+    formData.append('visibility', visibility.value);
+    
+    // Add image if selected
+    if (image) {
+      formData.append('image', image);
+    }
 
     try {
-      console.log("Sending project data:", projectData);
+      console.log("Sending project data with image...");
       
       const response = await fetch(API_URL, {
         method: "POST",
         headers: {
-          "Content-Type": "application/json",
           "Authorization": `Bearer ${token}`
+          // Do NOT set Content-Type header - browser will set it automatically with boundary
         },
-        body: JSON.stringify(projectData),
+        body: formData,
       });
 
       console.log("Response status:", response.status);
@@ -174,6 +215,8 @@ export default function BasicInformation2() {
             setError(`Category: ${Array.isArray(errorData.category) ? errorData.category[0] : errorData.category}`);
           } else if (errorData.visibility) {
             setError(`Visibility: ${Array.isArray(errorData.visibility) ? errorData.visibility[0] : errorData.visibility}`);
+          } else if (errorData.image) {
+            setError(`Image: ${Array.isArray(errorData.image) ? errorData.image[0] : errorData.image}`);
           } else if (errorData.non_field_errors) {
             setError(Array.isArray(errorData.non_field_errors) ? errorData.non_field_errors[0] : errorData.non_field_errors);
           } else if (errorData.detail) {
@@ -225,7 +268,16 @@ export default function BasicInformation2() {
     setDeadline("");
     setProjectType({ option: "Select", value: "select" });
     setVisibility({ option: "Public", value: "public" });
+    setImage(null);
+    setImagePreview(null);
     setError(null);
+    setSuccess(false);
+    
+    // Reset file input
+    const fileInput = document.getElementById('projectImage');
+    if (fileInput) {
+      fileInput.value = '';
+    }
   };
 
   // Get today's date in YYYY-MM-DD format for min date
@@ -314,6 +366,42 @@ export default function BasicInformation2() {
               <small className="text-muted">{description.length}/5000 characters</small>
             </div>
 
+            {/* Project Image */}
+            <div className="col-sm-12 mb20">
+              <label className="heading-color ff-heading fw500 mb10">
+                Project Image
+              </label>
+              <input
+                id="projectImage"
+                type="file"
+                className="form-control"
+                accept="image/*"
+                onChange={handleImageChange}
+                disabled={loading}
+              />
+              <small className="text-muted">Recommended: 800x600px, Max 5MB (JPG, PNG, GIF)</small>
+              
+              {/* Image Preview */}
+              {imagePreview && (
+                <div className="mt-3 position-relative" style={{ maxWidth: '300px' }}>
+                  <img 
+                    src={imagePreview} 
+                    alt="Preview" 
+                    className="img-fluid rounded"
+                    style={{ width: '100%', height: 'auto', objectFit: 'cover' }}
+                  />
+                  <button
+                    type="button"
+                    className="btn btn-sm btn-danger position-absolute top-0 end-0 m-2"
+                    onClick={handleRemoveImage}
+                    disabled={loading}
+                  >
+                    <i className="fal fa-times"></i>
+                  </button>
+                </div>
+              )}
+            </div>
+
             {/* Category */}
             <div className="col-sm-6 mb20">
               <div className={loading ? 'opacity-50' : ''}>
@@ -385,7 +473,7 @@ export default function BasicInformation2() {
                 />
               </div>
               <small className="text-muted">
-                {projectType.value === "fixed" 
+                {projectType.value === "fixed_price" 
                   ? "One-time payment for the entire project" 
                   : projectType.value === "hourly"
                   ? "Pay based on hours worked"

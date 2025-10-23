@@ -49,15 +49,15 @@ export default function Breadcumb11() {
             height={181}
             width={255}
             className="right-bottom-img wow zoomIn"
-            src="/images/vector-img/right-bottom.png"
+            src={project?.img || project?.imgUrl || "/images/vector-img/right-bottom.png"}
             alt="right-bottom"
           />
           <Image
             height={300}
             width={532}
             className="service-v1-vector bounce-y d-none d-xl-block"
-            src="/images/vector-img/vector-service-v1.png"
-            alt="vector-service"
+            src={project?.img || project?.imgUrl || "/images/vector-img/vector-service-v1.png"}
+            alt="project-image"
           />
           <div className="container">
             <div className="row wow fadeInUp">

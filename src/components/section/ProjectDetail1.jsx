@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
+import Image from "next/image";
 import Sticky from "react-stickynode";
 import ProjectPriceWidget1 from "../element/ProjectPriceWidget1";
 import ProjectContactWidget1 from "../element/ProjectContactWidget1";
@@ -8,36 +9,31 @@ import useScreen from "@/hook/useScreen";
 
 export default function ProjectDetail1() {
   const isMatchedScreen = useScreen(1216);
-  const params = useParams();
-  const projectId = params?.id; // Get project ID from URL params
-
+  const { id } = useParams();
+  
   // State management
-  const [project, setProject] = useState(null);
+  const [projectData, setProjectData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [proposalBudget, setProposalBudget] = useState("");
+  const [coverLetter, setCoverLetter] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [proposalSuccess, setProposalSuccess] = useState(false);
   const [proposalError, setProposalError] = useState(null);
 
-  // Form state for proposal
-  const [budget, setBudget] = useState("");
-  const [coverLetter, setCoverLetter] = useState("");
-
   // API URLs
   const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000/api/project";
-  const PROJECT_DETAIL_URL = `${API_URL}/projects/${projectId}/`;
-  const PROPOSAL_URL = `${API_URL}/proposals/`;
 
   // Fetch project details
   useEffect(() => {
-    if (!projectId) return;
-
     const fetchProjectDetails = async () => {
+      if (!id) return;
+
       try {
         setLoading(true);
         setError(null);
 
-        const response = await fetch(PROJECT_DETAIL_URL, {
+        const response = await fetch(`${API_URL}/projects/${id}/`, {
           method: "GET",
           headers: {
             "Content-Type": "application/json",
@@ -45,23 +41,22 @@ export default function ProjectDetail1() {
         });
 
         if (!response.ok) {
-          throw new Error(`Failed to fetch project details: ${response.status}`);
+          throw new Error(`HTTP error! status: ${response.status}`);
         }
 
         const data = await response.json();
         console.log("Fetched project details:", data);
-        setProject(data);
-        setBudget(data.budget); // Pre-fill budget with project budget
+        setProjectData(data);
       } catch (err) {
         console.error("Error fetching project details:", err);
-        setError(err.message || "Failed to load project details");
+        setError(err.message || "Failed to fetch project details");
       } finally {
         setLoading(false);
       }
     };
 
     fetchProjectDetails();
-  }, [projectId, PROJECT_DETAIL_URL]);
+  }, [id, API_URL]);
 
   // Handle proposal submission
   const handleSubmitProposal = async (e) => {
@@ -81,9 +76,9 @@ export default function ProjectDetail1() {
       return;
     }
 
-    // Validate form
-    if (!budget || parseFloat(budget) <= 0) {
-      setProposalError("Please enter a valid budget amount");
+    // Validate inputs
+    if (!proposalBudget || parseFloat(proposalBudget) <= 0) {
+      setProposalError("Please enter a valid budget");
       setSubmitting(false);
       return;
     }
@@ -94,29 +89,25 @@ export default function ProjectDetail1() {
       return;
     }
 
-    // Prepare proposal data
-    const proposalData = {
-      project: parseInt(projectId),
-      budget: parseFloat(budget),
-      cover_letter: coverLetter.trim(),
-    };
-
     try {
-      console.log("Submitting proposal:", proposalData);
+      const proposalData = {
+        project: projectData.id,
+        budget: parseFloat(proposalBudget),
+        cover_letter: coverLetter.trim(),
+      };
 
-      const response = await fetch(PROPOSAL_URL, {
+      const response = await fetch(`${API_URL}/proposals/`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`
+          "Authorization": `Bearer ${token}`,
         },
         body: JSON.stringify(proposalData),
       });
 
       if (!response.ok) {
         const errorData = await response.json();
-        console.error("Proposal submission error:", errorData);
-
+        
         if (response.status === 401) {
           localStorage.removeItem('accessToken');
           localStorage.removeItem('refreshToken');
@@ -124,20 +115,6 @@ export default function ProjectDetail1() {
           setTimeout(() => {
             window.location.href = '/login';
           }, 2000);
-          return;
-        } else if (response.status === 400) {
-          // Handle specific validation errors
-          if (errorData.project) {
-            setProposalError(`Project: ${Array.isArray(errorData.project) ? errorData.project[0] : errorData.project}`);
-          } else if (errorData.budget) {
-            setProposalError(`Budget: ${Array.isArray(errorData.budget) ? errorData.budget[0] : errorData.budget}`);
-          } else if (errorData.cover_letter) {
-            setProposalError(`Cover Letter: ${Array.isArray(errorData.cover_letter) ? errorData.cover_letter[0] : errorData.cover_letter}`);
-          } else if (errorData.non_field_errors) {
-            setProposalError(Array.isArray(errorData.non_field_errors) ? errorData.non_field_errors[0] : errorData.non_field_errors);
-          } else {
-            setProposalError("Invalid proposal data. Please check your input.");
-          }
           return;
         }
 
@@ -148,11 +125,11 @@ export default function ProjectDetail1() {
       console.log("Proposal submitted successfully:", data);
       
       setProposalSuccess(true);
-      
-      // Reset form after success
+      setProposalBudget("");
+      setCoverLetter("");
+
+      // Reset success message after 3 seconds
       setTimeout(() => {
-        setBudget(project?.budget || "");
-        setCoverLetter("");
         setProposalSuccess(false);
       }, 3000);
 
@@ -166,7 +143,7 @@ export default function ProjectDetail1() {
 
   // Format date helper
   const formatDate = (dateString) => {
-    if (!dateString) return "Not specified";
+    if (!dateString) return "N/A";
     const date = new Date(dateString);
     return date.toLocaleDateString('en-US', { 
       year: 'numeric', 
@@ -175,15 +152,37 @@ export default function ProjectDetail1() {
     });
   };
 
-  // Extract skills from category or description
-  const extractSkills = (project) => {
-    if (!project) return [];
-    const skills = [];
-    if (project.category) {
-      skills.push(project.category);
-    }
-    // Add more logic to extract skills from description if needed
-    return skills;
+  // Format budget helper
+  const formatBudget = (budget) => {
+    if (!budget) return "0";
+    return parseFloat(budget).toLocaleString('en-US', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
+  };
+
+  // Calculate time ago
+  const timeAgo = (dateString) => {
+    if (!dateString) return "Recently";
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffInSeconds = Math.floor((now - date) / 1000);
+    
+    if (diffInSeconds < 60) return "Just now";
+    if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)} minutes ago`;
+    if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)} hours ago`;
+    if (diffInSeconds < 604800) return `${Math.floor(diffInSeconds / 86400)} days ago`;
+    return formatDate(dateString);
+  };
+
+  // Extract skills from category
+  const getSkills = () => {
+    if (!projectData?.category) return [];
+    // Split by common separators and filter empty strings
+    return projectData.category
+      .split(/[,;&|]/)
+      .map(s => s.trim())
+      .filter(s => s.length > 0);
   };
 
   // Loading state
@@ -191,7 +190,7 @@ export default function ProjectDetail1() {
     return (
       <section className="pt30 pb90">
         <div className="container">
-          <div className="row">
+          <div className="row justify-content-center">
             <div className="col-12 text-center py-5">
               <div className="spinner-border text-primary" role="status">
                 <span className="visually-hidden">Loading...</span>
@@ -209,15 +208,17 @@ export default function ProjectDetail1() {
     return (
       <section className="pt30 pb90">
         <div className="container">
-          <div className="row">
-            <div className="col-12">
+          <div className="row justify-content-center">
+            <div className="col-lg-8">
               <div className="alert alert-danger" role="alert">
-                <strong>Error:</strong> {error}
+                <h4 className="alert-heading">Error Loading Project</h4>
+                <p>{error}</p>
+                <hr />
                 <button
-                  className="btn btn-sm btn-outline-danger ms-3"
+                  className="btn btn-danger"
                   onClick={() => window.location.reload()}
                 >
-                  Retry
+                  Try Again
                 </button>
               </div>
             </div>
@@ -228,13 +229,16 @@ export default function ProjectDetail1() {
   }
 
   // No project found
-  if (!project) {
+  if (!projectData) {
     return (
       <section className="pt30 pb90">
         <div className="container">
-          <div className="row">
-            <div className="col-12 text-center py-5">
-              <p className="text-muted">Project not found.</p>
+          <div className="row justify-content-center">
+            <div className="col-lg-8">
+              <div className="alert alert-warning text-center" role="alert">
+                <h4>Project Not Found</h4>
+                <p>The project you're looking for doesn't exist or has been removed.</p>
+              </div>
             </div>
           </div>
         </div>
@@ -242,7 +246,7 @@ export default function ProjectDetail1() {
     );
   }
 
-  const skills = extractSkills(project);
+  const skills = getSkills();
 
   return (
     <>
@@ -253,87 +257,131 @@ export default function ProjectDetail1() {
               <div className="column">
                 <div className="scrollbalance-inner">
                   
-                  {/* Project Header */}
-                  <div className="service-about mb30">
-                    <h2 className="mb20">{project.title}</h2>
-                    <div className="d-flex align-items-center mb20">
-                      <span className="badge bg-primary me-2">{project.category}</span>
-                      <span className="badge bg-success me-2">{project.status}</span>
-                      <span className="badge bg-info me-2">{project.project_type}</span>
-                      <span className="badge bg-secondary">{project.visibility}</span>
-                    </div>
-                    <div className="mb20">
-                      <p className="text-muted mb-1">
-                        <i className="far fa-user me-2"></i>
-                        Posted by: <strong>{project.user?.username || "Anonymous"}</strong>
-                      </p>
-                      <p className="text-muted mb-1">
-                        <i className="far fa-calendar me-2"></i>
-                        Posted on: <strong>{formatDate(project.created_at)}</strong>
-                      </p>
-                      <p className="text-muted mb-1">
-                        <i className="far fa-clock me-2"></i>
-                        Deadline: <strong>{formatDate(project.deadline)}</strong>
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Description */}
                   <div className="service-about">
-                    <h4>Description</h4>
-                    <p className="text mb30" style={{ whiteSpace: 'pre-wrap' }}>
-                      {project.description}
-                    </p>
-                    
-                    <hr className="opacity-100 mb60 mt60" />
-                    
-                    {/* Project Details */}
-                    <h4 className="mb30">Project Details</h4>
-                    <div className="row mb30">
-                      <div className="col-md-6 mb20">
-                        <div className="d-flex align-items-center">
-                          <i className="far fa-money-bill-wave text-primary me-2"></i>
-                          <div>
-                            <small className="text-muted">Budget</small>
-                            <p className="mb-0 fw-bold">${parseFloat(project.budget).toFixed(2)}</p>
+                    {/* Project Image */}
+                    {projectData.image_url && (
+                      <div className="mb-4">
+                        <img 
+                          src={projectData.image_url} 
+                          alt={projectData.title}
+                          className="w-100 rounded"
+                          style={{ 
+                            maxHeight: '400px', 
+                            objectFit: 'cover',
+                            border: '1px solid #e9ecef'
+                          }}
+                        />
+                      </div>
+                    )}
+
+                    {/* Project Info Cards */}
+                    <div className="row mb-4">
+                      <div className="col-md-3 col-6 mb-3">
+                        <div className="iconbox-style1 contact-style d-flex align-items-start mb-4">
+                          <div className="icon flex-shrink-0">
+                            <span className="flaticon-calendar text-thm2 fz40" />
+                          </div>
+                          <div className="details">
+                            <h5 className="title">Posted</h5>
+                            <p className="mb-0 text">{timeAgo(projectData.created_at)}</p>
                           </div>
                         </div>
                       </div>
-                      <div className="col-md-6 mb20">
-                        <div className="d-flex align-items-center">
-                          <i className="far fa-briefcase text-primary me-2"></i>
-                          <div>
-                            <small className="text-muted">Project Type</small>
-                            <p className="mb-0 fw-bold">
-                              {project.project_type === 'fixed_price' ? 'Fixed Price' : 'Hourly'}
+                      <div className="col-md-3 col-6 mb-3">
+                        <div className="iconbox-style1 contact-style d-flex align-items-start mb-4">
+                          <div className="icon flex-shrink-0">
+                            <span className="flaticon-goal text-thm2 fz40" />
+                          </div>
+                          <div className="details">
+                            <h5 className="title">Deadline</h5>
+                            <p className="mb-0 text">{formatDate(projectData.deadline)}</p>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="col-md-3 col-6 mb-3">
+                        <div className="iconbox-style1 contact-style d-flex align-items-start mb-4">
+                          <div className="icon flex-shrink-0">
+                            <span className="flaticon-contract text-thm2 fz40" />
+                          </div>
+                          <div className="details">
+                            <h5 className="title">Type</h5>
+                            <p className="mb-0 text text-capitalize">
+                              {projectData.project_type?.replace('_', ' ')}
                             </p>
                           </div>
                         </div>
                       </div>
-                      <div className="col-md-6 mb20">
-                        <div className="d-flex align-items-center">
-                          <i className="far fa-eye text-primary me-2"></i>
-                          <div>
-                            <small className="text-muted">Visibility</small>
-                            <p className="mb-0 fw-bold text-capitalize">{project.visibility}</p>
+                      <div className="col-md-3 col-6 mb-3">
+                        <div className="iconbox-style1 contact-style d-flex align-items-start mb-4">
+                          <div className="icon flex-shrink-0">
+                            <span className="flaticon-badge text-thm2 fz40" />
                           </div>
-                        </div>
-                      </div>
-                      <div className="col-md-6 mb20">
-                        <div className="d-flex align-items-center">
-                          <i className="far fa-flag text-primary me-2"></i>
-                          <div>
-                            <small className="text-muted">Status</small>
-                            <p className="mb-0 fw-bold text-capitalize">{project.status}</p>
+                          <div className="details">
+                            <h5 className="title">Status</h5>
+                            <p className="mb-0 text">
+                              <span className={`badge ${
+                                projectData.status === 'open' ? 'bg-success' : 
+                                projectData.status === 'in_progress' ? 'bg-warning' : 
+                                projectData.status === 'completed' ? 'bg-primary' : 
+                                'bg-secondary'
+                              }`}>
+                                {projectData.status?.replace('_', ' ').toUpperCase()}
+                              </span>
+                            </p>
                           </div>
                         </div>
                       </div>
                     </div>
 
+                    {/* Description */}
+                    <h4 className="mb-3">Description</h4>
+                    <div 
+                      className="text mb30"
+                      style={{ whiteSpace: 'pre-wrap' }}
+                    >
+                      {projectData.description}
+                    </div>
+
+                    <hr className="opacity-100 mb60 mt60" />
+
+                    {/* Project Details */}
+                    <h4 className="mb30">Project Details</h4>
+                    <div className="row mb-4">
+                      <div className="col-md-6 mb-3">
+                        <div className="d-flex">
+                          <span className="fw-bold me-2">Category:</span>
+                          <span>{projectData.category}</span>
+                        </div>
+                      </div>
+                      <div className="col-md-6 mb-3">
+                        <div className="d-flex">
+                          <span className="fw-bold me-2">Visibility:</span>
+                          <span className="text-capitalize">{projectData.visibility}</span>
+                        </div>
+                      </div>
+                      <div className="col-md-6 mb-3">
+                        <div className="d-flex">
+                          <span className="fw-bold me-2">Client:</span>
+                          <span>
+                            {projectData.user?.first_name && projectData.user?.last_name 
+                              ? `${projectData.user.first_name} ${projectData.user.last_name}`
+                              : projectData.user?.username || 'Anonymous'}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="col-md-6 mb-3">
+                        <div className="d-flex">
+                          <span className="fw-bold me-2">Last Updated:</span>
+                          <span>{timeAgo(projectData.updated_at)}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <hr className="opacity-100 mb60 mt30" />
+
                     {/* Skills Required */}
                     {skills.length > 0 && (
                       <>
-                        <hr className="opacity-100 mb60 mt30" />
                         <h4 className="mb30">Skills Required</h4>
                         <div className="mb60">
                           {skills.map((skill, i) => (
@@ -345,116 +393,109 @@ export default function ProjectDetail1() {
                             </span>
                           ))}
                         </div>
+                        <hr className="opacity-100 mb60" />
                       </>
                     )}
 
-                    <hr className="opacity-100 mb60" />
+                    {/* Send Your Proposal */}
+                    {projectData.status === 'open' && (
+                      <div className="bsp_reveiw_wrt mt25">
+                        <h4>Send Your Proposal</h4>
 
-                    {/* Proposal Form */}
-                    <div className="bsp_reveiw_wrt mt25">
-                      <h4>Send Your Proposal</h4>
-
-                      {/* Success Message */}
-                      {proposalSuccess && (
-                        <div className="alert alert-success mb20 d-flex align-items-center" role="alert">
-                          <span className="me-2">✓</span>
-                          <div>
+                        {/* Success Message */}
+                        {proposalSuccess && (
+                          <div className="alert alert-success mt-3" role="alert">
                             <strong>Success!</strong> Your proposal has been submitted successfully!
                           </div>
-                        </div>
-                      )}
+                        )}
 
-                      {/* Error Message */}
-                      {proposalError && (
-                        <div className="alert alert-danger mb20 d-flex align-items-center" role="alert">
-                          <span className="me-2">✗</span>
-                          <div>
+                        {/* Error Message */}
+                        {proposalError && (
+                          <div className="alert alert-danger mt-3" role="alert">
                             <strong>Error:</strong> {proposalError}
                           </div>
-                        </div>
-                      )}
+                        )}
 
-                      <form className="comments_form mt30 mb30-md" onSubmit={handleSubmitProposal}>
-                        <div className="row">
-                          <div className="col-md-12">
-                            <div className="mb20">
-                              <label className="fw500 ff-heading dark-color mb-2">
-                                Your Budget (USD) <span className="text-danger">*</span>
-                              </label>
-                              <input
-                                type="number"
-                                className="form-control"
-                                placeholder="Enter your budget"
-                                step="0.01"
-                                min="1"
-                                value={budget}
-                                onChange={(e) => setBudget(e.target.value)}
-                                required
-                                disabled={submitting || project.status !== 'open'}
-                              />
-                              <small className="text-muted">
-                                Project budget: ${parseFloat(project.budget).toFixed(2)}
-                              </small>
-                            </div>
-                          </div>
-                          <div className="col-md-12">
-                            <div className="mb-4">
-                              <label className="fw500 fz16 ff-heading dark-color mb-2">
-                                Cover Letter <span className="text-danger">*</span>
-                              </label>
-                              <textarea
-                                className="pt15 form-control"
-                                rows={8}
-                                placeholder="Write a compelling cover letter explaining why you're the best fit for this project. Include your relevant experience, approach to the project, and estimated timeline."
-                                value={coverLetter}
-                                onChange={(e) => setCoverLetter(e.target.value)}
-                                required
-                                maxLength={5000}
-                                disabled={submitting || project.status !== 'open'}
-                              />
-                              <small className="text-muted">
-                                {coverLetter.length}/5000 characters
-                              </small>
-                            </div>
-                          </div>
-                          
-                          {project.status !== 'open' && (
+                        <form className="comments_form mt30 mb30-md" onSubmit={handleSubmitProposal}>
+                          <div className="row">
                             <div className="col-md-12">
-                              <div className="alert alert-warning mb20">
-                                This project is no longer accepting proposals.
+                              <div className="mb20">
+                                <label className="fw500 ff-heading dark-color mb-2">
+                                  Your Budget (USD) <span className="text-danger">*</span>
+                                </label>
+                                <input
+                                  type="number"
+                                  className="form-control"
+                                  placeholder="Enter your budget"
+                                  min="1"
+                                  step="0.01"
+                                  value={proposalBudget}
+                                  onChange={(e) => setProposalBudget(e.target.value)}
+                                  disabled={submitting}
+                                  required
+                                />
+                                <small className="text-muted">
+                                  Project budget: ${formatBudget(projectData.budget)}
+                                </small>
                               </div>
                             </div>
-                          )}
-
-                          <div className="col-md-12">
-                            <div className="d-grid">
-                              <button
-                                type="submit"
-                                className="ud-btn btn-thm"
-                                disabled={submitting || project.status !== 'open'}
-                              >
-                                {submitting ? (
-                                  <>
-                                    <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
-                                    Submitting Proposal...
-                                  </>
-                                ) : (
-                                  <>
-                                    Submit a Proposal
-                                    <i className="fal fa-arrow-right-long ms-2" />
-                                  </>
-                                )}
-                              </button>
+                            <div className="col-md-12">
+                              <div className="mb-4">
+                                <label className="fw500 fz16 ff-heading dark-color mb-2">
+                                  Cover Letter <span className="text-danger">*</span>
+                                </label>
+                                <textarea
+                                  className="pt15 form-control"
+                                  rows={6}
+                                  placeholder="Describe why you're the best fit for this project. Include your relevant experience, approach, and what makes you unique..."
+                                  value={coverLetter}
+                                  onChange={(e) => setCoverLetter(e.target.value)}
+                                  disabled={submitting}
+                                  required
+                                  maxLength={2000}
+                                />
+                                <small className="text-muted">
+                                  {coverLetter.length}/2000 characters
+                                </small>
+                              </div>
+                            </div>
+                            <div className="col-md-12">
+                              <div className="d-grid">
+                                <button 
+                                  type="submit"
+                                  className="ud-btn btn-thm"
+                                  disabled={submitting}
+                                >
+                                  {submitting ? (
+                                    <>
+                                      <span className="spinner-border spinner-border-sm me-2" role="status"></span>
+                                      Submitting...
+                                    </>
+                                  ) : (
+                                    <>
+                                      Submit a Proposal
+                                      <i className="fal fa-arrow-right-long ms-2" />
+                                    </>
+                                  )}
+                                </button>
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      </form>
-                    </div>
+                        </form>
+                      </div>
+                    )}
+
+                    {/* Project Closed Message */}
+                    {projectData.status !== 'open' && (
+                      <div className="alert alert-info" role="alert">
+                        <strong>Notice:</strong> This project is currently {projectData.status?.replace('_', ' ')} and not accepting new proposals.
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
             </div>
-            
+
             {/* Sidebar */}
             <div className="col-lg-4" id="stikyContainer">
               <div className="column">
@@ -462,16 +503,16 @@ export default function ProjectDetail1() {
                   <Sticky bottomBoundary="#stikyContainer">
                     <div className="scrollbalance-inner">
                       <div className="blog-sidebar ms-lg-auto">
-                        <ProjectPriceWidget1 project={project} />
-                        <ProjectContactWidget1 project={project} />
+                        <ProjectPriceWidget1 projectData={projectData} />
+                        <ProjectContactWidget1 projectData={projectData} />
                       </div>
                     </div>
                   </Sticky>
                 ) : (
                   <div className="scrollbalance-inner">
                     <div className="blog-sidebar ms-lg-auto">
-                      <ProjectPriceWidget1 project={project} />
-                      <ProjectContactWidget1 project={project} />
+                      <ProjectPriceWidget1 projectData={projectData} />
+                      <ProjectContactWidget1 projectData={projectData} />
                     </div>
                   </div>
                 )}

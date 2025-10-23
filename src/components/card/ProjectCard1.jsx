@@ -57,12 +57,12 @@ export default function ProjectCard1({ data }) {
     return "Remote";
   };
 
-  // Get image URL
+
   const getImageUrl = () => {
     return data.imgUrl || 
            data.authorImg || 
            data.img || 
-           "/images/team/default-avatar.png";
+           "/images/team/default-project.png";
   };
 
   // Truncate description
@@ -84,8 +84,8 @@ export default function ProjectCard1({ data }) {
                 height={60}
                 width={60}
                 className="rounded-circle mx-auto"
-                src={getImageUrl()}
-                alt={getUserName()}
+                src={data.img || data.imgUrl || "/images/team/default-project.png"}
+                alt="project"
               />
               <span className="online-badge2" />
             </div>

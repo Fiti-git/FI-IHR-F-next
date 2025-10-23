@@ -73,11 +73,16 @@ export default function Listing8() {
           skills: project.category || "",
           skill: [project.category] || [], // Array format
           tags: [project.category] || [], // Tags array
+          brief: project.description?.substring(0, 100) + "..." || "No description",
           language: "English",
           englishLevel: "Fluent",
-          imgUrl: "/images/team/default-avatar.png", // Default image
+          
+          // Image field - use project image if exists, otherwise use user avatar or default
+          img: project.image || project.user?.profile_image || "/images/team/default-avatar.png",
+          imgUrl: project.image || project.user?.profile_image || "/images/team/default-avatar.png",
+          
           author: project.user?.username || "Anonymous",
-          authorImg: "/images/team/default-avatar.png",
+          authorImg: project.user?.profile_image || "/images/team/default-avatar.png",
           rating: 5.0,
           reviews: 0,
           jobDone: 0,
@@ -185,11 +190,21 @@ export default function Listing8() {
   } else if (filteredProjects.length === 0) {
     content = (
       <div className="col-12 text-center py-5">
-        <p className="text-muted">
-          {projects.length === 0 
-            ? "No projects available at the moment." 
-            : "No projects found matching your criteria."}
-        </p>
+        <div className="text-muted">
+          {projects.length === 0 ? (
+            <>
+              <i className="flaticon-folder fz60 mb-3 d-block"></i>
+              <h5>No projects available at the moment.</h5>
+              <p>Check back later for new opportunities!</p>
+            </>
+          ) : (
+            <>
+              <i className="flaticon-search fz60 mb-3 d-block"></i>
+              <h5>No projects found matching your criteria.</h5>
+              <p>Try adjusting your filters to see more results.</p>
+            </>
+          )}
+        </div>
       </div>
     );
   } else {
