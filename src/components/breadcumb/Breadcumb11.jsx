@@ -1,12 +1,45 @@
 "use client";
-import { project1 } from "@/data/product";
+import { useEffect, useState } from "react";
 import Image from "next/image";
 import { useParams } from "next/navigation";
 
 export default function Breadcumb11() {
   const { id } = useParams();
+  const [project, setProject] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  const data = project1.find((item) => item.id == id);
+  const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000/api/project/projects/";
+
+  useEffect(() => {
+    const fetchProject = async () => {
+      if (!id) return;
+
+      try {
+        setLoading(true);
+        const response = await fetch(`${API_URL}${id}/`, {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const data = await response.json();
+        setProject(data);
+      } catch (err) {
+        console.error("Error fetching project:", err);
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProject();
+  }, [id]);
 
   return (
     <>
@@ -30,10 +63,43 @@ export default function Breadcumb11() {
             <div className="row wow fadeInUp">
               <div className="col-xl-7">
                 <div className="position-relative">
-                  {data ? (
-                    <h2>{data.title}</h2>
+                  {loading ? (
+                    <div className="d-flex align-items-center">
+                      <div className="spinner-border text-white me-3" role="status">
+                        <span className="visually-hidden">Loading...</span>
+                      </div>
+                      <h2 className="text-white">Loading project...</h2>
+                    </div>
+                  ) : error ? (
+                    <h2 className="text-white">Error loading project</h2>
+                  ) : project ? (
+                    <>
+                      <h2 className="text-black">{project.title}</h2>
+                      <div className="mt-3 d-flex flex-wrap gap-3">
+                        <span className="badge bg-white text-dark px-3 py-2">
+                          <i className="flaticon-folder me-2"></i>
+                          {project.category}
+                        </span>
+                        <span className="badge bg-white text-dark px-3 py-2">
+                          <i className="flaticon-dollar me-2"></i>
+                          ${project.budget}
+                        </span>
+                        <span className="badge bg-white text-dark px-3 py-2">
+                          <i className="flaticon-calendar me-2"></i>
+                          {project.project_type === "fixed_price" ? "Fixed Price" : "Hourly"}
+                        </span>
+                        <span className={`badge px-3 py-2 ${
+                          project.status === 'open' ? 'bg-success' : 
+                          project.status === 'in_progress' ? 'bg-warning' : 
+                          project.status === 'completed' ? 'bg-info' : 'bg-secondary'
+                        }`}>
+                          <i className="flaticon-tick me-2"></i>
+                          {project.status.replace('_', ' ').toUpperCase()}
+                        </span>
+                      </div>
+                    </>
                   ) : (
-                    <h2>Website Designer Required For Directory Theme</h2>
+                    <h2 className="text-white">Project not found</h2>
                   )}
                 </div>
               </div>
