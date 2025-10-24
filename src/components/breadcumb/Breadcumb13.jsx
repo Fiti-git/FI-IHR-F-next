@@ -1,12 +1,54 @@
 "use client";
-import { job1 } from "@/data/job";
 import Image from "next/image";
 import Link from "next/link";
 import { useParams } from "next/navigation";
+import { useEffect, useState } from "react";
 
 export default function Breadcumb13() {
   const { id } = useParams();
-  const data = job1.find((item) => item.id == id);
+  const [job, setJob] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const load = async () => {
+      if (!id) {
+        setLoading(false);
+        return;
+      }
+      try {
+        const headers = { 'Content-Type': 'application/json' };
+        const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
+        if (token) headers.Authorization = `Bearer ${token}`;
+
+        const res = await fetch(`http://127.0.0.1:8000/api/job-posting/${id}/`, { headers });
+        if (res.status === 401) {
+          // Unauthorized - token missing or invalid
+          console.warn('Unauthorized when fetching job details');
+          setJob(null);
+          setLoading(false);
+          return;
+        }
+        if (res.ok) {
+          const data = await res.json();
+          setJob(data);
+        }
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    load();
+  }, [id]);
+
+  const titleText = job ? (job.job_title) : "Job";
+  const salaryText = job
+    ? ((job.salary_from || job.salary_to) ? `${job.salary_from || '-'} - ${job.salary_to || '-'} ${job.currency || ''}` : null)
+    : null;
+  const deadlineText = job?.application_deadline ? new Date(job.application_deadline).toLocaleDateString() : null;
+  const statusText = job?.job_status || job?.job_category || null;
+  const modeText = job?.work_mode || (typeof job?.remote_work === 'boolean' ? (job.remote_work ? 'Remote' : 'Onsite') : null);
+
   return (
     <>
       <section className="breadcumb-section pt-0">
@@ -32,46 +74,32 @@ export default function Breadcumb13() {
                   <div className="list-meta d-lg-flex align-items-end justify-content-between">
                     <div className="wrapper d-sm-flex align-items-center mb20-md">
                       <a className="position-relative freelancer-single-style">
-                        {data ? (
-                          <Image
-                            height={100}
-                            width={100}
-                            className="wa"
-                            src={data.img}
-                            alt="job-single"
-                          />
-                        ) : (
-                          <Image
-                            height={100}
-                            width={100}
-                            className="wa"
-                            src="/images/team/job-single.png"
-                            alt="job-single"
-                          />
-                        )}
+                        <Image
+                          height={100}
+                          width={100}
+                          className="wa"
+                          src="/images/team/job-single.png"
+                          alt="job-single"
+                        />
                       </a>
                       <div className="ml20 ml0-xs mt15-sm">
-                        {data ? (
-                          <h4 className="title">{data.title}</h4>
-                        ) : (
-                          <h4 className="title">UX/UI Designer</h4>
-                        )}
-                        
+                        <h4 className="title">{titleText}</h4>
+
                         <h6 className="list-inline-item mb-0">
-                          $125k-$135k Hourly
+                          {salaryText || "$125k-$135k Hourly"}
                         </h6>
                         <h6 className="list-inline-item mb-0 bdrl-eunry pl15">
-                          1-5 Days
+                          {deadlineText || 'Deadline N/A'}
                         </h6>
                         <h6 className="list-inline-item mb-0 bdrl-eunry pl15">
-                          Expensive
+                          {statusText || 'Status N/A'}
                         </h6>
                         <h6 className="list-inline-item mb-0 bdrl-eunry pl15">
-                          Remote
+                          {modeText || 'Mode N/A'}
                         </h6>
                       </div>
                     </div>
-                    
+
                   </div>
                 </div>
               </div>

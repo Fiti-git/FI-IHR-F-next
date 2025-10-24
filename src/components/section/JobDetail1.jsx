@@ -1,15 +1,66 @@
-"use client";  // Add this at the top to mark the component as a client-side component
+"use client";
 
-import { job1 } from "@/data/job";
+import { useState, useEffect } from "react";
+import { useParams, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import JobCard5 from "../card/JobCard5";
-import { useState } from "react";
 
 export default function JobDetail1() {
+  const params = useParams();
+  const search = useSearchParams();
+  const id = params?.id || search?.get("id");
+  const [job, setJob] = useState(null);
+  const [loading, setLoading] = useState(true);
   const [applied, setApplied] = useState(false);
+  const [error, setError] = useState(null);
 
-  const handleApply = () => {
-    setApplied(true);
+  useEffect(() => {
+    const load = async () => {
+      if (!id) {
+        setError("No job id provided");
+        setLoading(false);
+        return;
+      }
+      try {
+        const accessToken = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
+        const headers = { 'Content-Type': 'application/json' };
+        if (accessToken) headers.Authorization = `Bearer ${accessToken}`;
+
+        const res = await fetch(`http://127.0.0.1:8000/api/job-posting/${id}/`, { headers });
+        if (!res.ok) throw new Error(`Failed to fetch job (${res.status})`);
+        const data = await res.json();
+        setJob(data);
+      } catch (err) {
+        console.error(err);
+        setError(err.message || "Failed to load job");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    load();
+  }, [id]);
+
+  const handleApply = () => setApplied(true);
+
+  if (loading) return <div className="container mt-5">Loading job...</div>;
+  if (error) return <div className="container mt-5"><div className="alert alert-danger">{error}</div></div>;
+  if (!job) return <div className="container mt-5"><div className="alert alert-info">Job not found</div></div>;
+
+  // Helper to render possibly-multiline string as list
+  const renderMultiline = (text) => {
+    if (!text) return null;
+    const lines = String(text).split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+    if (lines.length === 0) return null;
+    if (lines.length === 1) return <p className="text mb30">{lines[0]}</p>;
+    return (
+      <div className="list-style1 mb60 pr50 pr0-lg">
+        <ul>
+          {lines.map((line, idx) => (
+            <li key={idx}><i className="far fa-check text-thm3 bgc-thm3-light" /> {line}</li>
+          ))}
+        </ul>
+      </div>
+    );
   };
 
   return (
@@ -20,96 +71,54 @@ export default function JobDetail1() {
             <div className="col-lg-8 mx-auto">
               <div className="service-about">
                 <h4 className="mb-4">Description</h4>
-                <p className="text mb30">
-                  It is a long established fact that a reader will be distracted
-                  by the readable content of a page when looking at its layout.
-                  The point of using Lorem Ipsum is that it has a more-or-less
-                  normal distribution of letters, as opposed to using 'Content
-                  here, content here', making it look like readable English.
-                </p>
-                <p className="text mb60">
-                  Many desktop publishing packages and web page editors now use
-                  Lorem Ipsum as their default model text, and a search for
-                  'lorem ipsum' will uncover many web sites still in their
-                  infancy. Various versions have evolved over the years,
-                  sometimes by accident, sometimes on purpose (injected humour
-                  and the like).
-                </p>
+                {job.role_overview ? (
+                  <p className="text mb30">{job.role_overview}</p>
+                ) : (
+                  <p className="text mb30">No description provided.</p>
+                )}
 
-                <h4 className="mb30">Key Responsibilities</h4>
-                <div className="list-style1 mb60 pr50 pr0-lg">
-                  <ul>
-                    <li>
-                      <i className="far fa-check text-thm3 bgc-thm3-light" />
-                      Be involved in every step of the product design cycle from
-                      discovery to developer handoff and user acceptance
-                      testing.
-                    </li>
-                    <li>
-                      <i className="far fa-check text-thm3 bgc-thm3-light" />
-                      Work with BAs, product managers and tech teams to lead the
-                      Product Design
-                    </li>
-                    <li>
-                      <i className="far fa-check text-thm3 bgc-thm3-light" />
-                      Maintain quality of the design process and ensure that
-                      when designs are translated into code they accurately
-                      reflect the design specifications.
-                    </li>
-                    <li>
-                      <i className="far fa-check text-thm3 bgc-thm3-light" />
-                      Accurately estimate design tickets during planning
-                      sessions.
-                    </li>
-                    <li>
-                      <i className="far fa-check text-thm3 bgc-thm3-light" />
-                      Contribute to sketching sessions involving non-designers
-                      Create, iterate and maintain UI deliverables including
-                      sketch files, style guides, high fidelity prototypes, micro
-                      interaction specifications and pattern libraries.
-                    </li>
-                    <li>
-                      <i className="far fa-check text-thm3 bgc-thm3-light" />
-                      Ensure design choices are data led by identifying
-                      assumptions to test each sprint, and work with the analysts
-                      in your team to plan moderated usability test sessions.
-                    </li>
-                    <li>
-                      <i className="far fa-check text-thm3 bgc-thm3-light" />
-                      Design pixel perfect responsive UI’s and understand that
-                      adopting common interface patterns is better for UX than
-                      reinventing the wheel.
-                    </li>
-                    <li>
-                      <i className="far fa-check text-thm3 bgc-thm3-light" />
-                      Present your work to the wider business at Show &amp; Tell
-                      sessions.
-                    </li>
+                {job.key_responsibilities && (
+                  <>
+                    <h4 className="mb30">Key Responsibilities</h4>
+                    {renderMultiline(job.key_responsibilities)}
+                  </>
+                )}
+
+                {job.required_qualifications && (
+                  <>
+                    <h4 className="mb30">Required Qualifications</h4>
+                    {renderMultiline(job.required_qualifications)}
+                  </>
+                )}
+
+                {job.preferred_qualifications && (
+                  <>
+                    <h4 className="mb30">Preferred Qualifications</h4>
+                    {renderMultiline(job.preferred_qualifications)}
+                  </>
+                )}
+
+                <div className="job-single-meta">
+                  <h4 className="mb20">Additional Information</h4>
+                  <ul className="list-style-type-bullet mb40">
+                    <li><strong>Department:</strong> {job.department}</li>
+                    <li><strong>Job Type:</strong> {job.job_type}</li>
+                    <li><strong>Work Location:</strong> {job.work_location}</li>
+                    <li><strong>Work Mode:</strong> {job.work_mode}</li>
+                    <li><strong>Languages Required:</strong> {job.language_required || job.languages_required || 'None specified'}</li>
+                    <li><strong>Salary Range:</strong> {job.salary_from || '-'} - {job.salary_to || '-'} {job.currency || ''}</li>
+                    <li><strong>Application Deadline:</strong> {job.application_deadline ? new Date(job.application_deadline).toLocaleDateString() : 'N/A'}</li>
+                    <li><strong>Interview Mode:</strong> {job.interview_mode}</li>
+                    <li><strong>Hiring Manager:</strong> {job.hiring_manager}</li>
+                    <li><strong>Number of Openings:</strong> {job.number_of_openings ?? 'N/A'}</li>
+                    <li><strong>Expected Start Date:</strong> {job.expected_start_date ? new Date(job.expected_start_date).toLocaleDateString() : 'N/A'}</li>
                   </ul>
                 </div>
-
-                <h4 className="mb30">Work &amp; Experience</h4>
-                <ul className="list-style-type-bullet ps-3 mb60">
-                  <li>
-                    You have at least 3 years’ experience working as a Product
-                    Designer.
-                  </li>
-                  <li>
-                    You have experience using Sketch and InVision or Framer X.
-                  </li>
-                  <li>
-                    You have some previous experience working in an agile
-                    environment – Think two-week sprints.
-                  </li>
-                  <li>
-                    You are familiar using Jira and Confluence in your workflow.
-                  </li>
-                </ul>
 
                 <div className="d-grid mb60">
                   {!applied ? (
                     <Link
-                      href="/contact"
+                      href="#"
                       className="ud-btn btn-thm2"
                       onClick={(e) => {
                         e.preventDefault();
@@ -120,23 +129,8 @@ export default function JobDetail1() {
                       <i className="fal fa-arrow-right-long" />
                     </Link>
                   ) : (
-                    <div className="success-message">
-                      Successfully Applied!
-                    </div>
+                    <div className="success-message">Successfully Applied!</div>
                   )}
-                </div>
-
-                <div className="main-title mb30">
-                  <h2>Related Jobs</h2>
-                  <p className="text">2022 jobs live - 293 added today</p>
-                </div>
-
-                <div className="row">
-                  {job1.slice(0, 3).map((item, i) => (
-                    <div key={i} className="col-sm-6 col-xl-12">
-                      <JobCard5 data={item} />
-                    </div>
-                  ))}
                 </div>
               </div>
             </div>
