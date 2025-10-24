@@ -70,7 +70,7 @@ function ProjectRow({ project, onDelete }) {
       <td>
         <div className="d-flex gap-2">
           <Link 
-            href={`/project-single/${project.id}`} 
+            href={`/projects/${project.id}`} 
             className="btn btn-sm btn-outline-primary"
             title="View Details"
           >
