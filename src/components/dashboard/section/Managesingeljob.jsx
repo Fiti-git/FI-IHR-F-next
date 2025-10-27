@@ -471,8 +471,21 @@ export default function JobDetailPage() {
             resume: a.resume_url || a.resume || a.file || null,
             cover_letter: a.cover_letter_url || a.cover_letter || a.coverletter || a.message || '',
             status: a.status || a.application_status || 'Applied',
+            // extract rating from possible backend fields (keep null if not present)
+            rating: a.rating ?? a.application_rating ?? a.applicant_rating ?? a.rating_value ?? null,
             raw: a,
           }));
+
+          // populate ratings state so badges render even before user rates manually
+          const ratingsFromApps = {};
+          mapped.forEach((m) => {
+            if (m.id != null && m.rating !== undefined && m.rating !== null && String(m.rating).trim() !== '') {
+              const num = Number(m.rating);
+              if (!Number.isNaN(num)) ratingsFromApps[m.id] = num;
+            }
+          });
+
+          setRatings(ratingsFromApps);
           setApplicants(mapped);
           setApplicantsError(null);
         }
@@ -751,12 +764,14 @@ export default function JobDetailPage() {
                                 <>
                                   {applicant.name}
                                   <span className={cls} title={`Status: ${label}`}>{label}</span>
+                                  {ratings && ratings[applicant.id] ? (
+                                    <span className="badge bg-warning text-dark ms-2" title={`Rating: ${ratings[applicant.id]}/5`}>
+                                      <i className="fal fa-star me-1" />{ratings[applicant.id]}/5
+                                    </span>
+                                  ) : null}
                                 </>
                               );
                             })()}
-                            {ratings && ratings[applicant.id] ? (
-                              <span className="badge bg-warning text-dark ms-2">Rating: {ratings[applicant.id]}/5</span>
-                            ) : null}
                             {schedules && schedules[applicant.id] ? (
                               <span className="badge bg-info text-white ms-2">Scheduled</span>
                             ) : null}
