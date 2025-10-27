@@ -41,6 +41,169 @@ export default function JobDetail1() {
   }, [id]);
 
   const handleApply = () => setApplied(true);
+  // Local modal state for application (no APIs)
+  const [showApplyModal, setShowApplyModal] = useState(false);
+  const [resumeFile, setResumeFile] = useState(null);
+  const [resumeUrlInput, setResumeUrlInput] = useState("");
+  const [coverLetter, setCoverLetter] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState(null);
+  const [submitSuccess, setSubmitSuccess] = useState(false);
+
+  const openApplyModal = () => setShowApplyModal(true);
+  const closeApplyModal = () => {
+    setShowApplyModal(false);
+    setResumeFile(null);
+    setResumeUrlInput("");
+    setCoverLetter("");
+    setSubmitError(null);
+  };
+
+  const onResumeChange = (e) => {
+    const file = e.target.files && e.target.files[0];
+    setResumeFile(file || null);
+    setSubmitError(null);
+  };
+
+  const handleLocalSubmit = async (e) => {
+    e.preventDefault();
+    setSubmitError(null);
+    setSubmitSuccess(false);
+    // Require a resume file or a resume URL, and a cover letter
+    if (!resumeFile && (!resumeUrlInput || String(resumeUrlInput).trim().length === 0)) {
+      setSubmitError('Please upload your resume or provide a resume URL before submitting.');
+      return;
+    }
+    if (!coverLetter || String(coverLetter).trim().length < 1) {
+      setSubmitError('Please provide a cover letter.');
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
+      if (!token) {
+        setSubmitError('You must be logged in to apply. Please login and try again.');
+        setSubmitting(false);
+        return;
+      }
+
+      const userId = typeof window !== 'undefined' ? localStorage.getItem('user_id') : null;
+      if (!userId) {
+        setSubmitError('User id not found. Please login or set your profile before applying.');
+        setSubmitting(false);
+        return;
+      }
+
+      // Determine resume URL: upload file if provided, otherwise use supplied URL
+      let resumeUrl = null;
+      if (resumeFile) {
+        try {
+          const fd = new FormData();
+          fd.append('file', resumeFile);
+          const upRes = await fetch('http://127.0.0.1:8000/api/upload/', {
+            method: 'POST',
+            headers: token ? { 'Authorization': `Bearer ${token}` } : {},
+            body: fd,
+          });
+          if (!upRes.ok) {
+            const txt = await upRes.text();
+            console.error('Upload failed:', upRes.status, txt);
+            setSubmitError('Resume upload failed. Please try again.');
+            setSubmitting(false);
+            return;
+          }
+          const ct = upRes.headers.get('content-type') || '';
+          if (ct.includes('application/json')) {
+            const j = await upRes.json();
+            resumeUrl = j.url || j.file_url || j.file || j.resume_url || j.data?.url || null;
+          } else {
+            const txt = await upRes.text();
+            console.warn('Upload returned non-json response:', txt);
+          }
+        } catch (e) {
+          console.error('Resume upload error', e);
+          setSubmitError('Resume upload failed. Please try again.');
+          setSubmitting(false);
+          return;
+        }
+
+        if (!resumeUrl || typeof resumeUrl !== 'string' || resumeUrl.length < 1 || resumeUrl.length > 200) {
+          setSubmitError('Invalid resume URL returned from upload.');
+          setSubmitting(false);
+          return;
+        }
+      } else {
+        // use provided resume URL
+        resumeUrl = String(resumeUrlInput).trim();
+        if (resumeUrl.length < 1 || resumeUrl.length > 200) {
+          setSubmitError('Resume URL must be between 1 and 200 characters.');
+          setSubmitting(false);
+          return;
+        }
+        // basic URL validation
+        try {
+          new URL(resumeUrl);
+        } catch (e) {
+          setSubmitError('Please provide a valid resume URL (include https://).');
+          setSubmitting(false);
+          return;
+        }
+      }
+
+      // Build payload according to API schema
+      const payload = {
+        job_id: Number(id),
+        freelancer_id: Number(userId),
+        resume: resumeUrl,
+        cover_letter: coverLetter,
+        job: Number(id),
+      };
+
+      const headers = { 'Content-Type': 'application/json' };
+      headers['Authorization'] = `Bearer ${token}`;
+
+      const res = await fetch('http://127.0.0.1:8000/api/job-application/', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(payload),
+      });
+
+      if (res.status === 401) {
+        setSubmitError('Unauthorized. Please login before applying.');
+        setSubmitting(false);
+        return;
+      }
+
+      if (!res.ok) {
+        // try parse JSON error
+        try {
+          const jsonErr = await res.json();
+          console.error('Submission error', jsonErr);
+          // find first useful message
+          const vals = Object.values(jsonErr);
+          const first = Array.isArray(vals) && vals.length ? vals[0] : null;
+          const msg = Array.isArray(first) && first.length ? String(first[0]) : JSON.stringify(jsonErr);
+          setSubmitError(`Submission failed: ${msg}`);
+        } catch (e) {
+          const txt = await res.text();
+          console.error('Submission failed body:', txt);
+          setSubmitError(`Submission failed: ${res.status}`);
+        }
+        setSubmitting(false);
+        return;
+      }
+
+      setSubmitSuccess(true);
+      setSubmitting(false);
+      setApplied(true);
+      closeApplyModal();
+    } catch (err) {
+      console.error(err);
+      setSubmitError('Failed to submit application');
+      setSubmitting(false);
+    }
+  };
 
   if (loading) return <div className="container mt-5">Loading job...</div>;
   if (error) return <div className="container mt-5"><div className="alert alert-danger">{error}</div></div>;
@@ -117,21 +280,55 @@ export default function JobDetail1() {
 
                 <div className="d-grid mb60">
                   {!applied ? (
-                    <Link
-                      href="#"
+                    <button
                       className="ud-btn btn-thm2"
                       onClick={(e) => {
                         e.preventDefault();
-                        handleApply();
+                        openApplyModal();
                       }}
                     >
                       Apply For Job
                       <i className="fal fa-arrow-right-long" />
-                    </Link>
+                    </button>
                   ) : (
-                    <div className="success-message">Successfully Applied!</div>
+                    <div className="success-message">Sucessfully Applied</div>
                   )}
                 </div>
+
+                {showApplyModal && (
+                  <>
+                    <div className="modal-overlay" style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.5)',zIndex:1050}} onClick={closeApplyModal} />
+                    <div className="apply-modal" style={{position:'fixed',left:'50%',top:'50%',transform:'translate(-50%,-50%)',zIndex:1051,width:'90%',maxWidth:700,background:'#fff',padding:20,borderRadius:8}}>
+                      <h4>Apply for {job.job_title || job.title || job.job_category}</h4>
+                      <form onSubmit={handleLocalSubmit}>
+                        <div style={{marginTop:12}}>
+                          <label className="mb-2 d-block">Upload Resume (PDF, DOC)</label>
+                          <input type="file" accept=".pdf,.doc,.docx" onChange={onResumeChange} />
+                        </div>
+                        <div style={{marginTop:8}}>
+                          <label className="mb-2 d-block">Or paste resume URL</label>
+                          <input
+                            type="url"
+                            className="form-control"
+                            placeholder="https://example.com/myresume.pdf"
+                            value={resumeUrlInput}
+                            onChange={(e) => setResumeUrlInput(e.target.value)}
+                          />
+                          <small className="form-text text-muted">You can either upload a file or provide a public URL to your resume. If both are provided, uploaded file takes precedence.</small>
+                        </div>
+                        <div style={{marginTop:12}}>
+                          <label className="mb-2 d-block">Cover Letter</label>
+                          <textarea className="form-control" rows={6} value={coverLetter} onChange={(e)=>setCoverLetter(e.target.value)} />
+                        </div>
+                        {submitError && <div className="alert alert-danger mt-3">{submitError}</div>}
+                        <div className="mt-3 d-flex justify-content-end">
+                          <button type="button" className="btn btn-secondary me-2" onClick={closeApplyModal}>Close</button>
+                          <button type="submit" className="btn btn-primary">Submit</button>
+                        </div>
+                      </form>
+                    </div>
+                  </>
+                )}
               </div>
             </div>
           </div>
