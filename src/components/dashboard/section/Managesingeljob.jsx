@@ -75,6 +75,39 @@ const fetchJobApplications = async (jobId) => {
   }
 };
 
+// Fetch interview info for a given application id
+const fetchInterviewForApplication = async (applicationId) => {
+  try {
+    if (!applicationId) return null;
+    let accessToken;
+    if (typeof window !== 'undefined') {
+      accessToken = localStorage.getItem('accessToken');
+    }
+    if (!accessToken) {
+      console.error('No access token for interview fetch');
+      return null;
+    }
+    const res = await fetch(`http://127.0.0.1:8000/api/job-interview/application/${applicationId}/`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'Authorization': `Bearer ${accessToken}`,
+      }
+    });
+    if (!res.ok) {
+      // don't fail hard for interview fetches; return null
+      console.debug('No interview data for application', applicationId, res.status);
+      return null;
+    }
+    const data = await res.json().catch(() => null);
+    return data;
+  } catch (e) {
+    console.error('Error fetching interview for application', applicationId, e);
+    return null;
+  }
+};
+
 export default function JobDetailPage() {
   const params = useParams();
   const jobId = parseInt(params.id, 10);
@@ -488,6 +521,27 @@ export default function JobDetailPage() {
           setRatings(ratingsFromApps);
           setApplicants(mapped);
           setApplicantsError(null);
+
+          // Fetch interview info for each application to determine scheduled state
+          try {
+            const interviewPromises = mapped.map((m) => {
+              // m.id should be the application id
+              return m.id ? fetchInterviewForApplication(m.id) : Promise.resolve(null);
+            });
+            const interviewResults = await Promise.allSettled(interviewPromises);
+            const schedulesFromApi = {};
+            interviewResults.forEach((r, idx) => {
+              if (r.status === 'fulfilled' && r.value) {
+                const appId = mapped[idx].id;
+                // store the returned interview object keyed by application id
+                schedulesFromApi[appId] = r.value;
+              }
+            });
+            // merge with any existing schedules
+            setSchedules(prev => ({ ...prev, ...schedulesFromApi }));
+          } catch (e) {
+            console.error('Error fetching interviews for applications', e);
+          }
         }
       }
       setLoading(false);
@@ -769,12 +823,26 @@ export default function JobDetailPage() {
                                       <i className="fal fa-star me-1" />{ratings[applicant.id]}/5
                                     </span>
                                   ) : null}
+
+                                  {/* Single interview tag: show only when interview exists. Label: Scheduled or Rescheduled */}
+                                  {(() => {
+                                    const iv = schedules && schedules[applicant.id];
+                                    if (!iv) return null;
+                                    const st = String(iv.status || '').toLowerCase();
+                                    let label = 'Scheduled';
+                                    if (st.includes('resched') || st.includes('rescheduled') || st.includes('reschedule')) {
+                                      label = 'Rescheduled';
+                                    } else if (st.includes('scheduled') || st.includes('confirmed')) {
+                                      label = 'Scheduled';
+                                    }
+                                    const cls = label === 'Rescheduled' ? 'badge bg-primary text-white ms-2' : 'badge bg-info text-white ms-2';
+                                    return (
+                                      <span className={cls} title={iv?.interview_link ? `Interview link: ${iv.interview_link}` : `Status: ${iv.status || ''}`}>{label}</span>
+                                    );
+                                  })()}
                                 </>
                               );
                             })()}
-                            {schedules && schedules[applicant.id] ? (
-                              <span className="badge bg-info text-white ms-2">Scheduled</span>
-                            ) : null}
                           </td>
                           <td>
                             <button
@@ -894,12 +962,19 @@ export default function JobDetailPage() {
                         <tr key={applicant.id}>
                           <td>
                             {applicant.name}
-                            {ratings && ratings[applicant.id] ? (
-                              <span className="badge bg-warning text-dark ms-2">Rating: {ratings[applicant.id]}/5</span>
-                            ) : null}
-                            {schedules && schedules[applicant.id] ? (
-                              <span className="badge bg-info text-white ms-2">Scheduled</span>
-                            ) : null}
+                            {(() => {
+                              const iv = schedules && schedules[applicant.id];
+                              if (!iv) return null;
+                              const st = String(iv.status || '').toLowerCase();
+                              let label = 'Scheduled';
+                              if (st.includes('resched') || st.includes('rescheduled') || st.includes('reschedule')) {
+                                label = 'Rescheduled';
+                              }
+                              const cls = label === 'Rescheduled' ? 'badge bg-primary text-white ms-2' : 'badge bg-info text-white ms-2';
+                              return (
+                                <span className={cls} title={iv?.interview_link ? `Interview link: ${iv.interview_link}` : `Status: ${iv.status || ''}`}>{label}</span>
+                              );
+                            })()}
                           </td>
                           <td>
                             <button
