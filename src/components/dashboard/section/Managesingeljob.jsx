@@ -84,6 +84,7 @@ export default function JobDetailPage() {
   const [activeTab, setActiveTab] = useState("overview");
   const [showApplicants, setShowApplicants] = useState(true);
   const [showSelected, setShowSelected] = useState(true);
+  const [showHired, setShowHired] = useState(true);
   const [applicantsLoading, setApplicantsLoading] = useState(false);
   const [applicantsError, setApplicantsError] = useState(null);
   const [ratings, setRatings] = useState({});
@@ -682,11 +683,16 @@ export default function JobDetailPage() {
       <div className="row mt-4">
         <div className="col-xl-12">
           <div className="mb-4 border rounded p-3">
-            <div className="d-flex justify-content-between align-items-center">
+            <div
+              className="d-flex justify-content-between align-items-center cursor-pointer"
+              onClick={() => setShowHired(!showHired)}
+            >
               <h5 className="fw500 mb-0">Hired Person</h5>
+              <span>{showHired ? "−" : "+"}</span>
             </div>
-            <div className="mt-3 table-responsive" style={{ maxHeight: "300px", overflowY: "auto" }}>
-              <table className="table-style3 table at-savesearch mb-0">
+            {showHired && (
+              <div className="mt-3 table-responsive" style={{ maxHeight: "300px", overflowY: "auto" }}>
+                <table className="table-style3 table at-savesearch mb-0">
                 <thead className="t-head">
                   <tr>
                     <th>Person</th>
@@ -764,8 +770,9 @@ export default function JobDetailPage() {
                     })()
                   )}
                 </tbody>
-              </table>
-            </div>
+                </table>
+              </div>
+            )}
           </div>
         </div>
       </div>
