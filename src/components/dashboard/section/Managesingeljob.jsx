@@ -678,6 +678,97 @@ export default function JobDetailPage() {
       </div>
 
       {/* Rating Modal (UI-only) */}
+      {/* Hired Person List (shows applicants with status 'Accepted') */}
+      <div className="row mt-4">
+        <div className="col-xl-12">
+          <div className="mb-4 border rounded p-3">
+            <div className="d-flex justify-content-between align-items-center">
+              <h5 className="fw500 mb-0">Hired Person</h5>
+            </div>
+            <div className="mt-3 table-responsive" style={{ maxHeight: "300px", overflowY: "auto" }}>
+              <table className="table-style3 table at-savesearch mb-0">
+                <thead className="t-head">
+                  <tr>
+                    <th>Person</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody className="t-body">
+                  {applicantsLoading ? (
+                    <tr>
+                      <td colSpan="2" className="text-center">Loading hired persons...</td>
+                    </tr>
+                  ) : applicantsError ? (
+                    <tr>
+                      <td colSpan="2" className="text-danger">Error loading applicants: {applicantsError}</td>
+                    </tr>
+                  ) : (
+                    (() => {
+                      const accepted = Array.isArray(applicants) ? applicants.filter(a => (a.status || '').toLowerCase() === 'accepted') : [];
+                      if (accepted.length === 0) {
+                        return (
+                          <tr>
+                            <td colSpan="2" className="text-center">No hired persons yet.</td>
+                          </tr>
+                        );
+                      }
+                      return accepted.map((applicant) => (
+                        <tr key={applicant.id}>
+                          <td>
+                            {applicant.name}
+                            {ratings && ratings[applicant.id] ? (
+                              <span className="badge bg-warning text-dark ms-2">Rating: {ratings[applicant.id]}/5</span>
+                            ) : null}
+                            {schedules && schedules[applicant.id] ? (
+                              <span className="badge bg-info text-white ms-2">Scheduled</span>
+                            ) : null}
+                          </td>
+                          <td>
+                            <button
+                              className="btn btn-sm btn-outline-primary me-2"
+                              title="CV"
+                              onClick={() => { if (applicant.resume) window.open(applicant.resume, '_blank'); else alert('No resume available'); }}
+                            ><i className="fal fa-file-download" /></button>
+                            <button
+                              className="btn btn-sm btn-secondary me-2"
+                              title="Rate"
+                              onClick={() => {
+                                setRatingApplicant(applicant);
+                                setRatingValue(ratings && ratings[applicant.id] ? ratings[applicant.id] : 5);
+                                setShowRatingModal(true);
+                              }}
+                            ><i className="fal fa-star" /></button>
+                            <button
+                              className="btn btn-sm btn-outline-secondary me-2"
+                              title="Schedule"
+                              onClick={() => {
+                                setScheduleApplicant(applicant);
+                                const existing = schedules && schedules[applicant.id] ? schedules[applicant.id] : null;
+                                setScheduleData(existing ? {
+                                  date_time: existing.date_time || '',
+                                  interview_mode: existing.interview_mode || 'Zoom',
+                                  interview_link: existing.interview_link || '',
+                                  interview_notes: existing.interview_notes || '',
+                                } : { date_time: '', interview_mode: 'Zoom', interview_link: '', interview_notes: '' });
+                                setShowScheduleModal(true);
+                              }}
+                            ><i className="fal fa-calendar-alt" /></button>
+                            <button
+                              className="btn btn-sm btn-info me-2"
+                              title="Chat"
+                              onClick={() => alert(`Open chat with ${applicant.name} (UI-only)`) }
+                            ><i className="fal fa-comments" /></button>
+                          </td>
+                        </tr>
+                      ));
+                    })()
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
       {showRatingModal && ratingApplicant && (
         <div className="modal-backdrop" style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1050 }}>
           <div className="d-flex justify-content-center align-items-center" style={{ minHeight: '100vh' }}>
