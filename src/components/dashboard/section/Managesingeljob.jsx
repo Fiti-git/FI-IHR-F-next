@@ -256,11 +256,109 @@ export default function JobDetailPage() {
       // update local state to reflect new status
       setApplicants(prev => prev.map(a => a.id === confirmApplicant.id ? { ...a, status: confirmAction } : a));
       setConfirmResult(`Applicant is ${confirmAction}`);
+      // If applicant was accepted, update the job posting to closed
+      if (confirmAction === 'Accepted' && job && job.id) {
+        try {
+          await updateJobPosting(job.id, { job_status: 'closed' });
+          // update UI state: show Closed and set selected candidate
+          setJob(prev => ({ ...prev, status: 'Closed', selectedCandidate: confirmApplicant.name }));
+        } catch (err) {
+          console.error('Could not update job status to closed', err);
+          // keep UI in sync with acceptance; inform user that job update failed
+          alert('Applicant accepted but failed to close job: ' + (err.message || String(err)));
+        }
+      }
     } catch (e) {
       console.error('Confirm action error', e);
       alert('Could not update status: ' + (e.message || String(e)));
     } finally {
       setConfirmLoading(false);
+    }
+  };
+
+  // Update job posting via PUT to change job_status or other fields
+  const updateJobPosting = async (jobId, updates = {}) => {
+    if (!jobId) throw new Error('Missing job id');
+    try {
+      let accessToken;
+      if (typeof window !== 'undefined') {
+        accessToken = localStorage.getItem('accessToken');
+      }
+      if (!accessToken) throw new Error('No access token found');
+      // Build payload using the original backend fields when available (job.raw)
+      // so we only change job_status while keeping all other fields identical to backend values.
+      const fromRaw = job && job.raw ? job.raw : {};
+      const payload = {
+        job_title: fromRaw.job_title ?? fromRaw.jobTitle ?? job?.title ?? '',
+        department: fromRaw.department ?? job?.department ?? '',
+        job_type: fromRaw.job_type ?? fromRaw.jobType ?? job?.jobType ?? '',
+        work_location: fromRaw.work_location ?? job?.workLocation ?? '',
+        work_mode: fromRaw.work_mode ?? job?.workMode ?? '',
+        role_overview: fromRaw.role_overview ?? job?.roleOverview ?? '',
+        key_responsibilities: fromRaw.key_responsibilities ?? job?.keyResponsibilities ?? '',
+        required_qualifications: fromRaw.required_qualifications ?? job?.requiredQualifications ?? '',
+        preferred_qualifications: fromRaw.preferred_qualifications ?? job?.preferredQualifications ?? '',
+        // backend may use language_required or languages_required
+        languages_required: fromRaw.languages_required ?? fromRaw.language_required ?? job?.languagesRequired ?? '',
+        job_category: fromRaw.job_category ?? fromRaw.category ?? job?.category ?? '',
+        salary_from: fromRaw.salary_from ?? job?.salaryFrom ?? '',
+        salary_to: fromRaw.salary_to ?? job?.salaryTo ?? '',
+        currency: fromRaw.currency ?? job?.currency ?? '',
+        application_deadline: fromRaw.application_deadline ?? job?.applicationDeadline ?? null,
+        application_method: fromRaw.application_method ?? job?.applicationMethod ?? '',
+        interview_mode: fromRaw.interview_mode ?? job?.interviewMode ?? '',
+        hiring_manager: fromRaw.hiring_manager ?? job?.hiringManager ?? '',
+        number_of_openings: fromRaw.number_of_openings ?? job?.numberOfOpenings ?? job?.number_of_openings ?? 1,
+        expected_start_date: fromRaw.expected_start_date ?? job?.expectedStartDate ?? null,
+        screening_questions: fromRaw.screening_questions ?? job?.screeningQuestions ?? '',
+        file_upload: fromRaw.file_upload ?? '',
+        health_insurance: fromRaw.health_insurance ?? job?.benefits?.healthInsurance ?? false,
+        remote_work: fromRaw.remote_work ?? job?.benefits?.remoteWork ?? false,
+        paid_leave: fromRaw.paid_leave ?? job?.benefits?.paidLeave ?? false,
+        bonus: fromRaw.bonus ?? job?.benefits?.bonus ?? false,
+        // set job_status from updates if provided; otherwise keep backend/raw value or fall back
+        job_status: updates.job_status ?? fromRaw.job_status ?? fromRaw.jobStatus ?? (job?.status ? String(job.status).toLowerCase() : 'open'),
+      };
+
+      // Allow callers to override or add fields explicitly
+      Object.assign(payload, updates);
+
+      // Remove empty-string fields before sending. Some backend choice fields
+      // (e.g. application_method) reject empty strings as invalid choices.
+      // Keep boolean false and numeric 0 values; only remove strings that are empty/whitespace.
+      Object.keys(payload).forEach((k) => {
+        const v = payload[k];
+        if (typeof v === 'string' && v.trim() === '') {
+          delete payload[k];
+        }
+      });
+
+      // Debug: show the outgoing payload when running in browser (remove in prod)
+      if (typeof window !== 'undefined' && window.console && process?.env?.NODE_ENV !== 'production') {
+        console.debug('updateJobPosting payload:', payload);
+      }
+
+      const res = await fetch(`http://127.0.0.1:8000/api/job-posting/${jobId}/`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'Authorization': `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (!res.ok) {
+        let txt = '';
+        try { txt = await res.text(); } catch (e) { txt = String(res.status); }
+        throw new Error(`Failed to update job posting: ${res.status} ${txt}`);
+      }
+
+      const data = await res.json().catch(() => null);
+      return data || payload;
+    } catch (err) {
+      console.error('updateJobPosting error', err);
+      throw err;
     }
   };
 
@@ -312,6 +410,9 @@ export default function JobDetailPage() {
           description: jobData.role_overview || "", // Using role_overview as description
           applicants: [], // Add empty array as default for applicants since it's not in the API
           selectedCandidate: null // Add null as default for selectedCandidate
+          ,
+          // keep the original raw API response so we can reuse exact backend field values when PUTting
+          raw: jobData
         };
         setJob(transformedJob);
         // load applicants for this job
@@ -919,29 +1020,7 @@ export default function JobDetailPage() {
         </div>
       )}
 
-      {/* Selected Candidate (if job closed) */}
-      {job.status === "Closed" && (
-        <div className="row">
-          <div className="col-xl-12">
-            <div className="mb-4 border rounded p-3">
-              <div
-                className="d-flex justify-content-between align-items-center cursor-pointer"
-                onClick={() => setShowSelected(!showSelected)}
-              >
-                <h5 className="fw500 mb-0">Selected Candidate</h5>
-                <span>{showSelected ? "−" : "+"}</span>
-              </div>
-              {showSelected && (
-                <div className="mt-3">
-                  <p className="text-muted">
-                    <strong>Candidate Selected:</strong> {job.selectedCandidate}
-                  </p>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Selected Candidate list removed per request */}
 
     </div>
   );
