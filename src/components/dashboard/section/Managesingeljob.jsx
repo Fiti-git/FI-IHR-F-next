@@ -41,14 +41,151 @@ const fetchJobDetails = async (jobId) => {
   }
 };
 
+const fetchJobApplications = async (jobId) => {
+  try {
+    let accessToken;
+    if (typeof window !== 'undefined') {
+      accessToken = localStorage.getItem('accessToken');
+    }
+    if (!accessToken) {
+      console.error('No access token for applications');
+      return { data: [], error: 'No access token' };
+    }
+    const res = await fetch(`http://127.0.0.1:8000/api/job-application/job/${jobId}/`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'Authorization': `Bearer ${accessToken}`,
+      }
+    });
+    if (!res.ok) {
+      const txt = await res.text().catch(()=>String(res.status));
+      const err = `Failed to fetch applicants: ${res.status} ${txt}`;
+      console.error(err);
+      return { data: [], error: err };
+    }
+    const data = await res.json();
+    // API may return { applications: [...] } or an array directly
+    const arr = data && Array.isArray(data.applications) ? data.applications : data;
+    return { data: Array.isArray(arr) ? arr : [], error: null };
+  } catch (e) {
+    console.error('Error fetching applications', e);
+    return { data: [], error: String(e) };
+  }
+};
+
 export default function JobDetailPage() {
   const params = useParams();
   const jobId = parseInt(params.id, 10);
   const [job, setJob] = useState(null);
+  const [applicants, setApplicants] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("overview");
   const [showApplicants, setShowApplicants] = useState(true);
   const [showSelected, setShowSelected] = useState(true);
+  const [applicantsLoading, setApplicantsLoading] = useState(false);
+  const [applicantsError, setApplicantsError] = useState(null);
+  const [ratings, setRatings] = useState({});
+  const [showRatingModal, setShowRatingModal] = useState(false);
+  const [ratingApplicant, setRatingApplicant] = useState(null);
+  const [ratingValue, setRatingValue] = useState(5);
+  const [schedules, setSchedules] = useState({});
+  const [showScheduleModal, setShowScheduleModal] = useState(false);
+  const [scheduleApplicant, setScheduleApplicant] = useState(null);
+  const [scheduleData, setScheduleData] = useState({ date_time: '', interview_mode: 'Zoom', interview_link: '', interview_notes: '' });
+  const [scheduleSaving, setScheduleSaving] = useState(false);
+  const [scheduleError, setScheduleError] = useState(null);
+
+  // Map UI labels to backend enum values expected by the API
+  const INTERVIEW_MODE_MAP = {
+    'Zoom': 'zoom',
+    'Teams': 'teams',
+    'In-person': 'in_person',
+    'Phone': 'phone',
+    'Other': 'other',
+  };
+
+  // Save schedule to backend API
+  const handleSaveSchedule = async () => {
+    // basic validation
+    if (!scheduleApplicant || !scheduleApplicant.id) {
+      alert('No applicant selected');
+      return;
+    }
+    if (!scheduleData.date_time) {
+      alert('Please provide date and time for the interview');
+      return;
+    }
+    if (!scheduleData.interview_mode) {
+      alert('Please select an interview mode');
+      return;
+    }
+
+    // Determine application_id: prefer applicant.raw.application_id or raw.id, fallback to applicant.id
+    const applicationId = scheduleApplicant.raw && (scheduleApplicant.raw.application_id || scheduleApplicant.raw.id) ?
+      (scheduleApplicant.raw.application_id || scheduleApplicant.raw.id) : scheduleApplicant.id;
+
+    const payload = {
+      application_id: applicationId,
+      date_time: scheduleData.date_time,
+      // translate UI value to backend enum if mapping exists
+      interview_mode: INTERVIEW_MODE_MAP[scheduleData.interview_mode] || scheduleData.interview_mode,
+      interview_link: scheduleData.interview_link || null,
+      interview_notes: scheduleData.interview_notes || null,
+    };
+
+    setScheduleSaving(true);
+    setScheduleError(null);
+
+    try {
+      let accessToken;
+      if (typeof window !== 'undefined') {
+        accessToken = localStorage.getItem('accessToken');
+      }
+      if (!accessToken) {
+        throw new Error('No access token found');
+      }
+
+      const res = await fetch('http://127.0.0.1:8000/api/job-interview/schedule/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'Authorization': `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (!res.ok) {
+        // try to read json or text error
+        let errText = '';
+        try { errText = await res.text(); } catch (e) { errText = String(res.status); }
+        throw new Error(`Failed to save schedule: ${res.status} ${errText}`);
+      }
+
+      const responseData = await res.json().catch(() => null);
+
+      // Use responseData if present, otherwise the payload we sent
+      const saved = responseData || payload;
+
+      // update local UI state
+      setSchedules(prev => ({ ...prev, [scheduleApplicant.id]: saved }));
+      setApplicants(prev => prev.map(a => a.id === scheduleApplicant.id ? { ...a, schedule: saved } : a));
+
+      // close modal
+      setShowScheduleModal(false);
+      setScheduleApplicant(null);
+      setScheduleData({ date_time: '', interview_mode: 'Zoom', interview_link: '', interview_notes: '' });
+    } catch (err) {
+      console.error('Schedule save error', err);
+      setScheduleError(String(err));
+      // show a simple alert for now
+      alert('Could not save schedule: ' + (err.message || String(err)));
+    } finally {
+      setScheduleSaving(false);
+    }
+  };
 
   useEffect(() => {
     const loadJobDetails = async () => {
@@ -100,6 +237,25 @@ export default function JobDetailPage() {
           selectedCandidate: null // Add null as default for selectedCandidate
         };
         setJob(transformedJob);
+        // load applicants for this job
+        setApplicantsLoading(true);
+        const appsRes = await fetchJobApplications(jobId);
+        setApplicantsLoading(false);
+        if (appsRes.error) {
+          setApplicants([]);
+          setApplicantsError(appsRes.error);
+        } else {
+          const mapped = appsRes.data.map(a => ({
+            id: a.application_id || a.id || null,
+            name: a.freelancer_name || a.freelancer?.name || a.applicant_name || (a.freelancer_profile?.full_name) || `Freelancer ${a.freelancer_id || ''}`,
+            resume: a.resume_url || a.resume || a.file || null,
+            cover_letter: a.cover_letter_url || a.cover_letter || a.coverletter || a.message || '',
+            status: a.status || a.application_status || 'Applied',
+            raw: a,
+          }));
+          setApplicants(mapped);
+          setApplicantsError(null);
+        }
       }
       setLoading(false);
     };
@@ -351,31 +507,73 @@ export default function JobDetailPage() {
                     </tr>
                   </thead>
                   <tbody className="t-body">
-                    {job.applicants.length > 0 ? (
-                      job.applicants.map((applicant) => (
+                    {applicantsLoading ? (
+                      <tr>
+                        <td colSpan="2" className="text-center">Loading applicants...</td>
+                      </tr>
+                    ) : applicantsError ? (
+                      <tr>
+                        <td colSpan="2" className="text-danger">Error loading applicants: {applicantsError}</td>
+                      </tr>
+                    ) : applicants.length > 0 ? (
+                      applicants.map((applicant) => (
                         <tr key={applicant.id}>
-                          <td>{applicant.name}</td>
-<td>
-  <button
-    className="btn btn-sm btn-outline-primary me-2"
-    onClick={() => alert(`View Profile: ${applicant.name}`)}
-  >
-    View Profile
-  </button>
-  <button
-    className="btn btn-sm btn-info me-2"
-    onClick={() => alert(`Move to Interview: ${applicant.name}`)}
-  >
-    To Interview
-  </button>
-  <button
-    className="btn btn-sm btn-outline-danger"
-    onClick={() => alert(`Reject: ${applicant.name}`)}
-  >
-    Reject
-  </button>
-</td>
-
+                          <td>
+                            {applicant.name}
+                            {ratings && ratings[applicant.id] ? (
+                              <span className="badge bg-warning text-dark ms-2">Rating: {ratings[applicant.id]}/5</span>
+                            ) : null}
+                            {schedules && schedules[applicant.id] ? (
+                              <span className="badge bg-info text-white ms-2">Scheduled</span>
+                            ) : null}
+                          </td>
+                          <td>
+                            <button
+                              className="btn btn-sm btn-outline-primary me-2"
+                              title="CV"
+                              onClick={() => { if (applicant.resume) window.open(applicant.resume, '_blank'); else alert('No resume available'); }}
+                            ><i className="fal fa-file-download" /></button>
+                            <button
+                              className="btn btn-sm btn-secondary me-2"
+                              title="Rate"
+                              onClick={() => {
+                                setRatingApplicant(applicant);
+                                setRatingValue(ratings && ratings[applicant.id] ? ratings[applicant.id] : 5);
+                                setShowRatingModal(true);
+                              }}
+                            ><i className="fal fa-star" /></button>
+                            <button
+                              className="btn btn-sm btn-outline-secondary me-2"
+                              title="Schedule"
+                              onClick={() => {
+                                setScheduleApplicant(applicant);
+                                // prefill scheduleData if applicant already has schedule
+                                const existing = schedules && schedules[applicant.id] ? schedules[applicant.id] : null;
+                                setScheduleData(existing ? {
+                                  date_time: existing.date_time || '',
+                                  interview_mode: existing.interview_mode || 'Zoom',
+                                  interview_link: existing.interview_link || '',
+                                  interview_notes: existing.interview_notes || '',
+                                } : { date_time: '', interview_mode: 'Zoom', interview_link: '', interview_notes: '' });
+                                setShowScheduleModal(true);
+                              }}
+                            ><i className="fal fa-calendar-alt" /></button>
+                            <button
+                              className="btn btn-sm btn-info me-2"
+                              title="Chat"
+                              onClick={() => alert(`Open chat with ${applicant.name} (UI-only)`) }
+                            ><i className="fal fa-comments" /></button>
+                            <button
+                              className="btn btn-sm btn-success me-2"
+                              title="Accept"
+                              onClick={() => setApplicants(prev => prev.map(a => a.id === applicant.id ? { ...a, status: 'Accepted' } : a))}
+                            ><i className="fal fa-check" /></button>
+                            <button
+                              className="btn btn-sm btn-outline-danger"
+                              title="Reject"
+                              onClick={() => setApplicants(prev => prev.map(a => a.id === applicant.id ? { ...a, status: 'Rejected' } : a))}
+                            ><i className="fal fa-times" /></button>
+                          </td>
                         </tr>
                       ))
                     ) : (
@@ -392,6 +590,108 @@ export default function JobDetailPage() {
           </div>
         </div>
       </div>
+
+      {/* Rating Modal (UI-only) */}
+      {showRatingModal && ratingApplicant && (
+        <div className="modal-backdrop" style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1050 }}>
+          <div className="d-flex justify-content-center align-items-center" style={{ minHeight: '100vh' }}>
+            <div className="bg-white p-4 rounded" style={{ width: 360 }}>
+              <h5 className="mb-3">Rate {ratingApplicant.name}</h5>
+              <div className="mb-3 d-flex align-items-center">
+                {[1,2,3,4,5].map((n) => (
+                  <button
+                    key={n}
+                    type="button"
+                    className={`btn btn-sm me-2 ${ratingValue >= n ? 'btn-warning text-dark' : 'btn-outline-secondary'}`}
+                    onClick={() => setRatingValue(n)}
+                    title={`${n} star${n>1?'s':''}`}
+                  >
+                    <i className="fal fa-star" /> {n}
+                  </button>
+                ))}
+              </div>
+              <div className="d-flex justify-content-end">
+                <button className="btn btn-secondary me-2" onClick={() => { setShowRatingModal(false); setRatingApplicant(null); }}>Cancel</button>
+                <button className="btn btn-primary" onClick={() => {
+                  if (!ratingApplicant || !ratingApplicant.id) {
+                    alert('No applicant selected');
+                    return;
+                  }
+                  setRatings(prev => ({ ...prev, [ratingApplicant.id]: ratingValue }));
+                  // Optionally reflect rating in applicants list by adding rating field
+                  setApplicants(prev => prev.map(a => a.id === ratingApplicant.id ? { ...a, rating: ratingValue } : a));
+                  setShowRatingModal(false);
+                  setRatingApplicant(null);
+                }}>Save</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Schedule Modal (UI-only) */}
+      {showScheduleModal && scheduleApplicant && (
+        <div className="modal-backdrop" style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1050 }}>
+          <div className="d-flex justify-content-center align-items-center" style={{ minHeight: '100vh' }}>
+            <div className="bg-white p-4 rounded" style={{ width: 520 }}>
+              <h5 className="mb-3">Schedule interview for {scheduleApplicant.name}</h5>
+              <div className="mb-2">
+                <label className="form-label">Date & Time *</label>
+                <input
+                  type="datetime-local"
+                  className="form-control"
+                  value={scheduleData.date_time}
+                  onChange={(e) => setScheduleData(prev => ({ ...prev, date_time: e.target.value }))}
+                />
+              </div>
+              <div className="mb-2">
+                <label className="form-label">Interview Mode *</label>
+                <select
+                  className="form-select"
+                  value={scheduleData.interview_mode}
+                  onChange={(e) => setScheduleData(prev => ({ ...prev, interview_mode: e.target.value }))}
+                >
+                  <option>Zoom</option>
+                  <option>Teams</option>
+                  <option>In-person</option>
+                  <option>Phone</option>
+                  <option>Other</option>
+                </select>
+              </div>
+              <div className="mb-2">
+                <label className="form-label">Interview Link (optional)</label>
+                <input
+                  type="url"
+                  className="form-control"
+                  placeholder="https://zoom.us/meeting/..."
+                  maxLength={200}
+                  value={scheduleData.interview_link}
+                  onChange={(e) => setScheduleData(prev => ({ ...prev, interview_link: e.target.value }))}
+                />
+              </div>
+              <div className="mb-3">
+                <label className="form-label">Interview Notes (optional)</label>
+                <textarea
+                  className="form-control"
+                  rows={3}
+                  value={scheduleData.interview_notes}
+                  onChange={(e) => setScheduleData(prev => ({ ...prev, interview_notes: e.target.value }))}
+                />
+              </div>
+              <div className="d-flex justify-content-end">
+                <button className="btn btn-secondary me-2" onClick={() => { setShowScheduleModal(false); setScheduleApplicant(null); }}>Cancel</button>
+                <button
+                  className="btn btn-primary"
+                  onClick={() => handleSaveSchedule()}
+                  disabled={scheduleSaving}
+                >
+                  {scheduleSaving ? 'Saving...' : 'Save'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Selected Candidate (if job closed) */}
       {job.status === "Closed" && (
