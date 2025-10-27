@@ -739,7 +739,21 @@ export default function JobDetailPage() {
                       applicants.map((applicant) => (
                         <tr key={applicant.id}>
                           <td>
-                            {applicant.name}
+                            {/* Status tag in front of name: Accepted / Rejected / Pending */}
+                            {(() => {
+                              const st = (applicant.status || '').toLowerCase();
+                              let label = 'Pending';
+                              // Put badge after the name, so use ms-2 (margin-start) for spacing
+                              let cls = 'badge bg-secondary text-white ms-2';
+                              if (st === 'accepted') { label = 'Accepted'; cls = 'badge bg-success ms-2'; }
+                              else if (st === 'rejected') { label = 'Rejected'; cls = 'badge bg-danger ms-2'; }
+                              return (
+                                <>
+                                  {applicant.name}
+                                  <span className={cls} title={`Status: ${label}`}>{label}</span>
+                                </>
+                              );
+                            })()}
                             {ratings && ratings[applicant.id] ? (
                               <span className="badge bg-warning text-dark ms-2">Rating: {ratings[applicant.id]}/5</span>
                             ) : null}
