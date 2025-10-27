@@ -108,6 +108,37 @@ const fetchInterviewForApplication = async (applicationId) => {
   }
 };
 
+// Convert backend ISO interview_date (UTC) to a value suitable for <input type="datetime-local"> (local time)
+const convertIsoToDatetimeLocal = (iso) => {
+  if (!iso) return '';
+  try {
+    const d = new Date(iso);
+    if (isNaN(d)) return '';
+    const pad = (n) => String(n).padStart(2, '0');
+    const year = d.getFullYear();
+    const month = pad(d.getMonth() + 1);
+    const day = pad(d.getDate());
+    const hours = pad(d.getHours());
+    const minutes = pad(d.getMinutes());
+    return `${year}-${month}-${day}T${hours}:${minutes}`;
+  } catch (e) {
+    return '';
+  }
+};
+
+// Convert a local datetime-local value to ISO string (UTC) for backend
+const convertDatetimeLocalToIso = (localValue) => {
+  if (!localValue) return null;
+  try {
+    // localValue is like '2025-10-27T14:30'
+    const d = new Date(localValue);
+    if (isNaN(d)) return null;
+    return d.toISOString();
+  } catch (e) {
+    return null;
+  }
+};
+
 export default function JobDetailPage() {
   const params = useParams();
   const jobId = parseInt(params.id, 10);
@@ -219,7 +250,8 @@ export default function JobDetailPage() {
 
     const payload = {
       application_id: applicationId,
-      date_time: scheduleData.date_time,
+      // convert local datetime-local value to ISO for backend
+      date_time: convertDatetimeLocalToIso(scheduleData.date_time),
       // translate UI value to backend enum if mapping exists
       interview_mode: INTERVIEW_MODE_MAP[scheduleData.interview_mode] || scheduleData.interview_mode,
       interview_link: scheduleData.interview_link || null,
@@ -862,18 +894,29 @@ export default function JobDetailPage() {
                             <button
                               className="btn btn-sm btn-outline-secondary me-2"
                               title="Schedule"
-                              onClick={() => {
-                                setScheduleApplicant(applicant);
-                                // prefill scheduleData if applicant already has schedule
-                                const existing = schedules && schedules[applicant.id] ? schedules[applicant.id] : null;
-                                setScheduleData(existing ? {
-                                  date_time: existing.date_time || '',
-                                  interview_mode: existing.interview_mode || 'Zoom',
-                                  interview_link: existing.interview_link || '',
-                                  interview_notes: existing.interview_notes || '',
-                                } : { date_time: '', interview_mode: 'Zoom', interview_link: '', interview_notes: '' });
-                                setShowScheduleModal(true);
-                              }}
+                              onClick={async () => {
+                                  setScheduleApplicant(applicant);
+                                  // Try to use cached schedule; if missing, fetch latest from API
+                                  let existing = schedules && schedules[applicant.id] ? schedules[applicant.id] : null;
+                                  if (!existing) {
+                                    try {
+                                      const fetched = await fetchInterviewForApplication(applicant.id);
+                                      if (fetched) {
+                                        setSchedules(prev => ({ ...prev, [applicant.id]: fetched }));
+                                        existing = fetched;
+                                      }
+                                    } catch (e) {
+                                      console.error('Error fetching interview on schedule click', e);
+                                    }
+                                  }
+                                  setScheduleData(existing ? {
+                                    date_time: convertIsoToDatetimeLocal(existing.interview_date) || '',
+                                    interview_mode: existing.interview_mode || 'Zoom',
+                                    interview_link: existing.interview_link || '',
+                                    interview_notes: existing.interview_notes || '',
+                                  } : { date_time: '', interview_mode: 'Zoom', interview_link: '', interview_notes: '' });
+                                  setShowScheduleModal(true);
+                                }}
                             ><i className="fal fa-calendar-alt" /></button>
                             <button
                               className="btn btn-sm btn-info me-2"
@@ -994,17 +1037,29 @@ export default function JobDetailPage() {
                             <button
                               className="btn btn-sm btn-outline-secondary me-2"
                               title="Schedule"
-                              onClick={() => {
-                                setScheduleApplicant(applicant);
-                                const existing = schedules && schedules[applicant.id] ? schedules[applicant.id] : null;
-                                setScheduleData(existing ? {
-                                  date_time: existing.date_time || '',
-                                  interview_mode: existing.interview_mode || 'Zoom',
-                                  interview_link: existing.interview_link || '',
-                                  interview_notes: existing.interview_notes || '',
-                                } : { date_time: '', interview_mode: 'Zoom', interview_link: '', interview_notes: '' });
-                                setShowScheduleModal(true);
-                              }}
+                              onClick={async () => {
+                                  setScheduleApplicant(applicant);
+                                  const existingCached = schedules && schedules[applicant.id] ? schedules[applicant.id] : null;
+                                  let existing = existingCached;
+                                  if (!existing) {
+                                    try {
+                                      const fetched = await fetchInterviewForApplication(applicant.id);
+                                      if (fetched) {
+                                        setSchedules(prev => ({ ...prev, [applicant.id]: fetched }));
+                                        existing = fetched;
+                                      }
+                                    } catch (e) {
+                                      console.error('Error fetching interview on schedule click', e);
+                                    }
+                                  }
+                                  setScheduleData(existing ? {
+                                    date_time: convertIsoToDatetimeLocal(existing.interview_date) || '',
+                                    interview_mode: existing.interview_mode || 'Zoom',
+                                    interview_link: existing.interview_link || '',
+                                    interview_notes: existing.interview_notes || '',
+                                  } : { date_time: '', interview_mode: 'Zoom', interview_link: '', interview_notes: '' });
+                                  setShowScheduleModal(true);
+                                }}
                             ><i className="fal fa-calendar-alt" /></button>
                             <button
                               className="btn btn-sm btn-info me-2"
