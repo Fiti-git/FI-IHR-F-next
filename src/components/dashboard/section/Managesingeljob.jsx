@@ -256,16 +256,58 @@ export default function JobDetailPage() {
       // update local state to reflect new status
       setApplicants(prev => prev.map(a => a.id === confirmApplicant.id ? { ...a, status: confirmAction } : a));
       setConfirmResult(`Applicant is ${confirmAction}`);
-      // If applicant was accepted, update the job posting to closed
+      // If applicant was accepted, reject other applicants and update the job posting to closed
       if (confirmAction === 'Accepted' && job && job.id) {
+        // capture previous applicants state so we can revert if needed
+        const prevApplicants = applicants;
         try {
-          await updateJobPosting(job.id, { job_status: 'closed' });
-          // update UI state: show Closed and set selected candidate
-          setJob(prev => ({ ...prev, status: 'Closed', selectedCandidate: confirmApplicant.name }));
+          // Reject other applicants (optimistic update)
+          const others = Array.isArray(applicants) ? applicants.filter(a => a.id !== confirmApplicant.id && (a.status || '').toLowerCase() !== 'rejected') : [];
+          if (others.length > 0) {
+            // optimistic: mark others as Rejected locally
+            setApplicants(prev => prev.map(a => a.id !== confirmApplicant.id ? { ...a, status: 'Rejected' } : a));
+
+            // send updates in parallel, but capture failures per-applicant
+            const rejectResults = await Promise.all(others.map(async (other) => {
+              const otherAppId = getApplicationIdFromApplicant(other) || other.id;
+              try {
+                await updateApplication(otherAppId, { status: 'Rejected' });
+                return { id: other.id, ok: true };
+              } catch (e) {
+                return { id: other.id, ok: false, error: e };
+              }
+            }));
+
+            const failed = rejectResults.filter(r => !r.ok);
+            if (failed.length > 0) {
+              // revert any that failed back to their original status
+              setApplicants(prev => prev.map(a => {
+                const f = failed.find(x => x.id === a.id);
+                if (f) {
+                  const original = prevApplicants.find(p => p.id === a.id);
+                  return original ? { ...a, status: original.status } : a;
+                }
+                return a;
+              }));
+              console.error('Failed to auto-reject some applicants', failed);
+              alert(`Applicant accepted but failed to reject ${failed.length} other applicant(s). Check console for details.`);
+            }
+          }
+
+          // Close the job posting on the backend
+          try {
+            await updateJobPosting(job.id, { job_status: 'closed' });
+            // update UI state: show Closed
+            setJob(prev => ({ ...prev, status: 'Closed', selectedCandidate: confirmApplicant.name }));
+          } catch (err) {
+            console.error('Could not update job status to closed', err);
+            alert('Applicant accepted but failed to close job: ' + (err.message || String(err)));
+          }
         } catch (err) {
-          console.error('Could not update job status to closed', err);
-          // keep UI in sync with acceptance; inform user that job update failed
-          alert('Applicant accepted but failed to close job: ' + (err.message || String(err)));
+          // any unexpected error: revert optimistic applicant changes
+          console.error('Error rejecting other applicants', err);
+          setApplicants(prevApplicants);
+          alert('Applicant accepted but an error occurred while rejecting other applicants: ' + (err.message || String(err)));
         }
       }
     } catch (e) {
