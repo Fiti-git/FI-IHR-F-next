@@ -96,6 +96,63 @@ export default function JobDetailPage() {
   const [scheduleData, setScheduleData] = useState({ date_time: '', interview_mode: 'Zoom', interview_link: '', interview_notes: '' });
   const [scheduleSaving, setScheduleSaving] = useState(false);
   const [scheduleError, setScheduleError] = useState(null);
+  const [applicationUpdating, setApplicationUpdating] = useState({});
+  const [applicationUpdateError, setApplicationUpdateError] = useState({});
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [confirmApplicant, setConfirmApplicant] = useState(null);
+  const [confirmAction, setConfirmAction] = useState(null); // 'Accepted' or 'Rejected'
+  const [confirmLoading, setConfirmLoading] = useState(false);
+  const [confirmResult, setConfirmResult] = useState(null);
+
+  // helper to extract application_id from applicant.raw or applicant object
+  const getApplicationIdFromApplicant = (applicant) => {
+    if (!applicant) return null;
+    if (applicant.raw) return applicant.raw.application_id || applicant.raw.id || applicant.id;
+    return applicant.application_id || applicant.id || null;
+  };
+
+  // Update application (rating/status/comments) via PUT
+  const updateApplication = async (applicationId, { rating, status, comments } = {}) => {
+    if (!applicationId) throw new Error('Missing application id');
+    setApplicationUpdating(prev => ({ ...prev, [applicationId]: true }));
+    setApplicationUpdateError(prev => ({ ...prev, [applicationId]: null }));
+    try {
+      let accessToken;
+      if (typeof window !== 'undefined') {
+        accessToken = localStorage.getItem('accessToken');
+      }
+      if (!accessToken) throw new Error('No access token found');
+
+      const body = {};
+      if (rating !== undefined && rating !== null) body.rating = String(rating);
+      if (status !== undefined) body.status = status;
+      if (comments !== undefined) body.comments = comments;
+
+      const res = await fetch(`http://127.0.0.1:8000/api/job-application/update/${applicationId}/`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'Authorization': `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify(body),
+      });
+
+      if (!res.ok) {
+        let errText = '';
+        try { errText = await res.text(); } catch (e) { errText = String(res.status); }
+        throw new Error(`Failed to update application: ${res.status} ${errText}`);
+      }
+
+      const data = await res.json().catch(() => null);
+      return data || body;
+    } catch (err) {
+      setApplicationUpdateError(prev => ({ ...prev, [applicationId]: String(err) }));
+      throw err;
+    } finally {
+      setApplicationUpdating(prev => ({ ...prev, [applicationId]: false }));
+    }
+  };
 
   // Map UI labels to backend enum values expected by the API
   const INTERVIEW_MODE_MAP = {
@@ -184,6 +241,25 @@ export default function JobDetailPage() {
       alert('Could not save schedule: ' + (err.message || String(err)));
     } finally {
       setScheduleSaving(false);
+    }
+  };
+
+  // Handle confirm Accept/Reject action (called from confirm modal)
+  const handleConfirmAction = async () => {
+    if (!confirmApplicant || !confirmAction) return;
+    setConfirmLoading(true);
+    setConfirmResult(null);
+    const appId = getApplicationIdFromApplicant(confirmApplicant) || confirmApplicant.id;
+    try {
+      await updateApplication(appId, { status: confirmAction });
+      // update local state to reflect new status
+      setApplicants(prev => prev.map(a => a.id === confirmApplicant.id ? { ...a, status: confirmAction } : a));
+      setConfirmResult(`Applicant is ${confirmAction}`);
+    } catch (e) {
+      console.error('Confirm action error', e);
+      alert('Could not update status: ' + (e.message || String(e)));
+    } finally {
+      setConfirmLoading(false);
     }
   };
 
@@ -566,12 +642,22 @@ export default function JobDetailPage() {
                             <button
                               className="btn btn-sm btn-success me-2"
                               title="Accept"
-                              onClick={() => setApplicants(prev => prev.map(a => a.id === applicant.id ? { ...a, status: 'Accepted' } : a))}
+                              onClick={() => {
+                                setConfirmApplicant(applicant);
+                                setConfirmAction('Accepted');
+                                setConfirmResult(null);
+                                setShowConfirmModal(true);
+                              }}
                             ><i className="fal fa-check" /></button>
                             <button
                               className="btn btn-sm btn-outline-danger"
                               title="Reject"
-                              onClick={() => setApplicants(prev => prev.map(a => a.id === applicant.id ? { ...a, status: 'Rejected' } : a))}
+                              onClick={() => {
+                                setConfirmApplicant(applicant);
+                                setConfirmAction('Rejected');
+                                setConfirmResult(null);
+                                setShowConfirmModal(true);
+                              }}
                             ><i className="fal fa-times" /></button>
                           </td>
                         </tr>
@@ -612,16 +698,29 @@ export default function JobDetailPage() {
               </div>
               <div className="d-flex justify-content-end">
                 <button className="btn btn-secondary me-2" onClick={() => { setShowRatingModal(false); setRatingApplicant(null); }}>Cancel</button>
-                <button className="btn btn-primary" onClick={() => {
+                <button className="btn btn-primary" onClick={async () => {
                   if (!ratingApplicant || !ratingApplicant.id) {
                     alert('No applicant selected');
                     return;
                   }
+                  const appId = getApplicationIdFromApplicant(ratingApplicant) || ratingApplicant.id;
+                  // optimistic UI
                   setRatings(prev => ({ ...prev, [ratingApplicant.id]: ratingValue }));
-                  // Optionally reflect rating in applicants list by adding rating field
                   setApplicants(prev => prev.map(a => a.id === ratingApplicant.id ? { ...a, rating: ratingValue } : a));
-                  setShowRatingModal(false);
-                  setRatingApplicant(null);
+                  try {
+                    await updateApplication(appId, { rating: ratingValue });
+                    setShowRatingModal(false);
+                    setRatingApplicant(null);
+                  } catch (e) {
+                    // revert on error
+                    setRatings(prev => {
+                      const next = { ...prev };
+                      delete next[ratingApplicant.id];
+                      return next;
+                    });
+                    setApplicants(prev => prev.map(a => a.id === ratingApplicant.id ? ({ ...a, rating: undefined }) : a));
+                    alert('Could not save rating: ' + (e.message || String(e)));
+                  }
                 }}>Save</button>
               </div>
             </div>
@@ -688,6 +787,35 @@ export default function JobDetailPage() {
                   {scheduleSaving ? 'Saving...' : 'Save'}
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Confirm Accept/Reject Modal */}
+      {showConfirmModal && confirmApplicant && (
+        <div className="modal-backdrop" style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1060 }}>
+          <div className="d-flex justify-content-center align-items-center" style={{ minHeight: '100vh' }}>
+            <div className="bg-white p-4 rounded" style={{ width: 420 }}>
+              {!confirmResult ? (
+                <>
+                  <h5 className="mb-3">{confirmAction} applicant</h5>
+                  <p>Are you sure you want to <strong>{confirmAction.toLowerCase()}</strong> <strong>{confirmApplicant.name}</strong>?</p>
+                  <div className="d-flex justify-content-end">
+                    <button className="btn btn-secondary me-2" onClick={() => { setShowConfirmModal(false); setConfirmApplicant(null); setConfirmAction(null); setConfirmResult(null); }}>Cancel</button>
+                    <button className="btn btn-primary" onClick={() => handleConfirmAction()} disabled={confirmLoading}>
+                      {confirmLoading ? 'Saving...' : confirmAction}
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <h5 className="mb-3">{confirmResult}</h5>
+                  <div className="d-flex justify-content-end">
+                    <button className="btn btn-primary" onClick={() => { setShowConfirmModal(false); setConfirmApplicant(null); setConfirmAction(null); setConfirmResult(null); }}>OK</button>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         </div>
