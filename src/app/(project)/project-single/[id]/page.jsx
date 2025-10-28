@@ -6,7 +6,7 @@ import ProjectDetail1 from "@/components/section/ProjectDetail1";
 import TabSection1 from "@/components/section/TabSection1";
 
 export const metadata = {
-    title: "IHRHUB | Project Signle",
+    title: "IHRHUB | Project Single",
 };
 
 export default function page() {

@@ -22,14 +22,113 @@ export default function BasicInformation2() {
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [userRole, setUserRole] = useState(null); // 'freelancer' or 'job-provider'
+  const [isCheckingRole, setIsCheckingRole] = useState(true);
 
-  // API URL - should come from environment variable in production
+  // API URLs
   const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000/api/project/projects/";
+  const FREELANCER_API_URL = process.env.NEXT_PUBLIC_FREELANCER_API_URL || "http://127.0.0.1:8000/api/profile/freelancer/";
+  const JOB_PROVIDER_API_URL = process.env.NEXT_PUBLIC_JOB_PROVIDER_API_URL || "http://127.0.0.1:8000/api/profile/job-provider/";
 
-  // Check authentication on component mount
+  // Check authentication and user role on component mount
   useEffect(() => {
-    const token = localStorage.getItem('accessToken');
-    setIsAuthenticated(!!token);
+    const checkUserAccess = async () => {
+      const token = localStorage.getItem('accessToken');
+      
+      if (!token) {
+        setIsAuthenticated(false);
+        setIsCheckingRole(false);
+        return;
+      }
+
+      setIsAuthenticated(true);
+      
+      try {
+        console.log("Checking user role with token:", token.substring(0, 20) + "...");
+        
+        // First, try to fetch freelancer profile
+        const freelancerResponse = await fetch(FREELANCER_API_URL, {
+          method: "GET",
+          headers: {
+            "Authorization": `Bearer ${token}`,
+            "Content-Type": "application/json"
+          }
+        });
+
+        console.log("Freelancer API Response Status:", freelancerResponse.status);
+
+        if (freelancerResponse.ok) {
+          // User is a freelancer
+          const freelancerData = await freelancerResponse.json();
+          console.log("User is a FREELANCER:", freelancerData);
+          setUserRole('freelancer');
+          setError("Freelancers cannot create projects. Only job providers can create projects.");
+          setIsCheckingRole(false);
+          return;
+        }
+
+        // If 404, user is not a freelancer, try job provider
+        if (freelancerResponse.status === 404) {
+          console.log("Not a freelancer, checking job provider...");
+          
+          const jobProviderResponse = await fetch(JOB_PROVIDER_API_URL, {
+            method: "GET",
+            headers: {
+              "Authorization": `Bearer ${token}`,
+              "Content-Type": "application/json"
+            }
+          });
+
+          console.log("Job Provider API Response Status:", jobProviderResponse.status);
+
+          if (jobProviderResponse.ok) {
+            // User is a job provider
+            const jobProviderData = await jobProviderResponse.json();
+            console.log("User is a JOB PROVIDER:", jobProviderData);
+            setUserRole('job-provider');
+            setError(null);
+          } else if (jobProviderResponse.status === 404) {
+            // User has neither profile
+            console.log("User has no profile");
+            setUserRole(null);
+            setError("Profile not found. Please complete your profile setup.");
+          } else if (jobProviderResponse.status === 401) {
+            // Token expired or invalid
+            console.log("Token expired or invalid");
+            localStorage.removeItem('accessToken');
+            localStorage.removeItem('refreshToken');
+            setIsAuthenticated(false);
+            setUserRole(null);
+            setError("Session expired. Please log in again.");
+          } else {
+            // Other error
+            const errorData = await jobProviderResponse.json().catch(() => ({}));
+            console.log("Job Provider API Error:", errorData);
+            setError("Unable to determine user role. Please try again.");
+          }
+        } else if (freelancerResponse.status === 401) {
+          // Token expired or invalid
+          console.log("Token expired or invalid");
+          localStorage.removeItem('accessToken');
+          localStorage.removeItem('refreshToken');
+          setIsAuthenticated(false);
+          setUserRole(null);
+          setError("Session expired. Please log in again.");
+        } else {
+          // Other error from freelancer endpoint
+          const errorData = await freelancerResponse.json().catch(() => ({}));
+          console.log("Freelancer API Error:", errorData);
+          setError("Unable to verify user permissions. Please try again.");
+        }
+      } catch (err) {
+        console.error("Error checking user role:", err);
+        setError("Network error. Unable to verify user permissions. Please check your connection and try again.");
+      } finally {
+        setIsCheckingRole(false);
+      }
+    };
+
+    checkUserAccess();
   }, []);
 
   // Handle image change
@@ -78,10 +177,23 @@ export default function BasicInformation2() {
       setError("Please log in to create a project");
       setLoading(false);
       setIsAuthenticated(false);
-      // Optional: Redirect to login page after 2 seconds
       setTimeout(() => {
         window.location.href = '/login';
       }, 2000);
+      return;
+    }
+
+    // Check if user is a freelancer
+    if (userRole === 'freelancer') {
+      setError("Access Denied: Freelancers cannot create projects. Only job providers can create projects.");
+      setLoading(false);
+      return;
+    }
+
+    // Check if user role is determined
+    if (!userRole) {
+      setError("Unable to verify user permissions. Please refresh the page and try again.");
+      setLoading(false);
       return;
     }
 
@@ -162,13 +274,12 @@ export default function BasicInformation2() {
     }
 
     try {
-      console.log("Sending project data with image...");
+      console.log("Sending project data...");
       
       const response = await fetch(API_URL, {
         method: "POST",
         headers: {
           "Authorization": `Bearer ${token}`
-          // Do NOT set Content-Type header - browser will set it automatically with boundary
         },
         body: formData,
       });
@@ -186,22 +297,21 @@ export default function BasicInformation2() {
         }
         
         if (response.status === 401) {
-          // Handle unauthorized access - token expired or invalid
           localStorage.removeItem('accessToken');
           localStorage.removeItem('refreshToken');
           setError("Session expired. Please log in again.");
           setIsAuthenticated(false);
-          // Redirect to login after 2 seconds
           setTimeout(() => {
             window.location.href = '/login';
           }, 2000);
           return;
         } else if (response.status === 403) {
-          setError("You don't have permission to create projects.");
+          setError("Access Denied: You don't have permission to create projects. Only job providers can create projects.");
           return;
         } else if (response.status === 400) {
-          // Handle validation errors from backend
-          if (errorData.budget) {
+          if (errorData.user_role || errorData.role || errorData.user_type) {
+            setError("Access Denied: Freelancers cannot create projects. Only job providers can create projects.");
+          } else if (errorData.budget) {
             setError(`Budget: ${Array.isArray(errorData.budget) ? errorData.budget[0] : errorData.budget}`);
           } else if (errorData.deadline) {
             setError(`Deadline: ${Array.isArray(errorData.deadline) ? errorData.deadline[0] : errorData.deadline}`);
@@ -238,13 +348,9 @@ export default function BasicInformation2() {
       
       setSuccess(true);
       
-      // Reset form after 2 seconds and optionally redirect
       setTimeout(() => {
         resetForm();
-        // Optional: Redirect to project details or list page
-        // window.location.href = `/projects/${data.id}`;
-        // Or redirect to user's projects
-        // window.location.href = '/my-projects';
+        window.location.href = '/my-projects';
       }, 2000);
       
     } catch (err) {
@@ -273,7 +379,6 @@ export default function BasicInformation2() {
     setError(null);
     setSuccess(false);
     
-    // Reset file input
     const fileInput = document.getElementById('projectImage');
     if (fileInput) {
       fileInput.value = '';
@@ -289,6 +394,115 @@ export default function BasicInformation2() {
     return `${year}-${month}-${day}`;
   };
 
+  // Show loading while checking user role
+  if (isCheckingRole) {
+    return (
+      <div className="ps-widget bgc-white bdrs4 p30 mb30 overflow-hidden position-relative">
+        <div className="bdrb1 pb15 mb25">
+          <h5 className="list-title">Create New Project</h5>
+        </div>
+        <div className="text-center py-5">
+          <div className="spinner-border text-primary" role="status">
+            <span className="visually-hidden">Loading...</span>
+          </div>
+          <p className="mt-3 text-muted">Verifying your account permissions...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show access denied for freelancers
+  if (userRole === 'freelancer') {
+    return (
+      <div className="ps-widget bgc-white bdrs4 p30 mb30 overflow-hidden position-relative">
+        <div className="bdrb1 pb15 mb25">
+          <h5 className="list-title">Create New Project</h5>
+        </div>
+        
+        <div className="col-xl-10">
+          <div className="alert alert-danger d-flex align-items-start" role="alert">
+            <i className="fal fa-exclamation-triangle fa-3x me-3 mt-1"></i>
+            <div>
+              <h4 className="alert-heading mb-3">
+                <strong>Access Denied</strong>
+              </h4>
+              <p className="mb-2">
+                <strong>Freelancers cannot create projects.</strong> This feature is only available for job providers.
+              </p>
+              <hr className="my-3" />
+              <p className="mb-2">
+                <strong>As a freelancer, you can:</strong>
+              </p>
+              <ul className="mb-3">
+                <li className="mb-2">
+                  <i className="fal fa-check-circle text-success me-2"></i>
+                  Browse and search available projects
+                </li>
+                <li className="mb-2">
+                  <i className="fal fa-check-circle text-success me-2"></i>
+                  Submit proposals for projects you're interested in
+                </li>
+                <li className="mb-2">
+                  <i className="fal fa-check-circle text-success me-2"></i>
+                  Work on accepted projects and create milestones
+                </li>
+                <li className="mb-2">
+                  <i className="fal fa-check-circle text-success me-2"></i>
+                  Receive payments for completed work
+                </li>
+              </ul>
+              <div className="mt-4 d-flex gap-3 flex-wrap">
+                <Link href="/projects" className="btn btn-primary">
+                  <i className="fal fa-briefcase me-2"></i>
+                  Browse Projects
+                </Link>
+                <Link href="/my-proposals" className="btn btn-outline-primary">
+                  <i className="fal fa-file-alt me-2"></i>
+                  My Proposals
+                </Link>
+                <Link href="/dashboard" className="btn btn-outline-secondary">
+                  <i className="fal fa-home me-2"></i>
+                  Go to Dashboard
+                </Link>
+              </div>
+            </div>
+          </div>
+          
+          <div className="alert alert-info mt-3" role="alert">
+            <i className="fal fa-info-circle me-2"></i>
+            <strong>Want to post projects?</strong> You need a job provider account to create and manage projects. 
+            Contact support if you'd like to upgrade your account.
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Show warning if role not determined
+  if (!userRole && isAuthenticated) {
+    return (
+      <div className="ps-widget bgc-white bdrs4 p30 mb30 overflow-hidden position-relative">
+        <div className="bdrb1 pb15 mb25">
+          <h5 className="list-title">Create New Project</h5>
+        </div>
+        
+        <div className="col-xl-8">
+          <div className="alert alert-warning" role="alert">
+            <i className="fal fa-exclamation-circle me-2"></i>
+            <strong>Profile Setup Required:</strong> Unable to determine your account type. 
+            Please complete your profile setup before creating projects.
+            <div className="mt-3">
+              <Link href="/profile/setup" className="btn btn-warning">
+                <i className="fal fa-user-cog me-2"></i>
+                Complete Profile Setup
+              </Link>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="ps-widget bgc-white bdrs4 p30 mb30 overflow-hidden position-relative">
       <div className="bdrb1 pb15 mb25">
@@ -296,33 +510,43 @@ export default function BasicInformation2() {
       </div>
       
       <div className="col-xl-8">
-        {/* Authentication Warning */}
         {!isAuthenticated && (
-          <div className="alert alert-warning mb20" role="alert">
-            ⚠️ You need to be logged in to create a project. 
-            <Link href="/login" className="ms-2 text-decoration-underline">
-              Login here
-            </Link>
+          <div className="alert alert-warning mb20 d-flex align-items-center" role="alert">
+            <i className="fal fa-exclamation-triangle me-2"></i>
+            <div>
+              ⚠️ You need to be logged in to create a project. 
+              <Link href="/login" className="ms-2 text-decoration-underline fw-bold">
+                Login here
+              </Link>
+            </div>
+          </div>
+        )}
+
+        {isAuthenticated && userRole === 'job-provider' && (
+          <div className="alert alert-success mb20 d-flex align-items-center" role="alert">
+            <i className="fal fa-check-circle me-2"></i>
+            <div>
+              You are logged in as a <strong>Job Provider</strong>. 
+              You can create and manage projects to hire freelancers.
+            </div>
           </div>
         )}
 
         <form className="form-style1" onSubmit={handleSubmit}>
-          {/* Success Message */}
           {success && (
             <div className="alert alert-success mb20 d-flex align-items-center" role="alert">
-              <span className="me-2">✓</span>
+              <i className="fal fa-check-circle fa-2x me-3"></i>
               <div>
-                <strong>Success!</strong> Project created successfully!
-                <br />
-                <small>Redirecting to your projects...</small>
+                <h5 className="alert-heading mb-2">Success!</h5>
+                <p className="mb-0">Project created successfully!</p>
+                <small className="text-muted">Redirecting to your projects...</small>
               </div>
             </div>
           )}
 
-          {/* Error Message */}
           {error && (
             <div className="alert alert-danger mb20 d-flex align-items-center" role="alert">
-              <span className="me-2">✗</span>
+              <i className="fal fa-times-circle me-2"></i>
               <div>
                 <strong>Error:</strong> {error}
               </div>
@@ -330,7 +554,6 @@ export default function BasicInformation2() {
           )}
 
           <div className="row">
-            {/* Project Title */}
             <div className="col-sm-12 mb20">
               <label className="heading-color ff-heading fw500 mb10">
                 Project Title <span className="text-danger">*</span>
@@ -343,12 +566,11 @@ export default function BasicInformation2() {
                 onChange={(e) => setTitle(e.target.value)}
                 required
                 maxLength={200}
-                disabled={loading}
+                disabled={loading || userRole === 'freelancer' || !isAuthenticated}
               />
               <small className="text-muted">{title.length}/200 characters</small>
             </div>
 
-            {/* Description */}
             <div className="col-sm-12 mb20">
               <label className="heading-color ff-heading fw500 mb10">
                 Description <span className="text-danger">*</span>
@@ -361,12 +583,11 @@ export default function BasicInformation2() {
                 onChange={(e) => setDescription(e.target.value)}
                 required
                 maxLength={5000}
-                disabled={loading}
+                disabled={loading || userRole === 'freelancer' || !isAuthenticated}
               />
               <small className="text-muted">{description.length}/5000 characters</small>
             </div>
 
-            {/* Project Image */}
             <div className="col-sm-12 mb20">
               <label className="heading-color ff-heading fw500 mb10">
                 Project Image
@@ -377,24 +598,24 @@ export default function BasicInformation2() {
                 className="form-control"
                 accept="image/*"
                 onChange={handleImageChange}
-                disabled={loading}
+                disabled={loading || userRole === 'freelancer' || !isAuthenticated}
               />
               <small className="text-muted">Recommended: 800x600px, Max 5MB (JPG, PNG, GIF)</small>
               
-              {/* Image Preview */}
               {imagePreview && (
                 <div className="mt-3 position-relative" style={{ maxWidth: '300px' }}>
                   <img 
                     src={imagePreview} 
                     alt="Preview" 
-                    className="img-fluid rounded"
+                    className="img-fluid rounded border"
                     style={{ width: '100%', height: 'auto', objectFit: 'cover' }}
                   />
                   <button
                     type="button"
                     className="btn btn-sm btn-danger position-absolute top-0 end-0 m-2"
                     onClick={handleRemoveImage}
-                    disabled={loading}
+                    disabled={loading || userRole === 'freelancer' || !isAuthenticated}
+                    title="Remove image"
                   >
                     <i className="fal fa-times"></i>
                   </button>
@@ -402,9 +623,8 @@ export default function BasicInformation2() {
               )}
             </div>
 
-            {/* Category */}
             <div className="col-sm-6 mb20">
-              <div className={loading ? 'opacity-50' : ''}>
+              <div className={loading || userRole === 'freelancer' || !isAuthenticated ? 'opacity-50' : ''}>
                 <SelectInput
                   label="Category *"
                   defaultSelect={category}
@@ -423,7 +643,6 @@ export default function BasicInformation2() {
               </div>
             </div>
 
-            {/* Budget */}
             <div className="col-sm-6 mb20">
               <label className="heading-color ff-heading fw500 mb10">
                 Budget (USD) <span className="text-danger">*</span>
@@ -437,12 +656,11 @@ export default function BasicInformation2() {
                 value={budget}
                 onChange={(e) => setBudget(e.target.value)}
                 required
-                disabled={loading}
+                disabled={loading || userRole === 'freelancer' || !isAuthenticated}
               />
               <small className="text-muted">Enter amount in US Dollars</small>
             </div>
 
-            {/* Deadline / Due Date */}
             <div className="col-sm-6 mb20">
               <label className="heading-color ff-heading fw500 mb10">
                 Deadline / Due Date <span className="text-danger">*</span>
@@ -454,14 +672,13 @@ export default function BasicInformation2() {
                 value={deadline}
                 onChange={(e) => setDeadline(e.target.value)}
                 required
-                disabled={loading}
+                disabled={loading || userRole === 'freelancer' || !isAuthenticated}
               />
               <small className="text-muted">Project completion date</small>
             </div>
 
-            {/* Project Type */}
             <div className="col-sm-6 mb20">
-              <div className={loading ? 'opacity-50' : ''}>
+              <div className={loading || userRole === 'freelancer' || !isAuthenticated ? 'opacity-50' : ''}>
                 <SelectInput
                   label="Project Type *"
                   defaultSelect={projectType}
@@ -481,9 +698,8 @@ export default function BasicInformation2() {
               </small>
             </div>
 
-            {/* Visibility */}
             <div className="col-sm-12 mb20">
-              <div className={loading ? 'opacity-50' : ''}>
+              <div className={loading || userRole === 'freelancer' || !isAuthenticated ? 'opacity-50' : ''}>
                 <SelectInput
                   label="Project Visibility"
                   defaultSelect={visibility}
@@ -501,22 +717,21 @@ export default function BasicInformation2() {
               </small>
             </div>
 
-            {/* Required Fields Note */}
             <div className="col-sm-12 mb20">
               <div className="alert alert-info">
                 <small>
+                  <i className="fal fa-info-circle me-2"></i>
                   <strong>Note:</strong> Fields marked with <span className="text-danger">*</span> are required.
                 </small>
               </div>
             </div>
 
-            {/* Action Buttons */}
             <div className="col-md-12 mt-3">
               <div className="d-flex gap-3">
                 <button
                   type="submit"
                   className="ud-btn btn-thm"
-                  disabled={loading || !isAuthenticated}
+                  disabled={loading || !isAuthenticated || userRole === 'freelancer'}
                 >
                   {loading ? (
                     <>
@@ -535,7 +750,7 @@ export default function BasicInformation2() {
                   type="button"
                   className="ud-btn btn-white"
                   onClick={resetForm}
-                  disabled={loading}
+                  disabled={loading || userRole === 'freelancer' || !isAuthenticated}
                 >
                   <i className="fal fa-redo me-2"></i>
                   Reset Form

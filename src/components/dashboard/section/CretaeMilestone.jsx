@@ -1,5 +1,6 @@
 "use client";
 import Link from "next/link";
+import { useRouter, useParams } from "next/navigation";
 import DashboardNavigation from "../header/DashboardNavigation";
 import { useState, useEffect } from "react";
 import Pagination1 from "@/components/section/Pagination1";
@@ -7,14 +8,19 @@ import ProposalModal1 from "../modal/ProposalModal1";
 import DeleteModal from "../modal/DeleteModal";
 
 export default function CreateMilestone() {
-  // Project info - you might want to get this from props or route params
+  const router = useRouter();
+  const params = useParams();
+  
+  // Get project info from URL params
   const [project, setProject] = useState({
-    id: 2,
-    name: "Mobile App Development"
+    id: params?.id || null,
+    name: "Loading..."
   });
   
   const [milestones, setMilestones] = useState([]);
-  const [freelancers, setFreelancers] = useState([]);
+  const [hasAccess, setHasAccess] = useState(false);
+  const [accessError, setAccessError] = useState("");
+  const [verifying, setVerifying] = useState(true);
 
   // Form state
   const [milestoneName, setMilestoneName] = useState("");
@@ -22,8 +28,6 @@ export default function CreateMilestone() {
   const [endDate, setEndDate] = useState("");
   const [budget, setBudget] = useState("");
   const [description, setDescription] = useState("");
-  const [freelancerId, setFreelancerId] = useState("");
-  const [status, setStatus] = useState("pending");
   
   // Loading and error states
   const [loading, setLoading] = useState(false);
@@ -31,18 +35,85 @@ export default function CreateMilestone() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [actionLoading, setActionLoading] = useState({}); // Track loading state for individual actions
 
   // API URL
-  const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000/api/project/milestones/";
+  const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000/api/project/";
 
-  // Check authentication on component mount
+  // Verify freelancer access on component mount
   useEffect(() => {
     const token = localStorage.getItem('accessToken');
     setIsAuthenticated(!!token);
-    if (token) {
-      fetchMilestones();
+    
+    if (!token) {
+      setVerifying(false);
+      setAccessError("Please log in to access this page");
+      setTimeout(() => {
+        router.push('/login');
+      }, 2000);
+      return;
     }
-  }, []);
+    
+    if (!project.id) {
+      setVerifying(false);
+      setAccessError("No project specified");
+      setTimeout(() => {
+        router.push('/freelancer-projects');
+      }, 2000);
+      return;
+    }
+    
+    verifyFreelancerAccess();
+  }, [project.id]);
+
+  // Verify if freelancer has access to this project
+  const verifyFreelancerAccess = async () => {
+    setVerifying(true);
+    const token = localStorage.getItem('accessToken');
+    
+    try {
+      const response = await fetch(
+        `${API_URL}milestones/verify_freelancer_access/?project_id=${project.id}`,
+        {
+          method: "GET",
+          headers: {
+            "Authorization": `Bearer ${token}`
+          }
+        }
+      );
+
+      const data = await response.json();
+
+      if (response.ok && data.has_access) {
+        setHasAccess(true);
+        setProject(prev => ({
+          ...prev,
+          name: data.project_name
+        }));
+        fetchMilestones();
+      } else {
+        setHasAccess(false);
+        
+        if (data.is_project_owner) {
+          setAccessError("You are the project owner. Only assigned freelancers can create milestones.");
+        } else {
+          setAccessError(data.error || "You don't have permission to create milestones for this project");
+        }
+        
+        setTimeout(() => {
+          router.push('/freelancer-projects');
+        }, 3000);
+      }
+    } catch (err) {
+      console.error("Error verifying access:", err);
+      setAccessError("Failed to verify access. Please try again.");
+      setTimeout(() => {
+        router.push('/freelancer-projects');
+      }, 3000);
+    } finally {
+      setVerifying(false);
+    }
+  };
 
   // Fetch existing milestones for this project
   const fetchMilestones = async () => {
@@ -50,23 +121,27 @@ export default function CreateMilestone() {
     const token = localStorage.getItem('accessToken');
     
     try {
-      const response = await fetch(`${API_URL}?project_id=${project.id}`, {
-        method: "GET",
-        headers: {
-          "Authorization": `Bearer ${token}`
+      const response = await fetch(
+        `${API_URL}milestones/?project_id=${project.id}`,
+        {
+          method: "GET",
+          headers: {
+            "Authorization": `Bearer ${token}`
+          }
         }
-      });
+      );
 
       if (response.ok) {
         const data = await response.json();
-        setMilestones(data);
+        const milestonesArray = data.results ? data.results : data;
+        setMilestones(milestonesArray);
       } else if (response.status === 401) {
         localStorage.removeItem('accessToken');
         localStorage.removeItem('refreshToken');
         setIsAuthenticated(false);
         setError("Session expired. Please log in again.");
         setTimeout(() => {
-          window.location.href = '/login';
+          router.push('/login');
         }, 2000);
       }
     } catch (err) {
@@ -89,9 +164,8 @@ export default function CreateMilestone() {
     if (!token) {
       setError("Please log in to create a milestone");
       setLoading(false);
-      setIsAuthenticated(false);
       setTimeout(() => {
-        window.location.href = '/login';
+        router.push('/login');
       }, 2000);
       return;
     }
@@ -122,16 +196,12 @@ export default function CreateMilestone() {
       setLoading(false);
       return;
     }
-    if (!freelancerId) {
-      setError("Please select a freelancer.");
-      setLoading(false);
-      return;
-    }
 
     // Validate dates
     const start = new Date(startDate);
     const end = new Date(endDate);
     const now = new Date();
+    now.setHours(0, 0, 0, 0);
 
     if (end <= start) {
       setError("End date must be after start date.");
@@ -140,27 +210,26 @@ export default function CreateMilestone() {
     }
 
     if (start < now) {
-      setError("Start date must be in the future.");
+      setError("Start date must be today or in the future.");
       setLoading(false);
       return;
     }
 
-    // Prepare milestone data
+    // Prepare milestone data - status is 'pending' by default (waiting for client approval)
     const milestoneData = {
-      project: project.id,
-      freelancer_id: parseInt(freelancerId),
+      project: parseInt(project.id),
       name: milestoneName.trim(),
       start_date: new Date(startDate).toISOString(),
       end_date: new Date(endDate).toISOString(),
       budget: parseFloat(budget),
       description: description.trim(),
-      status: status
+      status: "pending" // Pending client approval
     };
 
     try {
       console.log("Creating milestone:", milestoneData);
 
-      const response = await fetch(API_URL, {
+      const response = await fetch(`${API_URL}milestones/`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -168,8 +237,6 @@ export default function CreateMilestone() {
         },
         body: JSON.stringify(milestoneData),
       });
-
-      console.log("Response status:", response.status);
 
       if (!response.ok) {
         let errorData;
@@ -184,32 +251,19 @@ export default function CreateMilestone() {
           localStorage.removeItem('accessToken');
           localStorage.removeItem('refreshToken');
           setError("Session expired. Please log in again.");
-          setIsAuthenticated(false);
           setTimeout(() => {
-            window.location.href = '/login';
+            router.push('/login');
           }, 2000);
           return;
         } else if (response.status === 403) {
-          setError("You don't have permission to create milestones.");
+          setError(errorData.detail || "You don't have permission to create milestones for this project.");
           return;
         } else if (response.status === 400) {
           // Handle validation errors
-          if (errorData.name) {
-            setError(`Name: ${Array.isArray(errorData.name) ? errorData.name[0] : errorData.name}`);
-          } else if (errorData.start_date) {
-            setError(`Start date: ${Array.isArray(errorData.start_date) ? errorData.start_date[0] : errorData.start_date}`);
-          } else if (errorData.end_date) {
-            setError(`End date: ${Array.isArray(errorData.end_date) ? errorData.end_date[0] : errorData.end_date}`);
-          } else if (errorData.budget) {
-            setError(`Budget: ${Array.isArray(errorData.budget) ? errorData.budget[0] : errorData.budget}`);
-          } else if (errorData.description) {
-            setError(`Description: ${Array.isArray(errorData.description) ? errorData.description[0] : errorData.description}`);
-          } else if (errorData.freelancer_id) {
-            setError(`Freelancer: ${Array.isArray(errorData.freelancer_id) ? errorData.freelancer_id[0] : errorData.freelancer_id}`);
-          } else if (errorData.non_field_errors) {
-            setError(Array.isArray(errorData.non_field_errors) ? errorData.non_field_errors[0] : errorData.non_field_errors);
-          } else if (errorData.detail) {
-            setError(errorData.detail);
+          const errorKeys = Object.keys(errorData);
+          if (errorKeys.length > 0) {
+            const firstError = errorData[errorKeys[0]];
+            setError(`${errorKeys[0]}: ${Array.isArray(firstError) ? firstError[0] : firstError}`);
           } else {
             setError("Invalid milestone data. Please check your input.");
           }
@@ -222,7 +276,7 @@ export default function CreateMilestone() {
       const data = await response.json();
       console.log("Milestone created successfully:", data);
 
-      setSuccess("Milestone created successfully!");
+      setSuccess("Milestone created successfully! It has been sent to the client for approval.");
       
       // Refresh milestones list
       fetchMilestones();
@@ -230,10 +284,10 @@ export default function CreateMilestone() {
       // Clear form
       resetForm();
 
-      // Clear success message after 3 seconds
+      // Clear success message after 5 seconds
       setTimeout(() => {
         setSuccess("");
-      }, 3000);
+      }, 5000);
 
     } catch (err) {
       console.error("Error creating milestone:", err);
@@ -247,16 +301,96 @@ export default function CreateMilestone() {
     }
   };
 
+  // Mark milestone as completed (freelancer action)
+  const handleMarkAsCompleted = async (milestoneId) => {
+    if (!confirm("Are you sure you want to mark this milestone as completed? This will notify the client for review.")) {
+      return;
+    }
+
+    setActionLoading(prev => ({ ...prev, [milestoneId]: 'completing' }));
+    const token = localStorage.getItem('accessToken');
+    
+    try {
+      const response = await fetch(`${API_URL}milestones/${milestoneId}/complete/`, {
+        method: "PATCH",
+        headers: {
+          "Authorization": `Bearer ${token}`,
+          "Content-Type": "application/json"
+        }
+      });
+
+      if (response.ok) {
+        setSuccess("Milestone marked as completed! Payment request sent to client.");
+        fetchMilestones();
+        setTimeout(() => setSuccess(""), 3000);
+      } else if (response.status === 401) {
+        setError("Session expired. Please log in again.");
+        setTimeout(() => {
+          router.push('/login');
+        }, 2000);
+      } else if (response.status === 403) {
+        setError("You don't have permission to complete this milestone.");
+      } else {
+        const errorData = await response.json();
+        setError(errorData.error || "Failed to mark milestone as completed");
+      }
+    } catch (err) {
+      console.error("Error completing milestone:", err);
+      setError("Failed to mark milestone as completed");
+    } finally {
+      setActionLoading(prev => ({ ...prev, [milestoneId]: false }));
+    }
+  };
+
+  // Update milestone status (freelancer can change status)
+  const handleUpdateMilestoneStatus = async (milestoneId, newStatus) => {
+    setActionLoading(prev => ({ ...prev, [milestoneId]: 'updating' }));
+    const token = localStorage.getItem('accessToken');
+    
+    try {
+      const response = await fetch(`${API_URL}milestones/${milestoneId}/`, {
+        method: "PATCH",
+        headers: {
+          "Authorization": `Bearer ${token}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ status: newStatus })
+      });
+
+      if (response.ok) {
+        setSuccess(`Milestone status updated to "${newStatus.replace('_', ' ')}"!`);
+        fetchMilestones();
+        setTimeout(() => setSuccess(""), 3000);
+      } else if (response.status === 401) {
+        setError("Session expired. Please log in again.");
+        setTimeout(() => {
+          router.push('/login');
+        }, 2000);
+      } else if (response.status === 403) {
+        setError("You don't have permission to update this milestone.");
+      } else {
+        const errorData = await response.json();
+        setError(errorData.error || errorData.detail || "Failed to update milestone status");
+      }
+    } catch (err) {
+      console.error("Error updating milestone:", err);
+      setError("Failed to update milestone status");
+    } finally {
+      setActionLoading(prev => ({ ...prev, [milestoneId]: false }));
+    }
+  };
+
   // Delete milestone
   const handleDeleteMilestone = async (milestoneId) => {
     if (!confirm("Are you sure you want to delete this milestone?")) {
       return;
     }
 
+    setActionLoading(prev => ({ ...prev, [milestoneId]: 'deleting' }));
     const token = localStorage.getItem('accessToken');
     
     try {
-      const response = await fetch(`${API_URL}${milestoneId}/`, {
+      const response = await fetch(`${API_URL}milestones/${milestoneId}/`, {
         method: "DELETE",
         headers: {
           "Authorization": `Bearer ${token}`
@@ -270,16 +404,19 @@ export default function CreateMilestone() {
       } else if (response.status === 401) {
         setError("Session expired. Please log in again.");
         setTimeout(() => {
-          window.location.href = '/login';
+          router.push('/login');
         }, 2000);
       } else if (response.status === 403) {
-        setError("You don't have permission to delete this milestone.");
+        const errorData = await response.json();
+        setError(errorData.detail || "You don't have permission to delete this milestone.");
       } else {
         setError("Failed to delete milestone");
       }
     } catch (err) {
       console.error("Error deleting milestone:", err);
       setError("Failed to delete milestone");
+    } finally {
+      setActionLoading(prev => ({ ...prev, [milestoneId]: false }));
     }
   };
 
@@ -290,11 +427,9 @@ export default function CreateMilestone() {
     setEndDate("");
     setBudget("");
     setDescription("");
-    setFreelancerId("");
-    setStatus("pending");
   };
 
-  // Get today's date in YYYY-MM-DD format for min date
+  // Get today's date in YYYY-MM-DD format
   const getTodayDate = () => {
     const today = new Date();
     const year = today.getFullYear();
@@ -313,6 +448,102 @@ export default function CreateMilestone() {
     });
   };
 
+  // Get status badge styling
+  const getStatusBadge = (status) => {
+    const statusConfig = {
+      'pending': { class: 'bg-warning text-dark', icon: 'fa-clock', label: 'Pending Approval' },
+      'approved': { class: 'bg-success', icon: 'fa-check-circle', label: 'Approved' },
+      'in_progress': { class: 'bg-primary', icon: 'fa-spinner', label: 'In Progress' },
+      'completed': { class: 'bg-info', icon: 'fa-flag-checkered', label: 'Completed' },
+      'payment_requested': { class: 'bg-warning', icon: 'fa-money-bill-wave', label: 'Payment Requested' },
+      'paid': { class: 'bg-success', icon: 'fa-check-double', label: 'Paid' },
+      'revision_requested': { class: 'bg-danger', icon: 'fa-redo', label: 'Revision Requested' }
+    };
+
+    const config = statusConfig[status] || { class: 'bg-secondary', icon: 'fa-question', label: status };
+
+    return (
+      <span className={`badge ${config.class}`}>
+        <i className={`fal ${config.icon} me-1`}></i>
+        {config.label}
+      </span>
+    );
+  };
+
+  // Get available status transitions for freelancer
+  const getAvailableStatusOptions = (currentStatus) => {
+    const statusOptions = {
+      'pending': [],
+      'approved': ['in_progress'],
+      'in_progress': ['completed'],
+      'completed': [], // Client approves or requests revision
+      'payment_requested': [], // Waiting for client
+      'revision_requested': ['in_progress'],
+      'paid': []
+    };
+
+    return statusOptions[currentStatus] || [];
+  };
+
+  // Show loading/verification state
+  if (verifying) {
+    return (
+      <div className="dashboard__content hover-bgc-color">
+        <div className="row pb40">
+          <div className="col-lg-12">
+            <DashboardNavigation />
+          </div>
+        </div>
+        <div className="row">
+          <div className="col-xl-12">
+            <div className="ps-widget bgc-white bdrs4 p30 mb30 text-center">
+              <div className="spinner-border text-primary mb-3" role="status">
+                <span className="visually-hidden">Loading...</span>
+              </div>
+              <h5>Verifying Access...</h5>
+              <p className="text-muted">Please wait while we verify your permissions.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Show access denied message
+  if (!hasAccess) {
+    return (
+      <div className="dashboard__content hover-bgc-color">
+        <div className="row pb40">
+          <div className="col-lg-12">
+            <DashboardNavigation />
+          </div>
+        </div>
+        <div className="row">
+          <div className="col-xl-12">
+            <div className="ps-widget bgc-white bdrs4 p30 mb30">
+              <div className="alert alert-danger d-flex align-items-center" role="alert">
+                <i className="fal fa-exclamation-triangle fa-2x me-3"></i>
+                <div>
+                  <h5 className="mb-2">Access Denied</h5>
+                  <p className="mb-0">{accessError}</p>
+                  <p className="mt-2 mb-0">
+                    <small>Redirecting to your projects...</small>
+                  </p>
+                </div>
+              </div>
+              <div className="mt-3">
+                <Link href="/freelancer-projects" className="btn btn-primary">
+                  <i className="fal fa-arrow-left me-2"></i>
+                  Back to My Projects
+                </Link>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <>
       <div className="dashboard__content hover-bgc-color">
@@ -323,12 +554,21 @@ export default function CreateMilestone() {
 
           <div className="col-lg-9">
             <div className="dashboard_title_area">
-              <h2>Milestone</h2>
-              <p className="text">Project Name: {project.name}</p>
+              <h2>Milestone Management</h2>
+              <p className="text">Project: <strong>{project.name}</strong></p>
+              <div className="mt-2">
+                <Link 
+                  href="/freelancer-projects" 
+                  className="text-decoration-none"
+                >
+                  <i className="fal fa-arrow-left me-2"></i>
+                  Back to My Projects
+                </Link>
+              </div>
             </div>
           </div>
 
-          {/* Save/Refresh button on right */}
+          {/* Refresh button */}
           <div className="col-lg-3">
             <div className="text-lg-end">
               <button
@@ -356,38 +596,49 @@ export default function CreateMilestone() {
           <div className="col-xl-12">
             <div className="ps-widget bgc-white bdrs4 p30 mb30 overflow-hidden position-relative">
               
-              {/* Authentication Warning */}
-              {!isAuthenticated && (
-                <div className="alert alert-warning mb-3" role="alert">
-                  ⚠️ You need to be logged in to create milestones. 
-                  <Link href="/login" className="ms-2 text-decoration-underline">
-                    Login here
-                  </Link>
-                </div>
-              )}
-
               {/* Success Message */}
               {success && (
-                <div className="alert alert-success mb-3 d-flex align-items-center" role="alert">
-                  <span className="me-2">✓</span>
+                <div className="alert alert-success mb-3 d-flex align-items-center alert-dismissible fade show" role="alert">
+                  <i className="fal fa-check-circle me-2"></i>
                   <div>
                     <strong>Success!</strong> {success}
                   </div>
+                  <button type="button" className="btn-close" onClick={() => setSuccess("")}></button>
                 </div>
               )}
 
               {/* Error Message */}
               {error && (
-                <div className="alert alert-danger mb-3 d-flex align-items-center" role="alert">
-                  <span className="me-2">✕</span>
+                <div className="alert alert-danger mb-3 d-flex align-items-center alert-dismissible fade show" role="alert">
+                  <i className="fal fa-exclamation-circle me-2"></i>
                   <div>
                     <strong>Error:</strong> {error}
                   </div>
+                  <button type="button" className="btn-close" onClick={() => setError("")}></button>
                 </div>
               )}
 
+              {/* Workflow Info */}
+              <div className="alert alert-info mb-4" role="alert">
+                <h6 className="mb-2">
+                  <i className="fal fa-info-circle me-2"></i>
+                  Milestone Workflow
+                </h6>
+                <ol className="mb-0 ps-3">
+                  <li><strong>Create Milestones:</strong> Add milestones with timeline and budget</li>
+                  <li><strong>Pending Approval:</strong> Milestones are sent to client for approval</li>
+                  <li><strong>Approved:</strong> Client approves - Start working</li>
+                  <li><strong>In Progress:</strong> You are working on the milestone</li>
+                  <li><strong>Completed:</strong> Mark as done to request payment</li>
+                  <li><strong>Client Reviews:</strong> Client approves payment or requests revision</li>
+                </ol>
+              </div>
+
               {/* Title above table */}
-              <h4 className="mb-3">Milestones</h4>
+              <h4 className="mb-3">
+                <i className="fal fa-tasks me-2"></i>
+                Project Milestones
+              </h4>
 
               {/* Milestones Table */}
               <div className="table-responsive mb-4">
@@ -399,14 +650,12 @@ export default function CreateMilestone() {
                     <p className="mt-2">Loading milestones...</p>
                   </div>
                 ) : (
-                  <table className="table table-style3 at-savesearch">
+                  <table className="table table-style3 at-savesearch table-hover">
                     <thead className="t-head">
                       <tr>
-                        <th>Milestone Name</th>
-                        <th>Freelancer</th>
-                        <th>Start Date</th>
-                        <th>End Date</th>
-                        <th>Budget ($)</th>
+                        <th>Milestone Details</th>
+                        <th>Timeline</th>
+                        <th>Budget</th>
                         <th>Status</th>
                         <th>Actions</th>
                       </tr>
@@ -415,36 +664,115 @@ export default function CreateMilestone() {
                       {milestones.length > 0 ? (
                         milestones.map((m) => (
                           <tr key={m.id}>
-                            <td>{m.name}</td>
-                            <td>{m.freelancer?.username || 'N/A'}</td>
-                            <td>{formatDate(m.start_date)}</td>
-                            <td>{formatDate(m.end_date)}</td>
-                            <td>${parseFloat(m.budget).toFixed(2)}</td>
                             <td>
-                              <span className={`badge ${
-                                m.status === 'approved' ? 'bg-success' :
-                                m.status === 'completed' ? 'bg-info' :
-                                m.status === 'in_progress' ? 'bg-warning' :
-                                'bg-secondary'
-                              }`}>
-                                {m.status}
-                              </span>
+                              <strong className="d-block mb-1">{m.name}</strong>
+                              <small className="text-muted">{m.description?.substring(0, 80)}{m.description?.length > 80 ? '...' : ''}</small>
                             </td>
                             <td>
-                              <button
-                                className="btn btn-sm btn-danger"
-                                onClick={() => handleDeleteMilestone(m.id)}
-                                disabled={loading}
-                              >
-                                <i className="fal fa-trash-alt"></i> Delete
-                              </button>
+                              <div className="small">
+                                <div><i className="fal fa-calendar-check me-1 text-success"></i> {formatDate(m.start_date)}</div>
+                                <div><i className="fal fa-calendar-times me-1 text-danger"></i> {formatDate(m.end_date)}</div>
+                              </div>
+                            </td>
+                            <td>
+                              <strong className="text-primary">${parseFloat(m.budget).toFixed(2)}</strong>
+                            </td>
+                            <td>
+                              {getStatusBadge(m.status)}
+                              
+                              {/* Status Change Dropdown */}
+                              {getAvailableStatusOptions(m.status).length > 0 && (
+                                <div className="mt-2">
+                                  <select
+                                    className="form-select form-select-sm"
+                                    value={m.status}
+                                    onChange={(e) => handleUpdateMilestoneStatus(m.id, e.target.value)}
+                                    disabled={actionLoading[m.id]}
+                                  >
+                                    <option value={m.status}>Change Status...</option>
+                                    {getAvailableStatusOptions(m.status).map(status => (
+                                      <option key={status} value={status}>
+                                        {status.replace('_', ' ').toUpperCase()}
+                                      </option>
+                                    ))}
+                                  </select>
+                                </div>
+                              )}
+                            </td>
+                            <td>
+                              <div className="d-flex flex-column gap-1">
+                                {/* Mark as Completed button - only show for in_progress milestones */}
+                                {m.status === 'in_progress' && (
+                                  <button
+                                    className="btn btn-sm btn-success"
+                                    onClick={() => handleMarkAsCompleted(m.id)}
+                                    disabled={actionLoading[m.id]}
+                                    title="Mark as completed and request payment"
+                                  >
+                                    {actionLoading[m.id] === 'completing' ? (
+                                      <>
+                                        <span className="spinner-border spinner-border-sm me-1"></span>
+                                        Completing...
+                                      </>
+                                    ) : (
+                                      <>
+                                        <i className="fal fa-check me-1"></i>
+                                        Mark Done
+                                      </>
+                                    )}
+                                  </button>
+                                )}
+
+                                {/* Delete button - can't delete approved or paid milestones */}
+                                {m.status !== 'approved' && m.status !== 'paid' && m.status !== 'completed' && (
+                                  <button
+                                    className="btn btn-sm btn-danger"
+                                    onClick={() => handleDeleteMilestone(m.id)}
+                                    disabled={actionLoading[m.id]}
+                                    title="Delete milestone"
+                                  >
+                                    {actionLoading[m.id] === 'deleting' ? (
+                                      <>
+                                        <span className="spinner-border spinner-border-sm me-1"></span>
+                                        Deleting...
+                                      </>
+                                    ) : (
+                                      <>
+                                        <i className="fal fa-trash-alt me-1"></i>
+                                        Delete
+                                      </>
+                                    )}
+                                  </button>
+                                )}
+
+                                {/* Info for different statuses */}
+                                {m.status === 'pending' && (
+                                  <small className="text-muted">
+                                    <i className="fal fa-hourglass me-1"></i>
+                                    Awaiting client approval
+                                  </small>
+                                )}
+                                {m.status === 'completed' && (
+                                  <small className="text-info">
+                                    <i className="fal fa-clock me-1"></i>
+                                    Pending client review
+                                  </small>
+                                )}
+                                {m.status === 'paid' && (
+                                  <small className="text-success">
+                                    <i className="fal fa-check-double me-1"></i>
+                                    Payment released
+                                  </small>
+                                )}
+                              </div>
                             </td>
                           </tr>
                         ))
                       ) : (
                         <tr>
-                          <td colSpan="7" className="text-center py-4">
-                            No milestones added yet. Create your first milestone below.
+                          <td colSpan="5" className="text-center py-5">
+                            <i className="fal fa-tasks fa-3x text-muted mb-3 d-block"></i>
+                            <p className="text-muted mb-0">No milestones created yet. Add your first milestone below to get started.</p>
                           </td>
                         </tr>
                       )}
@@ -455,10 +783,17 @@ export default function CreateMilestone() {
 
               {/* Add Milestone Form */}
               <div className="border-top pt-4">
-                <h5 className="mb-3">Add New Milestone</h5>
+                <h5 className="mb-3">
+                  <i className="fal fa-plus-circle me-2"></i>
+                  Create New Milestone
+                </h5>
+                <p className="text-muted mb-4">
+                  <i className="fal fa-lightbulb me-1"></i>
+                  Create milestones with clear deliverables and timelines. Once created, they will be sent to the client for approval.
+                </p>
                 <form onSubmit={handleAddMilestone}>
                   <div className="row g-3 mb-3">
-                    <div className="col-md-6">
+                    <div className="col-md-8">
                       <label htmlFor="milestoneName" className="form-label">
                         Milestone Name <span className="text-danger">*</span>
                       </label>
@@ -466,31 +801,34 @@ export default function CreateMilestone() {
                         id="milestoneName"
                         type="text"
                         className="form-control"
-                        placeholder="e.g., Initial Design Phase"
+                        placeholder="e.g., Design Mockups, Homepage Development, Testing Phase"
                         value={milestoneName}
                         onChange={(e) => setMilestoneName(e.target.value)}
-                        disabled={loading || !isAuthenticated}
+                        disabled={loading}
                         maxLength={255}
+                        required
                       />
-                    </div>
-                    
-                    <div className="col-md-6">
-                      <label htmlFor="freelancerId" className="form-label">
-                        Freelancer <span className="text-danger">*</span>
-                      </label>
-                      <input
-                        id="freelancerId"
-                        type="number"
-                        className="form-control"
-                        placeholder="Enter Freelancer ID"
-                        value={freelancerId}
-                        onChange={(e) => setFreelancerId(e.target.value)}
-                        disabled={loading || !isAuthenticated}
-                      />
-                      <small className="text-muted">Enter the ID of the assigned freelancer</small>
                     </div>
 
-                    <div className="col-md-3">
+                    <div className="col-md-4">
+                      <label htmlFor="budget" className="form-label">
+                        Budget ($) <span className="text-danger">*</span>
+                      </label>
+                      <input
+                        id="budget"
+                        type="number"
+                        step="0.01"
+                        min="0.01"
+                        className="form-control"
+                        placeholder="e.g., 300.00"
+                        value={budget}
+                        onChange={(e) => setBudget(e.target.value)}
+                        disabled={loading}
+                        required
+                      />
+                    </div>
+
+                    <div className="col-md-6">
                       <label htmlFor="startDate" className="form-label">
                         Start Date <span className="text-danger">*</span>
                       </label>
@@ -501,11 +839,13 @@ export default function CreateMilestone() {
                         min={getTodayDate()}
                         value={startDate}
                         onChange={(e) => setStartDate(e.target.value)}
-                        disabled={loading || !isAuthenticated}
+                        disabled={loading}
+                        required
                       />
+                      <small className="text-muted">When will you start working on this milestone?</small>
                     </div>
 
-                    <div className="col-md-3">
+                    <div className="col-md-6">
                       <label htmlFor="endDate" className="form-label">
                         End Date <span className="text-danger">*</span>
                       </label>
@@ -516,58 +856,26 @@ export default function CreateMilestone() {
                         min={startDate || getTodayDate()}
                         value={endDate}
                         onChange={(e) => setEndDate(e.target.value)}
-                        disabled={loading || !isAuthenticated}
+                        disabled={loading}
+                        required
                       />
-                    </div>
-
-                    <div className="col-md-3">
-                      <label htmlFor="budget" className="form-label">
-                        Budget ($) <span className="text-danger">*</span>
-                      </label>
-                      <input
-                        id="budget"
-                        type="number"
-                        step="0.01"
-                        min="0.01"
-                        className="form-control"
-                        placeholder="1000.00"
-                        value={budget}
-                        onChange={(e) => setBudget(e.target.value)}
-                        disabled={loading || !isAuthenticated}
-                      />
-                    </div>
-
-                    <div className="col-md-3">
-                      <label htmlFor="status" className="form-label">
-                        Status
-                      </label>
-                      <select
-                        id="status"
-                        className="form-control"
-                        value={status}
-                        onChange={(e) => setStatus(e.target.value)}
-                        disabled={loading || !isAuthenticated}
-                      >
-                        <option value="pending">Pending</option>
-                        <option value="in_progress">In Progress</option>
-                        <option value="completed">Completed</option>
-                        <option value="approved">Approved</option>
-                      </select>
+                      <small className="text-muted">Expected completion date</small>
                     </div>
 
                     <div className="col-md-12">
                       <label htmlFor="description" className="form-label">
-                        Description <span className="text-danger">*</span>
+                        Description & Deliverables <span className="text-danger">*</span>
                       </label>
                       <textarea
                         id="description"
                         className="form-control"
-                        rows={3}
-                        placeholder="Describe the milestone objectives and deliverables..."
+                        rows={4}
+                        placeholder="Describe the milestone objectives, deliverables, and acceptance criteria in detail..."
                         value={description}
                         onChange={(e) => setDescription(e.target.value)}
-                        disabled={loading || !isAuthenticated}
+                        disabled={loading}
                         maxLength={2000}
+                        required
                       />
                       <small className="text-muted">{description.length}/2000 characters</small>
                     </div>
@@ -577,7 +885,7 @@ export default function CreateMilestone() {
                         <button 
                           type="submit" 
                           className="btn btn-success"
-                          disabled={loading || !isAuthenticated}
+                          disabled={loading}
                         >
                           {loading ? (
                             <>
@@ -587,7 +895,7 @@ export default function CreateMilestone() {
                           ) : (
                             <>
                               <i className="fal fa-plus me-2"></i>
-                              Add Milestone
+                              Add Milestone & Send for Approval
                             </>
                           )}
                         </button>
@@ -599,13 +907,63 @@ export default function CreateMilestone() {
                           disabled={loading}
                         >
                           <i className="fal fa-redo me-2"></i>
-                          Reset
+                          Reset Form
                         </button>
                       </div>
                     </div>
                   </div>
                 </form>
               </div>
+
+              {/* Statistics Summary */}
+              {milestones.length > 0 && (
+                <div className="border-top pt-4 mt-4">
+                  <h6 className="mb-3">
+                    <i className="fal fa-chart-bar me-2"></i>
+                    Milestone Statistics
+                  </h6>
+                  <div className="row g-3">
+                    <div className="col-md-3">
+                      <div className="card border-warning">
+                        <div className="card-body text-center">
+                          <h4 className="mb-0">{milestones.filter(m => m.status === 'pending').length}</h4>
+                          <small className="text-muted">Pending Approval</small>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="col-md-3">
+                      <div className="card border-primary">
+                        <div className="card-body text-center">
+                          <h4 className="mb-0">{milestones.filter(m => m.status === 'in_progress').length}</h4>
+                          <small className="text-muted">In Progress</small>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="col-md-3">
+                      <div className="card border-info">
+                        <div className="card-body text-center">
+                          <h4 className="mb-0">{milestones.filter(m => m.status === 'completed').length}</h4>
+                          <small className="text-muted">Awaiting Review</small>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="col-md-3">
+                      <div className="card border-success">
+                        <div className="card-body text-center">
+                          <h4 className="mb-0">{milestones.filter(m => m.status === 'paid').length}</h4>
+                          <small className="text-muted">Completed & Paid</small>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="mt-3">
+                    <strong>Total Budget:</strong> ${milestones.reduce((sum, m) => sum + parseFloat(m.budget), 0).toFixed(2)}
+                    <span className="ms-3">
+                      <strong>Earned:</strong> ${milestones.filter(m => m.status === 'paid').reduce((sum, m) => sum + parseFloat(m.budget), 0).toFixed(2)}
+                    </span>
+                  </div>
+                </div>
+              )}
 
               {/* Pagination if needed */}
               {milestones.length > 10 && (

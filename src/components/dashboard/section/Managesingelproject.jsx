@@ -16,6 +16,7 @@ export default function ManageSingleProject() {
   const [payments, setPayments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [success, setSuccess] = useState(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   
   // Collapsible sections
@@ -26,6 +27,13 @@ export default function ManageSingleProject() {
   
   // Action states
   const [processingProposal, setProcessingProposal] = useState(null);
+  const [processingMilestone, setProcessingMilestone] = useState(null);
+  const [processingPayment, setProcessingPayment] = useState(null);
+  
+  // Revision modal state
+  const [showRevisionModal, setShowRevisionModal] = useState(false);
+  const [selectedMilestone, setSelectedMilestone] = useState(null);
+  const [revisionNote, setRevisionNote] = useState("");
 
   // API URLs
   const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000/api/project";
@@ -156,7 +164,8 @@ export default function ManageSingleProject() {
         throw new Error("Failed to accept proposal");
       }
 
-      alert(`Proposal from ${freelancerName} accepted successfully!`);
+      setSuccess(`Proposal from ${freelancerName} accepted successfully!`);
+      setTimeout(() => setSuccess(null), 3000);
       
       // Refresh data
       await fetchProposals();
@@ -174,7 +183,8 @@ export default function ManageSingleProject() {
       
     } catch (err) {
       console.error("Error accepting proposal:", err);
-      alert(err.message || "Failed to accept proposal");
+      setError(err.message || "Failed to accept proposal");
+      setTimeout(() => setError(null), 3000);
     } finally {
       setProcessingProposal(null);
     }
@@ -201,29 +211,153 @@ export default function ManageSingleProject() {
         throw new Error("Failed to reject proposal");
       }
 
-      alert(`Proposal from ${freelancerName} rejected.`);
+      setSuccess(`Proposal from ${freelancerName} rejected.`);
+      setTimeout(() => setSuccess(null), 3000);
       await fetchProposals();
     } catch (err) {
       console.error("Error rejecting proposal:", err);
-      alert(err.message || "Failed to reject proposal");
+      setError(err.message || "Failed to reject proposal");
+      setTimeout(() => setError(null), 3000);
     } finally {
       setProcessingProposal(null);
     }
   };
 
-  // Handle chat with freelancer
-  const handleChat = (freelancerId, freelancerName) => {
-    // Redirect to chat page with freelancer
-    window.location.href = `/dashboard/chat?user=${freelancerId}&name=${encodeURIComponent(freelancerName)}`;
-  };
-
-  // Handle payout
-  const handlePayout = async (paymentId) => {
-    if (!confirm("Are you sure you want to release this payment?")) {
+  // Handle approve milestone (Client approves milestone setup)
+  const handleApproveMilestone = async (milestoneId, milestoneName) => {
+    if (!confirm(`Are you sure you want to approve the milestone: "${milestoneName}"?`)) {
       return;
     }
 
     try {
+      setProcessingMilestone(milestoneId);
+      const token = localStorage.getItem('accessToken');
+      const response = await fetch(`${API_URL}/milestones/${milestoneId}/approve/`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to approve milestone");
+      }
+
+      setSuccess(`Milestone "${milestoneName}" approved successfully!`);
+      setTimeout(() => setSuccess(null), 3000);
+      await fetchMilestones();
+    } catch (err) {
+      console.error("Error approving milestone:", err);
+      setError(err.message || "Failed to approve milestone");
+      setTimeout(() => setError(null), 3000);
+    } finally {
+      setProcessingMilestone(null);
+    }
+  };
+
+  // Handle request revision for milestone
+  const handleRequestRevision = async (milestoneId) => {
+    if (!revisionNote.trim()) {
+      alert("Please provide revision notes");
+      return;
+    }
+
+    try {
+      setProcessingMilestone(milestoneId);
+      const token = localStorage.getItem('accessToken');
+      
+      // Update milestone status to 'revision_requested'
+      const response = await fetch(`${API_URL}/milestones/${milestoneId}/`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          status: 'revision_requested',
+          revision_notes: revisionNote
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to request revision");
+      }
+
+      setSuccess("Revision requested successfully!");
+      setTimeout(() => setSuccess(null), 3000);
+      setShowRevisionModal(false);
+      setRevisionNote("");
+      setSelectedMilestone(null);
+      await fetchMilestones();
+    } catch (err) {
+      console.error("Error requesting revision:", err);
+      setError(err.message || "Failed to request revision");
+      setTimeout(() => setError(null), 3000);
+    } finally {
+      setProcessingMilestone(null);
+    }
+  };
+
+  // Open revision modal
+  const openRevisionModal = (milestone) => {
+    setSelectedMilestone(milestone);
+    setShowRevisionModal(true);
+  };
+
+  // Handle create payment for completed milestone
+  const handleCreatePayment = async (milestoneId, milestoneName, budget) => {
+    if (!confirm(`Create payment of $${formatBudget(budget)} for milestone "${milestoneName}"?`)) {
+      return;
+    }
+
+    try {
+      setProcessingMilestone(milestoneId);
+      const token = localStorage.getItem('accessToken');
+      
+      // Create payment record
+      const response = await fetch(`${API_URL}/payments/`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          project: parseInt(projectId),
+          milestone: milestoneId,
+          freelancer: milestones.find(m => m.id === milestoneId)?.freelancer,
+          payment_amount: budget,
+          payment_status: 'pending',
+          payment_method: 'platform_wallet'
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || "Failed to create payment");
+      }
+
+      setSuccess("Payment created successfully! You can now release it.");
+      setTimeout(() => setSuccess(null), 3000);
+      await fetchPayments();
+    } catch (err) {
+      console.error("Error creating payment:", err);
+      setError(err.message || "Failed to create payment");
+      setTimeout(() => setError(null), 3000);
+    } finally {
+      setProcessingMilestone(null);
+    }
+  };
+
+  // Handle payout (release payment)
+  const handlePayout = async (paymentId, amount) => {
+    if (!confirm(`Are you sure you want to release payment of $${formatBudget(amount)}?`)) {
+      return;
+    }
+
+    try {
+      setProcessingPayment(paymentId);
       const token = localStorage.getItem('accessToken');
       const response = await fetch(`${API_URL}/payments/${paymentId}/release_payment/`, {
         method: "PATCH",
@@ -234,15 +368,27 @@ export default function ManageSingleProject() {
       });
 
       if (!response.ok) {
-        throw new Error("Failed to release payment");
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to release payment");
       }
 
-      alert("Payment released successfully!");
+      setSuccess("Payment released successfully!");
+      setTimeout(() => setSuccess(null), 3000);
       await fetchPayments();
+      await fetchMilestones(); // Refresh milestones to update status
     } catch (err) {
       console.error("Error releasing payment:", err);
-      alert(err.message || "Failed to release payment");
+      setError(err.message || "Failed to release payment");
+      setTimeout(() => setError(null), 3000);
+    } finally {
+      setProcessingPayment(null);
     }
+  };
+
+  // Handle chat with freelancer
+  const handleChat = (freelancerId, freelancerName) => {
+    // Redirect to chat page with freelancer
+    window.location.href = `/dashboard/chat?user=${freelancerId}&name=${encodeURIComponent(freelancerName)}`;
   };
 
   // Format date
@@ -285,13 +431,44 @@ export default function ManageSingleProject() {
         return "badge bg-success";
       case "pending":
         return "badge bg-warning";
+      case "approved":
+        return "badge bg-success";
+      case "revision_requested":
+        return "badge bg-danger";
       default:
         return "badge bg-secondary";
     }
   };
 
+  // Get status badge with icon
+  const getStatusBadge = (status) => {
+    const statusConfig = {
+      'pending': { class: 'bg-warning text-dark', icon: 'fa-clock', label: 'Pending Approval' },
+      'approved': { class: 'bg-success', icon: 'fa-check-circle', label: 'Approved' },
+      'in_progress': { class: 'bg-primary', icon: 'fa-spinner', label: 'In Progress' },
+      'completed': { class: 'bg-info', icon: 'fa-flag-checkered', label: 'Completed - Review' },
+      'payment_requested': { class: 'bg-warning', icon: 'fa-money-bill-wave', label: 'Payment Requested' },
+      'paid': { class: 'bg-success', icon: 'fa-check-double', label: 'Paid' },
+      'revision_requested': { class: 'bg-danger', icon: 'fa-redo', label: 'Revision Requested' }
+    };
+
+    const config = statusConfig[status] || { class: 'bg-secondary', icon: 'fa-question', label: status };
+
+    return (
+      <span className={`badge ${config.class}`}>
+        <i className={`fal ${config.icon} me-1`}></i>
+        {config.label}
+      </span>
+    );
+  };
+
   // Get accepted proposal
   const acceptedProposal = proposals.find(p => p.status === 'accepted');
+
+  // Check if milestone has pending payment
+  const getMilestonePayment = (milestoneId) => {
+    return payments.find(p => p.milestone === milestoneId);
+  };
 
   // Loading state
   if (loading) {
@@ -315,7 +492,7 @@ export default function ManageSingleProject() {
   }
 
   // Error state
-  if (error || !project) {
+  if (error && !project) {
     return (
       <div className="dashboard__content hover-bgc-color">
         <div className="row pb40">
@@ -346,13 +523,30 @@ export default function ManageSingleProject() {
       </div>
 
       <div className="container">
+        {/* Success/Error Messages */}
+        {success && (
+          <div className="alert alert-success alert-dismissible fade show" role="alert">
+            <i className="fal fa-check-circle me-2"></i>
+            <strong>Success!</strong> {success}
+            <button type="button" className="btn-close" onClick={() => setSuccess(null)}></button>
+          </div>
+        )}
+
+        {error && (
+          <div className="alert alert-danger alert-dismissible fade show" role="alert">
+            <i className="fal fa-exclamation-circle me-2"></i>
+            <strong>Error!</strong> {error}
+            <button type="button" className="btn-close" onClick={() => setError(null)}></button>
+          </div>
+        )}
+
         {/* Title and Edit Button */}
         <div className="row pb40">
           <div className="col-lg-12">
             <div className="dashboard_title_area d-flex justify-content-between align-items-center flex-wrap gap-3">
               <div>
                 <h2>{project.title}</h2>
-                <p className="text">Manage project details and proposals</p>
+                <p className="text">Manage project details, proposals, and milestones</p>
               </div>
               <div className="d-flex gap-2">
                 <Link
@@ -440,8 +634,10 @@ export default function ManageSingleProject() {
                 </div>
                 <div className="col-md-3 col-6 mb-3">
                   <div className="text-center">
-                    <h4 className="mb-0 text-warning">{payments.length}</h4>
-                    <small className="text-muted">Payments</small>
+                    <h4 className="mb-0 text-warning">
+                      ${formatBudget(payments.filter(p => p.payment_status === 'released').reduce((sum, p) => sum + parseFloat(p.payment_amount || 0), 0))}
+                    </h4>
+                    <small className="text-muted">Paid Out</small>
                   </div>
                 </div>
               </div>
@@ -460,6 +656,7 @@ export default function ManageSingleProject() {
                   style={{ cursor: 'pointer' }}
                 >
                   <h5 className="fw500 mb-0">
+                    <i className="fal fa-file-alt me-2"></i>
                     Proposals ({proposals.length})
                   </h5>
                   <span className="fw-bold">{showProposals ? "−" : "+"}</span>
@@ -468,7 +665,7 @@ export default function ManageSingleProject() {
                 {showProposals && (
                   <div className="p30">
                     <div className="table-responsive">
-                      <table className="table table-style3 at-savesearch mb-0">
+                      <table className="table table-style3 at-savesearch mb-0 table-hover">
                         <thead className="t-head">
                           <tr>
                             <th>Freelancer</th>
@@ -502,7 +699,7 @@ export default function ManageSingleProject() {
                                   </div>
                                 </div>
                               </td>
-                              <td className="fw-bold">${formatBudget(proposal.budget)}</td>
+                              <td className="fw-bold text-success">${formatBudget(proposal.budget)}</td>
                               <td>
                                 <span className={getStatusClass(proposal.status)}>
                                   {proposal.status?.toUpperCase()}
@@ -531,7 +728,10 @@ export default function ManageSingleProject() {
                                         {processingProposal === proposal.id ? (
                                           <span className="spinner-border spinner-border-sm"></span>
                                         ) : (
-                                          <i className="fal fa-check"></i>
+                                          <>
+                                            <i className="fal fa-check me-1"></i>
+                                            Accept
+                                          </>
                                         )}
                                       </button>
                                       <button
@@ -543,7 +743,8 @@ export default function ManageSingleProject() {
                                         disabled={processingProposal === proposal.id}
                                         title="Reject Proposal"
                                       >
-                                        <i className="fal fa-times"></i>
+                                        <i className="fal fa-times me-1"></i>
+                                        Reject
                                       </button>
                                     </>
                                   )}
@@ -555,14 +756,16 @@ export default function ManageSingleProject() {
                                     )}
                                     title="Chat with Freelancer"
                                   >
-                                    <i className="fal fa-comment"></i>
+                                    <i className="fal fa-comment me-1"></i>
+                                    Chat
                                   </button>
                                   <Link
                                     href={`/freelancer/${proposal.freelancer?.id}`}
                                     className="btn btn-sm btn-outline-primary"
                                     title="View Profile"
                                   >
-                                    <i className="fal fa-user"></i>
+                                    <i className="fal fa-user me-1"></i>
+                                    Profile
                                   </Link>
                                 </div>
                               </td>
@@ -588,7 +791,10 @@ export default function ManageSingleProject() {
                   onClick={() => setShowSelectedFreelancer(!showSelectedFreelancer)}
                   style={{ cursor: 'pointer' }}
                 >
-                  <h5 className="fw500 mb-0">Selected Freelancer</h5>
+                  <h5 className="fw500 mb-0">
+                    <i className="fal fa-user-check me-2"></i>
+                    Selected Freelancer
+                  </h5>
                   <span className="fw-bold">{showSelectedFreelancer ? "−" : "+"}</span>
                 </div>
 
@@ -611,7 +817,7 @@ export default function ManageSingleProject() {
                               : acceptedProposal.freelancer?.username}
                           </h5>
                           <p className="mb-0 text-muted">{acceptedProposal.freelancer?.email}</p>
-                          <p className="mb-0 fw-bold text-success">Budget: ${formatBudget(acceptedProposal.budget)}</p>
+                          <p className="mb-0 fw-bold text-success">Contract Budget: ${formatBudget(acceptedProposal.budget)}</p>
                         </div>
                       </div>
                       <div className="d-flex gap-2">
@@ -641,7 +847,7 @@ export default function ManageSingleProject() {
           </div>
         )}
 
-        {/* Milestones */}
+        {/* Milestones - CLIENT VIEW WITH APPROVAL/REVISION OPTIONS */}
         {milestones.length > 0 && (
           <div className="row">
             <div className="col-xl-12">
@@ -651,46 +857,219 @@ export default function ManageSingleProject() {
                   onClick={() => setShowMilestones(!showMilestones)}
                   style={{ cursor: 'pointer' }}
                 >
-                  <h5 className="fw500 mb-0">Milestones ({milestones.length})</h5>
+                  <h5 className="fw500 mb-0">
+                    <i className="fal fa-tasks me-2"></i>
+                    Milestones ({milestones.length})
+                  </h5>
                   <span className="fw-bold">{showMilestones ? "−" : "+"}</span>
                 </div>
 
                 {showMilestones && (
                   <div className="p30">
+                    {/* Milestone Workflow Info */}
+                    <div className="alert alert-info mb-4" role="alert">
+                      <h6 className="mb-2">
+                        <i className="fal fa-info-circle me-2"></i>
+                        Client Actions for Milestones
+                      </h6>
+                      <ul className="mb-0 ps-3">
+                        <li><strong>Pending:</strong> Review and approve or request modifications</li>
+                        <li><strong>Completed:</strong> Review work and either release payment or request revision</li>
+                        <li><strong>In Progress:</strong> Freelancer is working on this milestone</li>
+                      </ul>
+                    </div>
+
                     <div className="table-responsive">
-                      <table className="table table-style3 at-savesearch mb-0">
+                      <table className="table table-style3 at-savesearch mb-0 table-hover">
                         <thead className="t-head">
                           <tr>
-                            <th>Milestone Name</th>
-                            <th>Start Date</th>
-                            <th>End Date</th>
+                            <th>Milestone Details</th>
+                            <th>Timeline</th>
                             <th>Budget</th>
                             <th>Status</th>
-                            <th>Description</th>
+                            <th>Actions</th>
                           </tr>
                         </thead>
                         <tbody className="t-body">
-                          {milestones.map((milestone) => (
-                            <tr key={milestone.id}>
-                              <td className="fw-bold">{milestone.name}</td>
-                              <td>{formatDate(milestone.start_date)}</td>
-                              <td>{formatDate(milestone.end_date)}</td>
-                              <td className="fw-bold">${formatBudget(milestone.budget)}</td>
-                              <td>
-                                <span className={getStatusClass(milestone.status)}>
-                                  {milestone.status?.replace('_', ' ').toUpperCase()}
-                                </span>
-                              </td>
-                              <td>
-                                <div style={{ maxWidth: '200px' }}>
-                                  {milestone.description?.substring(0, 50)}
-                                  {milestone.description?.length > 50 && '...'}
-                                </div>
-                              </td>
-                            </tr>
-                          ))}
+                          {milestones.map((milestone) => {
+                            const milestonePayment = getMilestonePayment(milestone.id);
+                            
+                            return (
+                              <tr key={milestone.id}>
+                                <td>
+                                  <strong className="d-block mb-1">{milestone.name}</strong>
+                                  <small className="text-muted">
+                                    {milestone.description?.substring(0, 80)}
+                                    {milestone.description?.length > 80 ? '...' : ''}
+                                  </small>
+                                </td>
+                                <td>
+                                  <div className="small">
+                                    <div>
+                                      <i className="fal fa-calendar-check me-1 text-success"></i>
+                                      {formatDate(milestone.start_date)}
+                                    </div>
+                                    <div>
+                                      <i className="fal fa-calendar-times me-1 text-danger"></i>
+                                      {formatDate(milestone.end_date)}
+                                    </div>
+                                  </div>
+                                </td>
+                                <td>
+                                  <strong className="text-primary">${formatBudget(milestone.budget)}</strong>
+                                </td>
+                                <td>
+                                  {getStatusBadge(milestone.status)}
+                                </td>
+                                <td>
+                                  <div className="d-flex flex-column gap-2">
+                                    {/* PENDING - Client needs to approve or modify */}
+                                    {milestone.status === 'pending' && (
+                                      <>
+                                        <button
+                                          className="btn btn-sm btn-success"
+                                          onClick={() => handleApproveMilestone(milestone.id, milestone.name)}
+                                          disabled={processingMilestone === milestone.id}
+                                        >
+                                          {processingMilestone === milestone.id ? (
+                                            <>
+                                              <span className="spinner-border spinner-border-sm me-1"></span>
+                                              Approving...
+                                            </>
+                                          ) : (
+                                            <>
+                                              <i className="fal fa-check me-1"></i>
+                                              Approve
+                                            </>
+                                          )}
+                                        </button>
+                                        <button
+                                          className="btn btn-sm btn-warning"
+                                          onClick={() => openRevisionModal(milestone)}
+                                        >
+                                          <i className="fal fa-edit me-1"></i>
+                                          Request Changes
+                                        </button>
+                                      </>
+                                    )}
+
+                                    {/* APPROVED - Work can begin */}
+                                    {milestone.status === 'approved' && (
+                                      <span className="text-success small">
+                                        <i className="fal fa-check-circle me-1"></i>
+                                        Approved - Freelancer can start
+                                      </span>
+                                    )}
+
+                                    {/* IN PROGRESS - Freelancer is working */}
+                                    {milestone.status === 'in_progress' && (
+                                      <span className="text-primary small">
+                                        <i className="fal fa-spinner fa-spin me-1"></i>
+                                        Work in progress
+                                      </span>
+                                    )}
+
+                                    {/* COMPLETED - Client needs to review and pay */}
+                                    {milestone.status === 'completed' && (
+                                      <>
+                                        {!milestonePayment ? (
+                                          <>
+                                            <button
+                                              className="btn btn-sm btn-success"
+                                              onClick={() => handleCreatePayment(
+                                                milestone.id,
+                                                milestone.name,
+                                                milestone.budget
+                                              )}
+                                              disabled={processingMilestone === milestone.id}
+                                            >
+                                              {processingMilestone === milestone.id ? (
+                                                <>
+                                                  <span className="spinner-border spinner-border-sm me-1"></span>
+                                                  Processing...
+                                                </>
+                                              ) : (
+                                                <>
+                                                  <i className="fal fa-check-double me-1"></i>
+                                                  Approve & Create Payment
+                                                </>
+                                              )}
+                                            </button>
+                                            <button
+                                              className="btn btn-sm btn-danger"
+                                              onClick={() => openRevisionModal(milestone)}
+                                            >
+                                              <i className="fal fa-redo me-1"></i>
+                                              Request Revision
+                                            </button>
+                                          </>
+                                        ) : (
+                                          <span className="text-info small">
+                                            <i className="fal fa-money-bill-wave me-1"></i>
+                                            Payment created - check payments section
+                                          </span>
+                                        )}
+                                      </>
+                                    )}
+
+                                    {/* REVISION REQUESTED */}
+                                    {milestone.status === 'revision_requested' && (
+                                      <span className="text-danger small">
+                                        <i className="fal fa-redo me-1"></i>
+                                        Awaiting freelancer revision
+                                      </span>
+                                    )}
+
+                                    {/* PAID */}
+                                    {milestone.status === 'paid' && (
+                                      <span className="text-success small">
+                                        <i className="fal fa-check-double me-1"></i>
+                                        Payment released
+                                      </span>
+                                    )}
+                                  </div>
+                                </td>
+                              </tr>
+                            );
+                          })}
                         </tbody>
                       </table>
+                    </div>
+
+                    {/* Milestone Statistics */}
+                    <div className="row mt-4 pt-3 border-top">
+                      <div className="col-md-3 col-6">
+                        <div className="text-center">
+                          <h5 className="mb-0 text-warning">
+                            {milestones.filter(m => m.status === 'pending').length}
+                          </h5>
+                          <small className="text-muted">Pending Approval</small>
+                        </div>
+                      </div>
+                      <div className="col-md-3 col-6">
+                        <div className="text-center">
+                          <h5 className="mb-0 text-primary">
+                            {milestones.filter(m => m.status === 'in_progress').length}
+                          </h5>
+                          <small className="text-muted">In Progress</small>
+                        </div>
+                      </div>
+                      <div className="col-md-3 col-6">
+                        <div className="text-center">
+                          <h5 className="mb-0 text-info">
+                            {milestones.filter(m => m.status === 'completed').length}
+                          </h5>
+                          <small className="text-muted">Awaiting Review</small>
+                        </div>
+                      </div>
+                      <div className="col-md-3 col-6">
+                        <div className="text-center">
+                          <h5 className="mb-0 text-success">
+                            {milestones.filter(m => m.status === 'paid').length}
+                          </h5>
+                          <small className="text-muted">Completed & Paid</small>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 )}
@@ -709,14 +1088,17 @@ export default function ManageSingleProject() {
                   onClick={() => setShowPayments(!showPayments)}
                   style={{ cursor: 'pointer' }}
                 >
-                  <h5 className="fw500 mb-0">Payments ({payments.length})</h5>
+                  <h5 className="fw500 mb-0">
+                    <i className="fal fa-money-bill-wave me-2"></i>
+                    Payments ({payments.length})
+                  </h5>
                   <span className="fw-bold">{showPayments ? "−" : "+"}</span>
                 </div>
 
                 {showPayments && (
                   <div className="p30">
                     <div className="table-responsive">
-                      <table className="table table-style3 at-savesearch mb-0">
+                      <table className="table table-style3 at-savesearch mb-0 table-hover">
                         <thead className="t-head">
                           <tr>
                             <th>Payment ID</th>
@@ -733,24 +1115,34 @@ export default function ManageSingleProject() {
                           {payments.map((payment) => (
                             <tr key={payment.id}>
                               <td className="fw-bold">#{payment.id}</td>
-                              <td>{payment.milestone_name || 'N/A'}</td>
+                              <td>{payment.milestone_name || milestones.find(m => m.id === payment.milestone)?.name || 'N/A'}</td>
                               <td className="fw-bold text-success">${formatBudget(payment.payment_amount)}</td>
                               <td>
                                 <span className={getStatusClass(payment.payment_status)}>
                                   {payment.payment_status?.toUpperCase()}
                                 </span>
                               </td>
-                              <td>{payment.payment_method || 'N/A'}</td>
+                              <td className="text-capitalize">{payment.payment_method?.replace('_', ' ') || 'Platform Wallet'}</td>
                               <td>{formatDate(payment.created_at)}</td>
                               <td>{formatDate(payment.released_at) || '-'}</td>
                               <td>
-                                {payment.payment_status !== 'released' && (
+                                {payment.payment_status === 'pending' && (
                                   <button
-                                    className="btn btn-sm btn-primary"
-                                    onClick={() => handlePayout(payment.id)}
+                                    className="btn btn-sm btn-success"
+                                    onClick={() => handlePayout(payment.id, payment.payment_amount)}
+                                    disabled={processingPayment === payment.id}
                                   >
-                                    <i className="fal fa-money-bill-wave me-1"></i>
-                                    Release Payment
+                                    {processingPayment === payment.id ? (
+                                      <>
+                                        <span className="spinner-border spinner-border-sm me-1"></span>
+                                        Releasing...
+                                      </>
+                                    ) : (
+                                      <>
+                                        <i className="fal fa-money-bill-wave me-1"></i>
+                                        Release Payment
+                                      </>
+                                    )}
                                   </button>
                                 )}
                                 {payment.payment_status === 'released' && (
@@ -764,6 +1156,34 @@ export default function ManageSingleProject() {
                           ))}
                         </tbody>
                       </table>
+                    </div>
+
+                    {/* Payment Summary */}
+                    <div className="row mt-4 pt-3 border-top">
+                      <div className="col-md-4">
+                        <div className="text-center">
+                          <h5 className="mb-0 text-primary">
+                            ${formatBudget(payments.reduce((sum, p) => sum + parseFloat(p.payment_amount || 0), 0))}
+                          </h5>
+                          <small className="text-muted">Total Payments</small>
+                        </div>
+                      </div>
+                      <div className="col-md-4">
+                        <div className="text-center">
+                          <h5 className="mb-0 text-warning">
+                            ${formatBudget(payments.filter(p => p.payment_status === 'pending').reduce((sum, p) => sum + parseFloat(p.payment_amount || 0), 0))}
+                          </h5>
+                          <small className="text-muted">Pending Release</small>
+                        </div>
+                      </div>
+                      <div className="col-md-4">
+                        <div className="text-center">
+                          <h5 className="mb-0 text-success">
+                            ${formatBudget(payments.filter(p => p.payment_status === 'released').reduce((sum, p) => sum + parseFloat(p.payment_amount || 0), 0))}
+                          </h5>
+                          <small className="text-muted">Released</small>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 )}
@@ -784,7 +1204,95 @@ export default function ManageSingleProject() {
             </div>
           </div>
         )}
+
+        {milestones.length === 0 && project.status === 'in_progress' && (
+          <div className="row">
+            <div className="col-xl-12">
+              <div className="ps-widget bgc-white bdrs4 p30 mb30 text-center">
+                <i className="fal fa-tasks fa-3x text-muted mb-3"></i>
+                <h5>No Milestones Yet</h5>
+                <p className="text-muted">The freelancer will create milestones for your approval.</p>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
+
+      {/* Revision Request Modal */}
+      {showRevisionModal && selectedMilestone && (
+        <div className="modal fade show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }} tabIndex="-1">
+          <div className="modal-dialog modal-dialog-centered">
+            <div className="modal-content">
+              <div className="modal-header">
+                <h5 className="modal-title">
+                  <i className="fal fa-edit me-2"></i>
+                  Request Revision
+                </h5>
+                <button
+                  type="button"
+                  className="btn-close"
+                  onClick={() => {
+                    setShowRevisionModal(false);
+                    setRevisionNote("");
+                    setSelectedMilestone(null);
+                  }}
+                ></button>
+              </div>
+              <div className="modal-body">
+                <p className="mb-3">
+                  <strong>Milestone:</strong> {selectedMilestone.name}
+                </p>
+                <div className="mb-3">
+                  <label htmlFor="revisionNote" className="form-label">
+                    Revision Notes <span className="text-danger">*</span>
+                  </label>
+                  <textarea
+                    id="revisionNote"
+                    className="form-control"
+                    rows="5"
+                    placeholder="Please describe the changes or improvements you'd like to see..."
+                    value={revisionNote}
+                    onChange={(e) => setRevisionNote(e.target.value)}
+                    required
+                  ></textarea>
+                  <small className="text-muted">Be specific about what needs to be changed or improved.</small>
+                </div>
+              </div>
+              <div className="modal-footer">
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={() => {
+                    setShowRevisionModal(false);
+                    setRevisionNote("");
+                    setSelectedMilestone(null);
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  onClick={() => handleRequestRevision(selectedMilestone.id)}
+                  disabled={!revisionNote.trim() || processingMilestone === selectedMilestone.id}
+                >
+                  {processingMilestone === selectedMilestone.id ? (
+                    <>
+                      <span className="spinner-border spinner-border-sm me-2"></span>
+                      Sending...
+                    </>
+                  ) : (
+                    <>
+                      <i className="fal fa-paper-plane me-2"></i>
+                      Send Revision Request
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

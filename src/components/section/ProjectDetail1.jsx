@@ -20,9 +20,74 @@ export default function ProjectDetail1() {
   const [submitting, setSubmitting] = useState(false);
   const [proposalSuccess, setProposalSuccess] = useState(false);
   const [proposalError, setProposalError] = useState(null);
+  const [currentUser, setCurrentUser] = useState(null);
+  const [userType, setUserType] = useState(null); // 'freelancer' or 'job_provider'
+  const [userProfileLoading, setUserProfileLoading] = useState(true);
 
   // API URLs
   const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000/api/project";
+  const BASE_API_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
+
+  // Fetch current user profile (try both endpoints)
+  useEffect(() => {
+    const fetchCurrentUser = async () => {
+      const token = localStorage.getItem('accessToken');
+      if (!token) {
+        setUserProfileLoading(false);
+        return;
+      }
+
+      try {
+        setUserProfileLoading(true);
+
+        // First, try to fetch freelancer profile
+        let response = await fetch(`${BASE_API_URL}/api/profile/freelancer/`, {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${token}`
+          },
+        });
+
+        if (response.ok) {
+          const userData = await response.json();
+          console.log("Freelancer profile:", userData);
+          setCurrentUser(userData);
+          setUserType('freelancer');
+          setUserProfileLoading(false);
+          return;
+        }
+
+        // If freelancer fails, try job provider
+        response = await fetch(`${BASE_API_URL}/api/profile/job-provider/`, {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${token}`
+          },
+        });
+
+        if (response.ok) {
+          const userData = await response.json();
+          console.log("Job provider profile:", userData);
+          setCurrentUser(userData);
+          setUserType('job_provider');
+          setUserProfileLoading(false);
+          return;
+        }
+
+        // If both fail
+        console.warn("Could not fetch user profile from either endpoint");
+        setUserProfileLoading(false);
+
+      } catch (err) {
+        console.error("Error fetching current user:", err);
+        setUserProfileLoading(false);
+      }
+    };
+
+    fetchCurrentUser();
+  }, [BASE_API_URL]);
 
   // Fetch project details
   useEffect(() => {
@@ -58,6 +123,42 @@ export default function ProjectDetail1() {
     fetchProjectDetails();
   }, [id, API_URL]);
 
+  // Check if current user is the project owner (job provider who created the project)
+  const isProjectOwner = () => {
+    if (!currentUser || !projectData || !projectData.user) return false;
+    
+    // Compare user IDs - adjust based on your API response structure
+    // The project owner's ID is in projectData.user.id
+    // The current user's ID might be in currentUser.user.id or currentUser.id
+    const currentUserId = currentUser.user?.id || currentUser.id;
+    const projectOwnerId = projectData.user.id;
+    
+    console.log("Current User ID:", currentUserId);
+    console.log("Project Owner ID:", projectOwnerId);
+    console.log("User Type:", userType);
+    
+    return currentUserId === projectOwnerId;
+  };
+
+  // Check if user is a freelancer (employee)
+  const isFreelancer = () => {
+    return userType === 'freelancer';
+  };
+
+  // Check if user can submit proposal
+  const canSubmitProposal = () => {
+    // Must be a freelancer
+    if (!isFreelancer()) return false;
+    
+    // Must not be the project owner
+    if (isProjectOwner()) return false;
+    
+    // Project must be open
+    if (projectData?.status !== 'open') return false;
+    
+    return true;
+  };
+
   // Handle proposal submission
   const handleSubmitProposal = async (e) => {
     e.preventDefault();
@@ -73,6 +174,20 @@ export default function ProjectDetail1() {
       setTimeout(() => {
         window.location.href = '/login';
       }, 2000);
+      return;
+    }
+
+    // Check if user is a freelancer
+    if (!isFreelancer()) {
+      setProposalError("Only freelancers can submit proposals");
+      setSubmitting(false);
+      return;
+    }
+
+    // Check if user is the project owner
+    if (isProjectOwner()) {
+      setProposalError("You cannot submit a proposal to your own project");
+      setSubmitting(false);
       return;
     }
 
@@ -186,7 +301,7 @@ export default function ProjectDetail1() {
   };
 
   // Loading state
-  if (loading) {
+  if (loading || userProfileLoading) {
     return (
       <section className="pt30 pb90">
         <div className="container">
@@ -397,8 +512,8 @@ export default function ProjectDetail1() {
                       </>
                     )}
 
-                    {/* Send Your Proposal */}
-                    {projectData.status === 'open' && (
+                    {/* Send Your Proposal - ONLY SHOW TO FREELANCERS WHO DON'T OWN THE PROJECT */}
+                    {canSubmitProposal() && (
                       <div className="bsp_reveiw_wrt mt25">
                         <h4>Send Your Proposal</h4>
 
@@ -482,6 +597,27 @@ export default function ProjectDetail1() {
                             </div>
                           </div>
                         </form>
+                      </div>
+                    )}
+
+                    {/* Job Provider Notice (if logged in as job provider) */}
+                    {projectData.status === 'open' && userType === 'job_provider' && !isProjectOwner() && (
+                      <div className="alert alert-info" role="alert">
+                        <strong>Notice:</strong> Only freelancers can submit proposals to projects. You are logged in as a job provider.
+                      </div>
+                    )}
+
+                    {/* Project Owner Notice */}
+                    {projectData.status === 'open' && isProjectOwner() && (
+                      <div className="alert alert-info" role="alert">
+                        <strong>Notice:</strong> This is your project. You cannot submit a proposal to your own project.
+                      </div>
+                    )}
+
+                    {/* Not Logged In Notice */}
+                    {projectData.status === 'open' && !currentUser && (
+                      <div className="alert alert-warning" role="alert">
+                        <strong>Notice:</strong> Please log in as a freelancer to submit a proposal for this project.
                       </div>
                     )}
 
