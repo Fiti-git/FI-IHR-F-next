@@ -34,6 +34,10 @@ export default function ManageSingleProject() {
   const [showRevisionModal, setShowRevisionModal] = useState(false);
   const [selectedMilestone, setSelectedMilestone] = useState(null);
   const [revisionNote, setRevisionNote] = useState("");
+  
+  // Cover letter modal state
+  const [showCoverLetterModal, setShowCoverLetterModal] = useState(false);
+  const [selectedCoverLetter, setSelectedCoverLetter] = useState(null);
 
   // API URLs
   const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000/api/project";
@@ -304,6 +308,19 @@ export default function ManageSingleProject() {
   const openRevisionModal = (milestone) => {
     setSelectedMilestone(milestone);
     setShowRevisionModal(true);
+  };
+
+  // Open cover letter modal
+  const openCoverLetterModal = (proposal) => {
+    setSelectedCoverLetter({
+      freelancerName: proposal.freelancer?.first_name && proposal.freelancer?.last_name
+        ? `${proposal.freelancer.first_name} ${proposal.freelancer.last_name}`
+        : proposal.freelancer?.username,
+      coverLetter: proposal.cover_letter,
+      budget: proposal.budget,
+      submittedAt: proposal.submitted_at
+    });
+    setShowCoverLetterModal(true);
   };
 
   // Handle create payment for completed milestone
@@ -706,9 +723,20 @@ export default function ManageSingleProject() {
                                 </span>
                               </td>
                               <td>
-                                <div style={{ maxWidth: '200px' }}>
-                                  {proposal.cover_letter?.substring(0, 50)}
-                                  {proposal.cover_letter?.length > 50 && '...'}
+                                <div className="d-flex align-items-center gap-2">
+                                  <div style={{ maxWidth: '150px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                    {proposal.cover_letter?.substring(0, 50)}
+                                    {proposal.cover_letter?.length > 50 && '...'}
+                                  </div>
+                                  {proposal.cover_letter && (
+                                    <button
+                                      className="btn btn-sm btn-outline-primary"
+                                      onClick={() => openCoverLetterModal(proposal)}
+                                      title="View full cover letter"
+                                    >
+                                      <i className="fal fa-eye"></i>
+                                    </button>
+                                  )}
                                 </div>
                               </td>
                               <td>{formatDate(proposal.submitted_at)}</td>
@@ -1287,6 +1315,79 @@ export default function ManageSingleProject() {
                       Send Revision Request
                     </>
                   )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Cover Letter Modal */}
+      {showCoverLetterModal && selectedCoverLetter && (
+        <div className="modal fade show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }} tabIndex="-1">
+          <div className="modal-dialog modal-dialog-centered modal-lg">
+            <div className="modal-content">
+              <div className="modal-header bg-primary text-white">
+                <h5 className="modal-title">
+                  <i className="fal fa-envelope-open me-2"></i>
+                  Cover Letter
+                </h5>
+                <button
+                  type="button"
+                  className="btn-close btn-close-white"
+                  onClick={() => {
+                    setShowCoverLetterModal(false);
+                    setSelectedCoverLetter(null);
+                  }}
+                ></button>
+              </div>
+              <div className="modal-body">
+                <div className="mb-3 pb-3 border-bottom">
+                  <div className="row">
+                    <div className="col-md-6">
+                      <p className="mb-1">
+                        <strong><i className="fal fa-user me-2"></i>Freelancer:</strong>
+                      </p>
+                      <p className="text-muted">{selectedCoverLetter.freelancerName}</p>
+                    </div>
+                    <div className="col-md-3">
+                      <p className="mb-1">
+                        <strong><i className="fal fa-dollar-sign me-2"></i>Budget:</strong>
+                      </p>
+                      <p className="text-success fw-bold">${formatBudget(selectedCoverLetter.budget)}</p>
+                    </div>
+                    <div className="col-md-3">
+                      <p className="mb-1">
+                        <strong><i className="fal fa-calendar me-2"></i>Submitted:</strong>
+                      </p>
+                      <p className="text-muted">{formatDate(selectedCoverLetter.submittedAt)}</p>
+                    </div>
+                  </div>
+                </div>
+                <div className="cover-letter-content" style={{ 
+                  maxHeight: '400px', 
+                  overflowY: 'auto',
+                  padding: '15px',
+                  backgroundColor: '#f8f9fa',
+                  borderRadius: '8px',
+                  whiteSpace: 'pre-wrap',
+                  wordWrap: 'break-word',
+                  lineHeight: '1.6'
+                }}>
+                  {selectedCoverLetter.coverLetter || 'No cover letter provided.'}
+                </div>
+              </div>
+              <div className="modal-footer">
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={() => {
+                    setShowCoverLetterModal(false);
+                    setSelectedCoverLetter(null);
+                  }}
+                >
+                  <i className="fal fa-times me-2"></i>
+                  Close
                 </button>
               </div>
             </div>
