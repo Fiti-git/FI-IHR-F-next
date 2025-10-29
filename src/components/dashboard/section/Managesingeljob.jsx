@@ -168,6 +168,12 @@ export default function JobDetailPage() {
   const [confirmAction, setConfirmAction] = useState(null); // 'Accepted' or 'Rejected'
   const [confirmLoading, setConfirmLoading] = useState(false);
   const [confirmResult, setConfirmResult] = useState(null);
+  // Offer modal state (local-only, no APIs)
+  const [showOfferModal, setShowOfferModal] = useState(false);
+  const [offerApplicant, setOfferApplicant] = useState(null);
+  const [offerData, setOfferData] = useState({ salary: '', starting_date: '', benefits: '' });
+  const [offerSaving, setOfferSaving] = useState(false);
+  const [offerError, setOfferError] = useState(null);
 
   // helper to extract application_id from applicant.raw or applicant object
   const getApplicationIdFromApplicant = (applicant) => {
@@ -307,6 +313,34 @@ export default function JobDetailPage() {
       alert('Could not save schedule: ' + (err.message || String(err)));
     } finally {
       setScheduleSaving(false);
+    }
+  };
+
+  // Save offer locally (no API) -- attaches offer to applicant in local state
+  const handleSaveOffer = async () => {
+    if (!offerApplicant || !offerApplicant.id) {
+      alert('No applicant selected');
+      return;
+    }
+    if (!offerData.salary || !offerData.starting_date) {
+      alert('Please provide salary and starting date');
+      return;
+    }
+    setOfferSaving(true);
+    setOfferError(null);
+    try {
+      // store offer on applicant locally
+      setApplicants(prev => prev.map(a => a.id === offerApplicant.id ? { ...a, offer: { ...offerData } } : a));
+      // close modal
+      setShowOfferModal(false);
+      setOfferApplicant(null);
+      setOfferData({ salary: '', starting_date: '', benefits: '' });
+    } catch (e) {
+      console.error('Error saving offer', e);
+      setOfferError(String(e));
+      alert('Could not save offer: ' + (e.message || String(e)));
+    } finally {
+      setOfferSaving(false);
     }
   };
 
@@ -1021,46 +1055,15 @@ export default function JobDetailPage() {
                           </td>
                           <td>
                             <button
-                              className="btn btn-sm btn-outline-primary me-2"
-                              title="CV"
-                              onClick={() => { if (applicant.resume) window.open(applicant.resume, '_blank'); else alert('No resume available'); }}
-                            ><i className="fal fa-file-download" /></button>
-                            <button
-                              className="btn btn-sm btn-secondary me-2"
-                              title="Rate"
+                              className="btn btn-sm btn-success me-2"
+                              title="Offer"
                               onClick={() => {
-                                setRatingApplicant(applicant);
-                                setRatingValue(ratings && ratings[applicant.id] ? ratings[applicant.id] : 5);
-                                setShowRatingModal(true);
+                                // open local offer modal
+                                setOfferApplicant(applicant);
+                                setOfferData({ salary: (applicant.offer && applicant.offer.salary) || '', starting_date: (applicant.offer && applicant.offer.starting_date) || '', benefits: (applicant.offer && applicant.offer.benefits) || '' });
+                                setShowOfferModal(true);
                               }}
-                            ><i className="fal fa-star" /></button>
-                            <button
-                              className="btn btn-sm btn-outline-secondary me-2"
-                              title="Schedule"
-                              onClick={async () => {
-                                  setScheduleApplicant(applicant);
-                                  const existingCached = schedules && schedules[applicant.id] ? schedules[applicant.id] : null;
-                                  let existing = existingCached;
-                                  if (!existing) {
-                                    try {
-                                      const fetched = await fetchInterviewForApplication(applicant.id);
-                                      if (fetched) {
-                                        setSchedules(prev => ({ ...prev, [applicant.id]: fetched }));
-                                        existing = fetched;
-                                      }
-                                    } catch (e) {
-                                      console.error('Error fetching interview on schedule click', e);
-                                    }
-                                  }
-                                  setScheduleData(existing ? {
-                                    date_time: convertIsoToDatetimeLocal(existing.interview_date) || '',
-                                    interview_mode: existing.interview_mode || 'Zoom',
-                                    interview_link: existing.interview_link || '',
-                                    interview_notes: existing.interview_notes || '',
-                                  } : { date_time: '', interview_mode: 'Zoom', interview_link: '', interview_notes: '' });
-                                  setShowScheduleModal(true);
-                                }}
-                            ><i className="fal fa-calendar-alt" /></button>
+                            >Offer</button>
                             <button
                               className="btn btn-sm btn-info me-2"
                               title="Chat"
@@ -1216,6 +1219,58 @@ export default function JobDetailPage() {
                   </div>
                 </>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Offer Modal (local-only) */}
+      {showOfferModal && offerApplicant && (
+        <div className="modal-backdrop" style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1050 }}>
+          <div className="d-flex justify-content-center align-items-center" style={{ minHeight: '100vh' }}>
+            <div className="bg-white p-4 rounded" style={{ width: 520 }}>
+              <h5 className="mb-3">Send Offer to {offerApplicant.name}</h5>
+              <div className="mb-2">
+                <label className="form-label">Salary *</label>
+                <input
+                  type="text"
+                  className="form-control"
+                  placeholder="e.g. 2000 USD / month"
+                  maxLength={100}
+                  value={offerData.salary}
+                  onChange={(e) => setOfferData(prev => ({ ...prev, salary: e.target.value }))}
+                />
+              </div>
+              <div className="mb-2">
+                <label className="form-label">Starting Date *</label>
+                <input
+                  type="date"
+                  className="form-control"
+                  value={offerData.starting_date}
+                  onChange={(e) => setOfferData(prev => ({ ...prev, starting_date: e.target.value }))}
+                />
+              </div>
+              <div className="mb-3">
+                <label className="form-label">Benefits (optional)</label>
+                <textarea
+                  className="form-control"
+                  rows={3}
+                  maxLength={500}
+                  value={offerData.benefits}
+                  onChange={(e) => setOfferData(prev => ({ ...prev, benefits: e.target.value }))}
+                />
+              </div>
+              {offerError ? <div className="text-danger mb-2">{offerError}</div> : null}
+              <div className="d-flex justify-content-end">
+                <button className="btn btn-secondary me-2" onClick={() => { setShowOfferModal(false); setOfferApplicant(null); setOfferData({ salary: '', starting_date: '', benefits: '' }); setOfferError(null); }}>Cancel</button>
+                <button
+                  className="btn btn-primary"
+                  onClick={() => handleSaveOffer()}
+                  disabled={offerSaving}
+                >
+                  {offerSaving ? 'Saving...' : 'Send Offer'}
+                </button>
+              </div>
             </div>
           </div>
         </div>
