@@ -33,7 +33,7 @@ export default function ProjectDetail1() {
 useEffect(() => {
   const fetchCurrentUser = async () => {
     const token = localStorage.getItem('accessToken');
-    
+
     if (!token) {
       console.log("No token found - user not logged in");
       setUserProfileLoading(false);
@@ -45,38 +45,52 @@ useEffect(() => {
     try {
       setUserProfileLoading(true);
 
-      // NEW: Use the dedicated profile-type endpoint
-      const response = await fetch(`${BASE_API_URL}/api/profile/profile-type/`, {
+      // Try freelancer profile first
+      const freelancerRes = await fetch(`${BASE_API_URL}/api/profile/freelancer/`, {
         method: "GET",
         headers: {
           "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`
+          "Authorization": `Bearer ${token}`,
         },
       });
 
-      if (response.ok) {
-        const data = await response.json();
-        
-        if (data.success && data.profile_type) {
-          console.log(`✅ User is a ${data.profile_type.toUpperCase()}:`, data.profile_data);
-          setCurrentUser(data.profile_data);
-          setUserType(data.profile_type === 'job-provider' ? 'job_provider' : 'freelancer');
-          setUserProfileLoading(false);
-          return;
-        }
+      if (freelancerRes.ok) {
+        const data = await freelancerRes.json();
+        console.log("✅ Detected freelancer profile:", data);
+        setCurrentUser(data);
+        setUserType('freelancer');
+        setUserProfileLoading(false);
+        return;
       }
 
-      // Token might be expired
-      if (response.status === 401) {
-        console.log("Token expired - clearing storage");
+      // If not freelancer, try job-provider
+      const jpRes = await fetch(`${BASE_API_URL}/api/profile/job-provider/`, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`,
+        },
+      });
+
+      if (jpRes.ok) {
+        const data = await jpRes.json();
+        console.log("✅ Detected job-provider profile:", data);
+        setCurrentUser(data);
+        setUserType('job_provider');
+        setUserProfileLoading(false);
+        return;
+      }
+
+      // Token might be expired or profile endpoints returned not found
+      if (freelancerRes.status === 401 || jpRes.status === 401) {
+        console.log("Token expired or unauthorized - clearing storage");
         localStorage.removeItem('accessToken');
         localStorage.removeItem('refreshToken');
       }
-      
+
       setUserType(null);
       setCurrentUser(null);
       setUserProfileLoading(false);
-
     } catch (err) {
       console.error("Error fetching user profile:", err);
       setUserType(null);
