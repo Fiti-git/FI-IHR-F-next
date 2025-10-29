@@ -23,71 +23,70 @@ export default function ProjectDetail1() {
   const [currentUser, setCurrentUser] = useState(null);
   const [userType, setUserType] = useState(null); // 'freelancer' or 'job_provider'
   const [userProfileLoading, setUserProfileLoading] = useState(true);
+  const [existingProposal, setExistingProposal] = useState(null);
 
   // API URLs
   const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000/api/project";
-  const BASE_API_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
+  const BASE_API_URL = process.env.NEXT_PUBLIC_BASE_API_URL || "http://127.0.0.1:8000";
 
-  // Fetch current user profile (try both endpoints)
-  useEffect(() => {
-    const fetchCurrentUser = async () => {
-      const token = localStorage.getItem('accessToken');
-      if (!token) {
-        setUserProfileLoading(false);
-        return;
-      }
+// Fetch current user profile to determine role
+useEffect(() => {
+  const fetchCurrentUser = async () => {
+    const token = localStorage.getItem('accessToken');
+    
+    if (!token) {
+      console.log("No token found - user not logged in");
+      setUserProfileLoading(false);
+      setUserType(null);
+      setCurrentUser(null);
+      return;
+    }
 
-      try {
-        setUserProfileLoading(true);
+    try {
+      setUserProfileLoading(true);
 
-        // First, try to fetch freelancer profile
-        let response = await fetch(`${BASE_API_URL}/api/profile/freelancer/`, {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${token}`
-          },
-        });
+      // NEW: Use the dedicated profile-type endpoint
+      const response = await fetch(`${BASE_API_URL}/api/profile/profile-type/`, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+      });
 
-        if (response.ok) {
-          const userData = await response.json();
-          console.log("Freelancer profile:", userData);
-          setCurrentUser(userData);
-          setUserType('freelancer');
+      if (response.ok) {
+        const data = await response.json();
+        
+        if (data.success && data.profile_type) {
+          console.log(`✅ User is a ${data.profile_type.toUpperCase()}:`, data.profile_data);
+          setCurrentUser(data.profile_data);
+          setUserType(data.profile_type === 'job-provider' ? 'job_provider' : 'freelancer');
           setUserProfileLoading(false);
           return;
         }
-
-        // If freelancer fails, try job provider
-        response = await fetch(`${BASE_API_URL}/api/profile/job-provider/`, {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${token}`
-          },
-        });
-
-        if (response.ok) {
-          const userData = await response.json();
-          console.log("Job provider profile:", userData);
-          setCurrentUser(userData);
-          setUserType('job_provider');
-          setUserProfileLoading(false);
-          return;
-        }
-
-        // If both fail
-        console.warn("Could not fetch user profile from either endpoint");
-        setUserProfileLoading(false);
-
-      } catch (err) {
-        console.error("Error fetching current user:", err);
-        setUserProfileLoading(false);
       }
-    };
 
-    fetchCurrentUser();
-  }, [BASE_API_URL]);
+      // Token might be expired
+      if (response.status === 401) {
+        console.log("Token expired - clearing storage");
+        localStorage.removeItem('accessToken');
+        localStorage.removeItem('refreshToken');
+      }
+      
+      setUserType(null);
+      setCurrentUser(null);
+      setUserProfileLoading(false);
+
+    } catch (err) {
+      console.error("Error fetching user profile:", err);
+      setUserType(null);
+      setCurrentUser(null);
+      setUserProfileLoading(false);
+    }
+  };
+
+  fetchCurrentUser();
+}, [BASE_API_URL]);
 
   // Fetch project details
   useEffect(() => {
@@ -123,38 +122,82 @@ export default function ProjectDetail1() {
     fetchProjectDetails();
   }, [id, API_URL]);
 
-  // Check if current user is the project owner (job provider who created the project)
+  // Check if user already submitted a proposal for this project
+  useEffect(() => {
+    const checkExistingProposal = async () => {
+      if (!currentUser || !projectData || userType !== 'freelancer') {
+        return;
+      }
+
+      const token = localStorage.getItem('accessToken');
+      if (!token) return;
+
+      try {
+        const currentUserId = currentUser.user?.id || currentUser.id;
+        const response = await fetch(
+          `${API_URL}/proposals/?project_id=${projectData.id}&freelancer_id=${currentUserId}`,
+          {
+            method: "GET",
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": `Bearer ${token}`,
+            },
+          }
+        );
+
+        if (response.ok) {
+          const proposals = await response.json();
+          if (proposals && proposals.length > 0) {
+            setExistingProposal(proposals[0]);
+            console.log("User already has a proposal for this project");
+          }
+        }
+      } catch (err) {
+        console.error("Error checking existing proposals:", err);
+      }
+    };
+
+    checkExistingProposal();
+  }, [currentUser, projectData, userType, API_URL]);
+
+  // Check if current user is the project owner
   const isProjectOwner = () => {
-    if (!currentUser || !projectData || !projectData.user) return false;
+    if (!currentUser || !projectData || !projectData.user) {
+      return false;
+    }
     
-    // Compare user IDs - adjust based on your API response structure
-    // The project owner's ID is in projectData.user.id
-    // The current user's ID might be in currentUser.user.id or currentUser.id
     const currentUserId = currentUser.user?.id || currentUser.id;
     const projectOwnerId = projectData.user.id;
-    
-    console.log("Current User ID:", currentUserId);
-    console.log("Project Owner ID:", projectOwnerId);
-    console.log("User Type:", userType);
     
     return currentUserId === projectOwnerId;
   };
 
-  // Check if user is a freelancer (employee)
-  const isFreelancer = () => {
-    return userType === 'freelancer';
-  };
-
   // Check if user can submit proposal
   const canSubmitProposal = () => {
+    // Must be logged in
+    if (!currentUser) {
+      return false;
+    }
+
     // Must be a freelancer
-    if (!isFreelancer()) return false;
+    if (userType !== 'freelancer') {
+      return false;
+    }
     
     // Must not be the project owner
-    if (isProjectOwner()) return false;
+    if (isProjectOwner()) {
+      return false;
+    }
     
     // Project must be open
-    if (projectData?.status !== 'open') return false;
+    if (projectData?.status !== 'open') {
+      return false;
+    }
+
+    // Must not have existing proposal
+    if (existingProposal) {
+      return false;
+    }
     
     return true;
   };
@@ -174,20 +217,6 @@ export default function ProjectDetail1() {
       setTimeout(() => {
         window.location.href = '/login';
       }, 2000);
-      return;
-    }
-
-    // Check if user is a freelancer
-    if (!isFreelancer()) {
-      setProposalError("Only freelancers can submit proposals");
-      setSubmitting(false);
-      return;
-    }
-
-    // Check if user is the project owner
-    if (isProjectOwner()) {
-      setProposalError("You cannot submit a proposal to your own project");
-      setSubmitting(false);
       return;
     }
 
@@ -233,6 +262,11 @@ export default function ProjectDetail1() {
           return;
         }
 
+        if (response.status === 403) {
+          setProposalError(errorData.detail || "Only freelancers can submit proposals.");
+          return;
+        }
+
         throw new Error(errorData.detail || errorData.message || "Failed to submit proposal");
       }
 
@@ -240,13 +274,13 @@ export default function ProjectDetail1() {
       console.log("Proposal submitted successfully:", data);
       
       setProposalSuccess(true);
+      setExistingProposal(data);
       setProposalBudget("");
       setCoverLetter("");
 
-      // Reset success message after 3 seconds
       setTimeout(() => {
         setProposalSuccess(false);
-      }, 3000);
+      }, 5000);
 
     } catch (err) {
       console.error("Error submitting proposal:", err);
@@ -293,7 +327,6 @@ export default function ProjectDetail1() {
   // Extract skills from category
   const getSkills = () => {
     if (!projectData?.category) return [];
-    // Split by common separators and filter empty strings
     return projectData.category
       .split(/[,;&|]/)
       .map(s => s.trim())
@@ -512,22 +545,29 @@ export default function ProjectDetail1() {
                       </>
                     )}
 
-                    {/* Send Your Proposal - ONLY SHOW TO FREELANCERS WHO DON'T OWN THE PROJECT */}
+                    {/* PROPOSAL SUBMISSION SECTION - ONLY FOR FREELANCERS */}
                     {canSubmitProposal() && (
                       <div className="bsp_reveiw_wrt mt25">
                         <h4>Send Your Proposal</h4>
 
                         {/* Success Message */}
                         {proposalSuccess && (
-                          <div className="alert alert-success mt-3" role="alert">
-                            <strong>Success!</strong> Your proposal has been submitted successfully!
+                          <div className="alert alert-success mt-3 d-flex align-items-center" role="alert">
+                            <i className="fal fa-check-circle fa-2x me-3"></i>
+                            <div>
+                              <h5 className="alert-heading mb-2">Success!</h5>
+                              <p className="mb-0">Your proposal has been submitted successfully!</p>
+                            </div>
                           </div>
                         )}
 
                         {/* Error Message */}
                         {proposalError && (
-                          <div className="alert alert-danger mt-3" role="alert">
-                            <strong>Error:</strong> {proposalError}
+                          <div className="alert alert-danger mt-3 d-flex align-items-center" role="alert">
+                            <i className="fal fa-exclamation-circle me-2"></i>
+                            <div>
+                              <strong>Error:</strong> {proposalError}
+                            </div>
                           </div>
                         )}
 
@@ -562,7 +602,7 @@ export default function ProjectDetail1() {
                                 <textarea
                                   className="pt15 form-control"
                                   rows={6}
-                                  placeholder="Describe why you're the best fit for this project. Include your relevant experience, approach, and what makes you unique..."
+                                  placeholder="Describe why you're the best fit for this project..."
                                   value={coverLetter}
                                   onChange={(e) => setCoverLetter(e.target.value)}
                                   disabled={submitting}
@@ -600,31 +640,88 @@ export default function ProjectDetail1() {
                       </div>
                     )}
 
-                    {/* Job Provider Notice (if logged in as job provider) */}
-                    {projectData.status === 'open' && userType === 'job_provider' && !isProjectOwner() && (
-                      <div className="alert alert-info" role="alert">
-                        <strong>Notice:</strong> Only freelancers can submit proposals to projects. You are logged in as a job provider.
+                    {/* Already Submitted Proposal Message */}
+                    {userType === 'freelancer' && existingProposal && !isProjectOwner() && (
+                      <div className="alert alert-info d-flex align-items-start mt-4" role="alert">
+                        <i className="fal fa-info-circle fa-2x me-3 mt-1"></i>
+                        <div>
+                          <h5 className="alert-heading">Proposal Already Submitted</h5>
+                          <p className="mb-2">
+                            You have already submitted a proposal for this project.
+                          </p>
+                          <p className="mb-0">
+                            <strong>Your Budget:</strong> ${formatBudget(existingProposal.budget)}
+                            <br />
+                            <strong>Status:</strong> <span className="badge bg-warning text-dark ms-2">
+                              {existingProposal.status?.toUpperCase()}
+                            </span>
+                          </p>
+                        </div>
                       </div>
                     )}
 
-                    {/* Project Owner Notice */}
-                    {projectData.status === 'open' && isProjectOwner() && (
-                      <div className="alert alert-info" role="alert">
-                        <strong>Notice:</strong> This is your project. You cannot submit a proposal to your own project.
+                    {/* Job Provider Cannot Submit Proposal */}
+                    {userType === 'job_provider' && !isProjectOwner() && projectData.status === 'open' && (
+                      <div className="alert alert-warning d-flex align-items-start mt-4" role="alert">
+                        <i className="fal fa-exclamation-triangle fa-2x me-3 mt-1"></i>
+                        <div>
+                          <h5 className="alert-heading">Job Providers Cannot Submit Proposals</h5>
+                          <p className="mb-0">
+                            You are logged in as a <strong>Job Provider</strong>. 
+                            Only freelancers can submit proposals to projects.
+                            <br />
+                            <small className="text-muted mt-2 d-block">
+                              Job providers can create and manage projects, but cannot bid on them.
+                            </small>
+                          </p>
+                        </div>
                       </div>
                     )}
 
-                    {/* Not Logged In Notice */}
-                    {projectData.status === 'open' && !currentUser && (
-                      <div className="alert alert-warning" role="alert">
-                        <strong>Notice:</strong> Please log in as a freelancer to submit a proposal for this project.
+                    {/* Project Owner Message */}
+                    {isProjectOwner() && projectData.status === 'open' && (
+                      <div className="alert alert-primary d-flex align-items-start mt-4" role="alert">
+                        <i className="fal fa-user-shield fa-2x me-3 mt-1"></i>
+                        <div>
+                          <h5 className="alert-heading">You Own This Project</h5>
+                          <p className="mb-0">
+                            This is your project. You cannot submit a proposal to your own project.
+                            <br />
+                            <small className="text-muted mt-2 d-block">
+                              You can view and manage proposals from freelancers in your dashboard.
+                            </small>
+                          </p>
+                        </div>
                       </div>
                     )}
 
-                    {/* Project Closed Message */}
+                    {/* Not Logged In */}
+                    {!currentUser && projectData.status === 'open' && (
+                      <div className="alert alert-info d-flex align-items-start mt-4" role="alert">
+                        <i className="fal fa-sign-in-alt fa-2x me-3 mt-1"></i>
+                        <div>
+                          <h5 className="alert-heading">Login Required</h5>
+                          <p className="mb-3">
+                            Please log in as a <strong>freelancer</strong> to submit a proposal for this project.
+                          </p>
+                          <a href="/login" className="btn btn-sm btn-primary">
+                            <i className="fal fa-sign-in-alt me-2"></i>
+                            Login to Submit Proposal
+                          </a>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Project Not Open */}
                     {projectData.status !== 'open' && (
-                      <div className="alert alert-info" role="alert">
-                        <strong>Notice:</strong> This project is currently {projectData.status?.replace('_', ' ')} and not accepting new proposals.
+                      <div className="alert alert-secondary d-flex align-items-start mt-4" role="alert">
+                        <i className="fal fa-lock fa-2x me-3 mt-1"></i>
+                        <div>
+                          <h5 className="alert-heading">Project Not Accepting Proposals</h5>
+                          <p className="mb-0">
+                            This project is currently <strong className="text-uppercase">{projectData.status?.replace('_', ' ')}</strong> and not accepting new proposals.
+                          </p>
+                        </div>
                       </div>
                     )}
                   </div>
