@@ -139,6 +139,48 @@ const convertDatetimeLocalToIso = (localValue) => {
   }
 };
 
+// -------------------------------------------------------------------
+// POST /api/job-offer/create
+// -------------------------------------------------------------------
+const createJobOffer = async (applicationId, offerData) => {
+  let accessToken;
+  if (typeof window !== 'undefined') {
+    accessToken = localStorage.getItem('accessToken');
+  }
+  if (!accessToken) throw new Error('No access token');
+
+  const payload = {
+    application_id: applicationId,
+    offer_status: 'Pending',                     // always Pending on creation
+    offer_details: {
+      salary: Number(offerData.salary.trim()),   // numeric
+      start_date: offerData.starting_date,       // YYYY-MM-DD
+      benefits: offerData.benefits
+        .split('\n')                              // textarea → lines
+        .map(l => l.trim())
+        .filter(l => l),                          // non-empty strings
+    },
+  };
+
+  const res = await fetch('http://127.0.0.1:8000/api/job-offer/create/', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Accept: 'application/json',
+      Authorization: `Bearer ${accessToken}`,
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!res.ok) {
+    let txt = '';
+    try { txt = await res.text(); } catch {}
+    throw new Error(`Failed to create offer: ${res.status} ${txt}`);
+  }
+
+  return await res.json(); // {offer_id:…, message:…}
+};
+
 export default function JobDetailPage() {
   const params = useParams();
   const jobId = parseInt(params.id, 10);
@@ -1224,60 +1266,106 @@ export default function JobDetailPage() {
         </div>
       )}
 
-      {/* Offer Modal (local-only) */}
+      {/* Offer Modal – now persists to the backend */}
       {showOfferModal && offerApplicant && (
         <div className="modal-backdrop" style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1050 }}>
           <div className="d-flex justify-content-center align-items-center" style={{ minHeight: '100vh' }}>
             <div className="bg-white p-4 rounded" style={{ width: 520 }}>
               <h5 className="mb-3">Send Offer to {offerApplicant.name}</h5>
+
               <div className="mb-2">
-                <label className="form-label">Salary *</label>
+                <label className="form-label">Salary * (numeric)</label>
                 <input
-                  type="text"
+                  type="number"
+                  min="0"
+                  step="0.01"
                   className="form-control"
-                  placeholder="e.g. 2000 USD / month"
-                  maxLength={100}
+                  placeholder="e.g. 2500"
                   value={offerData.salary}
-                  onChange={(e) => setOfferData(prev => ({ ...prev, salary: e.target.value }))}
+                  onChange={e => setOfferData(prev => ({ ...prev, salary: e.target.value }))}
                 />
               </div>
+
               <div className="mb-2">
                 <label className="form-label">Starting Date *</label>
                 <input
                   type="date"
                   className="form-control"
                   value={offerData.starting_date}
-                  onChange={(e) => setOfferData(prev => ({ ...prev, starting_date: e.target.value }))}
+                  onChange={e => setOfferData(prev => ({ ...prev, starting_date: e.target.value }))}
                 />
               </div>
+
               <div className="mb-3">
-                <label className="form-label">Benefits (optional)</label>
+                <label className="form-label">Benefits (one per line, optional)</label>
                 <textarea
                   className="form-control"
-                  rows={3}
-                  maxLength={500}
+                  rows={4}
+                  placeholder="Health insurance&#10;Remote work&#10;Paid leave"
                   value={offerData.benefits}
-                  onChange={(e) => setOfferData(prev => ({ ...prev, benefits: e.target.value }))}
+                  onChange={e => setOfferData(prev => ({ ...prev, benefits: e.target.value }))}
                 />
               </div>
-              {offerError ? <div className="text-danger mb-2">{offerError}</div> : null}
+
+              {offerError && <div className="text-danger mb-2">{offerError}</div>}
+
               <div className="d-flex justify-content-end">
-                <button className="btn btn-secondary me-2" onClick={() => { setShowOfferModal(false); setOfferApplicant(null); setOfferData({ salary: '', starting_date: '', benefits: '' }); setOfferError(null); }}>Cancel</button>
+                <button
+                  className="btn btn-secondary me-2"
+                  onClick={() => {
+                    setShowOfferModal(false);
+                    setOfferApplicant(null);
+                    setOfferData({ salary: '', starting_date: '', benefits: '' });
+                    setOfferError(null);
+                  }}
+                >
+                  Cancel
+                </button>
+
                 <button
                   className="btn btn-primary"
-                  onClick={() => handleSaveOffer()}
                   disabled={offerSaving}
+                  onClick={async () => {
+                    if (!offerData.salary || !offerData.starting_date) {
+                      alert('Salary and Starting Date are required');
+                      return;
+                    }
+
+                    setOfferSaving(true);
+                    setOfferError(null);
+
+                    try {
+                      const applicationId = getApplicationIdFromApplicant(offerApplicant) || offerApplicant.id;
+                      const apiResult = await createJobOffer(applicationId, offerData);
+
+                      setApplicants(prev =>
+                        prev.map(a =>
+                          a.id === offerApplicant.id
+                            ? { ...a, offer: { ...offerData, offer_id: apiResult.offer_id } }
+                            : a
+                        )
+                      );
+
+                      setShowOfferModal(false);
+                      setOfferApplicant(null);
+                      setOfferData({ salary: '', starting_date: '', benefits: '' });
+                      alert('Offer sent successfully!');
+                    } catch (err) {
+                      console.error(err);
+                      setOfferError(err.message || String(err));
+                      alert('Could not send offer: ' + (err.message || String(err)));
+                    } finally {
+                      setOfferSaving(false);
+                    }
+                  }}
                 >
-                  {offerSaving ? 'Saving...' : 'Send Offer'}
+                  {offerSaving ? 'Sending...' : 'Send Offer'}
                 </button>
               </div>
             </div>
           </div>
         </div>
       )}
-
-      {/* Selected Candidate list removed per request */}
-
     </div>
   );
 }
