@@ -88,7 +88,35 @@ export default function JobDetail1() {
         return;
       }
 
-      const userId = typeof window !== 'undefined' ? localStorage.getItem('user_id') : null;
+      // Try to get freelancer profile id from API using the access token.
+      // This endpoint returns an array of freelancer profiles; use the first profile's `id` as freelancer_id.
+      let freelancerProfileId = null;
+      try {
+        if (token) {
+          const pfRes = await fetch('http://127.0.0.1:8000/api/profile/freelancer/', {
+            method: 'GET',
+            headers: {
+              'Content-Type': 'application/json',
+              'Accept': 'application/json',
+              'Authorization': `Bearer ${token}`,
+            }
+          });
+          if (pfRes.ok) {
+            const profiles = await pfRes.json().catch(() => null);
+            const arr = Array.isArray(profiles) ? profiles : (profiles && profiles.results) ? profiles.results : [];
+            if (arr && arr.length > 0 && arr[0].id != null) {
+              freelancerProfileId = Number(arr[0].id);
+            }
+          } else {
+            console.debug('Could not fetch freelancer profile, status:', pfRes.status);
+          }
+        }
+      } catch (e) {
+        console.error('Error fetching freelancer profile', e);
+      }
+
+      // Fallback to localStorage user_id if profile endpoint did not return an id
+      const userId = (freelancerProfileId != null) ? String(freelancerProfileId) : (typeof window !== 'undefined' ? localStorage.getItem('user_id') : null);
       if (!userId) {
         setSubmitError('User id not found. Please login or set your profile before applying.');
         setSubmitting(false);
@@ -154,6 +182,7 @@ export default function JobDetail1() {
       // Build payload according to API schema
       const payload = {
         job_id: Number(id),
+        // Use freelancer profile id (profile.id) when available; otherwise fall back to stored user_id
         freelancer_id: Number(userId),
         resume: resumeUrl,
         cover_letter: coverLetter,
