@@ -276,7 +276,7 @@ export default function JobDetailPage() {
     'Other': 'other',
   };
 
-  // Save schedule to backend API
+  // Save schedule to backend API (requires application_id, job_id, freelance_id)
   const handleSaveSchedule = async () => {
     // basic validation
     if (!scheduleApplicant || !scheduleApplicant.id) {
@@ -296,8 +296,27 @@ export default function JobDetailPage() {
     const applicationId = scheduleApplicant.raw && (scheduleApplicant.raw.application_id || scheduleApplicant.raw.id) ?
       (scheduleApplicant.raw.application_id || scheduleApplicant.raw.id) : scheduleApplicant.id;
 
+    // Required identifiers for the new API contract
+    const jobIdForPayload = (job && job.id) ? job.id : (Number.isFinite(jobId) ? jobId : null);
+    const freelanceId = (
+      (scheduleApplicant.raw && (scheduleApplicant.raw.freelance_id ?? scheduleApplicant.raw.freelancer_id)) ??
+      scheduleApplicant.freelance_id ??
+      null
+    );
+
+    if (!jobIdForPayload) {
+      alert('Missing job_id for scheduling.');
+      return;
+    }
+    if (!freelanceId) {
+      alert('Missing freelance_id for scheduling.');
+      return;
+    }
+
     const payload = {
       application_id: applicationId,
+      job_id: jobIdForPayload,
+      freelance_id: freelanceId,
       // convert local datetime-local value to ISO for backend
       date_time: convertDatetimeLocalToIso(scheduleData.date_time),
       // translate UI value to backend enum if mapping exists
