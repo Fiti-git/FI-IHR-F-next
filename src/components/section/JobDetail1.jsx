@@ -12,6 +12,7 @@ export default function JobDetail1() {
   const [loading, setLoading] = useState(true);
   const [applied, setApplied] = useState(false);
   const [error, setError] = useState(null);
+  const [isJobProvider, setIsJobProvider] = useState(false);
 
   useEffect(() => {
     const load = async () => {
@@ -39,6 +40,35 @@ export default function JobDetail1() {
 
     load();
   }, [id]);
+
+  // Determine if current user is a Job Provider to hide the Apply button
+  useEffect(() => {
+    try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
+      if (!token) return;
+
+      const checkRole = async () => {
+        try {
+          const res = await fetch('http://127.0.0.1:8000/api/profile/job-provider/', {
+            method: 'GET',
+            headers: {
+              'Accept': 'application/json',
+              'Authorization': `Bearer ${token}`,
+            },
+          });
+          if (!res.ok) return; // if unauthorized or error, leave as false
+          const data = await res.json().catch(() => null);
+          const arr = Array.isArray(data) ? data : (data && data.results) ? data.results : [];
+          setIsJobProvider(Array.isArray(arr) && arr.length > 0);
+        } catch (e) {
+          // ignore and keep default false
+        }
+      };
+      checkRole();
+    } catch (e) {
+      // ignore
+    }
+  }, []);
 
   const handleApply = () => setApplied(true);
   // Local modal state for application (no APIs)
@@ -308,19 +338,21 @@ export default function JobDetail1() {
                 </div>
 
                 <div className="d-grid mb60">
-                  {!applied ? (
-                    <button
-                      className="ud-btn btn-thm2"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        openApplyModal();
-                      }}
-                    >
-                      Apply For Job
-                      <i className="fal fa-arrow-right-long" />
-                    </button>
-                  ) : (
-                    <div className="success-message">Sucessfully Applied</div>
+                  {!isJobProvider && (
+                    !applied ? (
+                      <button
+                        className="ud-btn btn-thm2"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          openApplyModal();
+                        }}
+                      >
+                        Apply For Job
+                        <i className="fal fa-arrow-right-long" />
+                      </button>
+                    ) : (
+                      <div className="success-message">Successfully Applied</div>
+                    )
                   )}
                 </div>
 
