@@ -692,8 +692,16 @@ export default function JobDetailPage() {
             <p><strong>Date Posted:</strong> {job.date}</p>
             <p>
               <strong>Status:</strong>{" "}
-              <span className={`badge ${job.status === "Open" ? "bg-success" : "bg-danger"}`}>
-                {job.status}
+              <span
+                className={`badge ${
+                  job.status?.toLowerCase() === "open"
+                    ? "bg-success"
+                    : job.status?.toLowerCase() === "closed"
+                    ? "bg-danger"
+                    : "bg-secondary"
+                }`}
+              >
+                {job.status ? job.status.charAt(0).toUpperCase() + job.status.slice(1).toLowerCase() : "Unknown"}
               </span>
             </p>
           </div>
