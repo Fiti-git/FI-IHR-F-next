@@ -10,6 +10,8 @@ export default function AppliedJobDetailPage() {
   const [job, setJob] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [userApplicationStatus, setUserApplicationStatus] = useState("");
+  const [interviewDetails, setInterviewDetails] = useState(null);
 
   useEffect(() => {
     async function fetchJob() {
@@ -46,6 +48,75 @@ export default function AppliedJobDetailPage() {
     fetchJob();
   }, [jobId]);
 
+  // Fetch interview info for this job and populate status + details
+  useEffect(() => {
+    async function fetchInterviews() {
+      try {
+        const token = localStorage.getItem("accessToken");
+        if (!token) {
+          // If user isn't authenticated, skip interview fetch
+          return;
+        }
+
+        const res = await fetch(`http://127.0.0.1:8000/api/interview/${jobId}/`, {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        if (!res.ok) {
+          // Non-fatal; just no interview to show
+          console.warn(`Failed to fetch interviews (Status: ${res.status})`);
+          return;
+        }
+
+        const data = await res.json();
+        const interviews = Array.isArray(data?.interviews) ? data.interviews : [];
+        if (interviews.length === 0) return;
+
+        // Pick the latest interview by date
+        const latest = interviews
+          .filter(iv => iv && iv.interview_date)
+          .sort((a, b) => new Date(b.interview_date) - new Date(a.interview_date))[0] || interviews[0];
+
+        if (!latest) return;
+
+        const d = new Date(latest.interview_date);
+        if (!isNaN(d)) {
+          const date = d.toLocaleDateString();
+          const time = d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+          setInterviewDetails({
+            date,
+            time,
+            link: latest.interview_link || "",
+            mode: latest.interview_mode || "",
+            status: latest.status || "",
+            notes: latest.interview_notes || "",
+          });
+        } else {
+          setInterviewDetails({
+            date: latest.interview_date,
+            time: "",
+            link: latest.interview_link || "",
+            mode: latest.interview_mode || "",
+            status: latest.status || "",
+            notes: latest.interview_notes || "",
+          });
+        }
+
+        // Use backend status if available; default to "Interviewed" for backward-compat
+        const backendStatus = (latest.status || "").trim();
+        setUserApplicationStatus(backendStatus || "Interviewed");
+      } catch (err) {
+        console.error("Error fetching interviews:", err);
+      }
+    }
+
+    fetchInterviews();
+  }, [jobId]);
+
   if (loading) {
     return (
       <div className="dashboard__content hover-bgc-color container mt-5">
@@ -66,18 +137,13 @@ export default function AppliedJobDetailPage() {
     );
   }
 
-  // ✅ Mock user application status (replace with backend data later)
-  const userApplicationStatus = "Interviewed";
-  const interviewDetails = {
-    date: "2025-10-20",
-    time: "10:00 AM",
-    link: "https://zoom.us/j/123456789",
-  };
+  // userApplicationStatus and interviewDetails are now populated from the interview API
 
   const statusBadgeClass = {
     Rejected: "badge bg-danger",
     Interviewed: "badge bg-warning text-dark",
     Hired: "badge bg-success",
+    Scheduled: "badge bg-info text-white",
   };
 
   return (
@@ -102,7 +168,7 @@ export default function AppliedJobDetailPage() {
       <div className="mb-4">
         <strong>Status: </strong>
         <span className={statusBadgeClass[userApplicationStatus] || "badge bg-secondary"}>
-          {userApplicationStatus}
+          {userApplicationStatus || "Pending"}
         </span>
       </div>
 
@@ -162,22 +228,30 @@ export default function AppliedJobDetailPage() {
       </div>
 
       {/* Interview Details */}
-      {userApplicationStatus === "Interviewed" && interviewDetails && (
+      {interviewDetails && (
         <div className="ps-widget bgc-white bdrs4 p30 mb30 overflow-hidden position-relative">
           <h5 className="fw500 mb-3">Interview Details</h5>
           <p><strong>Date:</strong> {interviewDetails.date}</p>
           <p><strong>Time:</strong> {interviewDetails.time}</p>
-          <p>
-            <strong>Link:</strong>{" "}
-            <a
-              href={interviewDetails.link}
-              className="btn btn-primary btn-sm"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Join Interview
-            </a>
-          </p>
+          {(interviewDetails.link && String(interviewDetails.mode).toLowerCase() === 'zoom') ? (
+            <p>
+              <strong>Link:</strong>{" "}
+              <a
+                href={interviewDetails.link}
+                className="btn btn-primary btn-sm"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Join Interview
+              </a>
+            </p>
+          ) : null}
+          {interviewDetails.mode ? (
+            <p><strong>Mode:</strong> {String(interviewDetails.mode).toUpperCase()}</p>
+          ) : null}
+          {interviewDetails.notes ? (
+            <p style={{ whiteSpace: 'pre-line' }}><strong>Notes:</strong>{" "}{interviewDetails.notes}</p>
+          ) : null}
         </div>
       )}
     </div>
