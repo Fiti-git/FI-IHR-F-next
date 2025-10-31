@@ -80,13 +80,14 @@ export default function ProjectCard1({ data }) {
         <div className="col-lg-8 ps-0">
           <div className="d-lg-flex bdrr1 bdrn-xl pr15 pr0-lg">
             <div className="thumb w60 position-relative rounded-circle mb15-md">
-              <Image
+              {/* <Image
                 height={60}
                 width={60}
                 className="rounded-circle mx-auto"
                 src={data.img || data.imgUrl || "/images/team/default-project.png"}
                 alt="project"
-              />
+              /> */}
+            
               <span className="online-badge2" />
             </div>
             <div className="details ml15 ml0-md mb15-md">
