@@ -16,13 +16,20 @@ const appliedJobs = [
 ];
 
 // Status badge component for applicant statuses without "On Going"
+const capitalizeFirst = (value) => {
+  if (value == null) return "";
+  const str = String(value).trim();
+  if (!str) return "";
+  return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
+};
+
 const ApplicantStatusBadge = ({ status }) => {
   let colorClass;
   switch (status) {
-    case "Rejected":
+    case "closed":
       colorClass = "badge bg-danger";
       break;
-    case "Hired":
+    case "open":
       colorClass = "badge bg-success";
       break;
     case "Interview":
@@ -31,7 +38,7 @@ const ApplicantStatusBadge = ({ status }) => {
     default:
       colorClass = "badge bg-secondary";
   }
-  return <span className={colorClass}>{status}</span>;
+  return <span className={colorClass}>{capitalizeFirst(status)}</span>;
 };
 
 // Row component for Applied Jobs
