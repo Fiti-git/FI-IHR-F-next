@@ -15,7 +15,7 @@ function LinkedInCallbackInner() {
         if (code) {
             const handleLinkedInLogin = async (authCode) => {
                 try {
-                    const res = await fetch("http://localhost:8000/myapi/linkedin-login/", {
+                    const res = await fetch("http://206.189.134.117:8000/myapi/linkedin-login/", {
                         method: "POST",
                         headers: { "Content-Type": "application/json" },
                         body: JSON.stringify({ code: authCode }),
