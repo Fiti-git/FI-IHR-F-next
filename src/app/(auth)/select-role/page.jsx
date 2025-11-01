@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState,useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Header20 from "@/components/header/Header20";
 import Footer from "@/components/footer/Footer";
+
 
 // Note: I've updated this form to use <select> dropdowns for fields with choices.
 const EmployerForm = ({ onSubmit, loading }) => {
