@@ -1,9 +1,52 @@
-import React from "react";
+"use client";
+
+import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import Navigation from "./Navigation";
 import MobileNavigation2 from "./MobileNavigation2";
+
 export default function Header19() {
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+
+  useEffect(() => {
+    const checkAuthStatus = async () => {
+      // Get the access token from local storage
+      const accessToken = localStorage.getItem("accessToken");
+      if (!accessToken) {
+        // If there's no token, the user is not authenticated
+        setIsAuthenticated(false);
+        return;
+      }
+
+      // If a token exists, verify it with the backend API
+      try {
+        const response = await fetch("http://127.0.0.1:8000/api/profile/check-auth/", {
+          method: "GET",
+          headers: {
+            "Authorization": `Bearer ${accessToken}`,
+          },
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          // Set authentication status based on the API response
+          if (data.isAuthenticated) {
+            setIsAuthenticated(true);
+          }
+        } else {
+          // If response is not ok (e.g., 401 Unauthorized), the token is invalid
+          setIsAuthenticated(false);
+        }
+      } catch (error) {
+        console.error('Error checking authentication status:', error);
+        setIsAuthenticated(false);
+      }
+    };
+
+    checkAuthStatus();
+  }, []); // The empty dependency array ensures this effect runs only once on component mount
+
   return (
     <>
       <header className="header-nav nav-innerpage-style at-home20 main-menu border-0 ">
@@ -29,18 +72,34 @@ export default function Header19() {
               </div>
               <div className="col-auto pe-0 ">
                 <div className="d-flex align-items-center">
-                  <Link
-                    className="login-info mr10 home18-sign-btn px30 py-1 bdrs12 ml30 bdr1-dark"
-                    href="/login"
-                  >
-                    Sign in
-                  </Link>
-                  <Link
-                    className="ud-btn add-joining home20-join-btn bdrs12 text-white"
-                    href="/register"
-                  >
-                    Join Now
-                  </Link>
+                  {!isAuthenticated ? (
+                    // Show these links if the user is NOT authenticated
+                    <>
+                      <Link
+                        className="login-info mr10 home18-sign-btn px30 py-1 bdrs12 ml30 bdr1-dark"
+                        href="/login"
+                      >
+                        Sign in
+                      </Link>
+                      <Link
+                        className="ud-btn add-joining home20-join-btn bdrs12 text-white"
+                        href="/register"
+                      >
+                        Join Now
+                      </Link>
+                    </>
+                  ) : (
+                    // Show this content if the user IS authenticated
+                    <>
+                      <Link
+                        className="login-info mr10 home18-sign-btn px30 py-1 bdrs12 ml30 bdr1-dark"
+                        href="/dashboard" // Example link to a user dashboard
+                      >
+                        Dashboard
+                      </Link>
+                      {/* You can also add a Logout button here */}
+                    </>
+                  )}
                 </div>
               </div>
             </div>
