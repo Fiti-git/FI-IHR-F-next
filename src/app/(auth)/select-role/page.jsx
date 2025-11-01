@@ -301,7 +301,15 @@ export default function SelectRolePage() {
     const [loading, setLoading] = useState(false);
     const [message, setMessage] = useState("");
     const [selectedRole, setSelectedRole] = useState(null);
-    const accessToken = localStorage.getItem("accessToken");
+const [accessToken, setAccessToken] = useState(null);
+
+useEffect(() => {
+  if (typeof window !== "undefined") {
+    const token = localStorage.getItem("accessToken");
+    setAccessToken(token);
+  }
+}, []);
+
 
     const handleRoleSelection = async (role) => {
         try {
