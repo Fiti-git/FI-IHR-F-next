@@ -65,8 +65,35 @@ const IconButton = ({ onClick, title, iconClass, colorClass }) => (
 
 // Status badge component
 const StatusBadge = ({ status }) => {
-  const colorClass = status === "Open" ? "badge bg-success" : "badge bg-danger";
-  return <span className={colorClass}>{status}</span>;
+  const raw = (status ?? '').toString().trim();
+  const key = raw.toLowerCase();
+
+  const colorClass = (() => {
+    switch (key) {
+      case 'open':
+        return 'badge bg-success'; // green
+      case 'closed':
+        return 'badge bg-danger'; // red
+      case 'pending':
+      case 'in review':
+      case 'in-review':
+        return 'badge bg-warning text-dark'; // yellow
+      case 'draft':
+        return 'badge bg-secondary'; // gray
+      case 'paused':
+        return 'badge bg-info text-dark'; // light blue
+      case 'filled':
+        return 'badge bg-primary'; // blue
+      default:
+        return 'badge bg-secondary';
+    }
+  })();
+
+  const label = raw
+    ? raw.toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase())
+    : 'Unknown';
+
+  return <span className={colorClass}>{label}</span>;
 };
 
 // Row component for Posted Jobs
@@ -74,7 +101,11 @@ function PostedJobsRow({ job }) {
   return (
     <tr>
       <td>{job.title}</td>
-      <td>{job.category}</td>
+      <td>{
+        typeof job.category === 'string' && job.category.length > 0
+          ? job.category[0].toUpperCase() + job.category.slice(1)
+          : job.category
+      }</td>
       <td>{job.date ? new Date(job.date).toLocaleDateString() : 'N/A'}</td>
       <td>
         <StatusBadge status={job.status} />

@@ -55,7 +55,10 @@ export default function Listing9() {
           id: job.job_id || job.id,
           img: "/images/team/client-2.png", // default image
           title: job.job_title || job.title,
-          server: job.job_category || "General",
+          server:
+            typeof job.job_category === "string" && job.job_category.length > 0
+              ? job.job_category[0].toUpperCase() + job.job_category.slice(1)
+              : "General",
           benefits: [
             job.salary_range,
             job.work_mode || 'Full Time',
