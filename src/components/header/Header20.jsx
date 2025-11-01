@@ -71,19 +71,14 @@ export default function Header20() {
                                 <div className="d-flex align-items-center gap-3">
                                     <Navigation />
 
-                                    {/* Conditionally render Sign In and Join buttons */}
-                                    {!isAuthenticated && (
+                                    {!user ? (
                                         <>
-                                            {/* Sign In Link */}
                                             <Link
-                                                className={`login-info small-text ${path === "/login" ? "ui-active" : ""
-                                                    }`}
+                                                className={`login-info small-text ${path === "/login" ? "ui-active" : ""}`}
                                                 href="/login"
                                             >
                                                 Sign in
                                             </Link>
-
-                                            {/* Join Button */}
                                             <Link
                                                 className="ud-btn btn-thm btn-sm join-btn"
                                                 href="/register"
@@ -91,14 +86,26 @@ export default function Header20() {
                                                 Join
                                             </Link>
                                         </>
-                                    )}
+                                    ) : (
+                                        // 3. Implement role-based rendering
+                                        <div className="d-flex align-items-center gap-3">
+                                            {user.roles?.includes('employee') ? (
+                                                <Link href="/freelancer" className="login-info small-text">
+                                                    Freelancer Dashboard
+                                                </Link>
+                                            ) : user.roles?.includes('employer') ? (
+                                                <Link href="/job-provider" className="login-info small-text">
+                                                    Employer Dashboard
+                                                </Link>
+                                            ) : (
+                                                <Link href="/dashboard" className="login-info small-text">
+                                                    My Account
+                                                </Link>
+                                            )}
 
-                                    {/* You can optionally show a user profile or a sign out button if authenticated */}
-                                    {isAuthenticated && (
-                                        <div>
-                                            {/* Example: Link to a dashboard and a sign out button */}
-                                            <Link href="/dashboard" className="login-info small-text">My Account</Link>
-                                            {/* Add a sign out button with its logic here */}
+                                            <button onClick={handleLogout} className="ud-btn btn-thm btn-sm join-btn">
+                                                Logout
+                                            </button>
                                         </div>
                                     )}
                                 </div>

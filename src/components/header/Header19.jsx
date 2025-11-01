@@ -91,12 +91,20 @@ export default function Header19() {
                   ) : (
                     // Show this content if the user IS authenticated
                     <>
-                      <Link
-                        className="login-info mr10 home18-sign-btn px30 py-1 bdrs12 ml30 bdr1-dark"
-                        href="/dashboard" // Example link to a user dashboard
-                      >
-                        Dashboard
-                      </Link>
+                      {user.roles?.includes('employee') ? (
+                        <Link href="/freelancer" className="login-info mr10 home18-sign-btn px30 py-1 bdrs12 ml30 bdr1-dark">
+                          Freelancer Dashboard
+                        </Link>
+                      ) : user.roles?.includes('employer') ? (
+                        <Link href="/job-provider" className="login-info mr10 home18-sign-btn px30 py-1 bdrs12 ml30 bdr1-dark">
+                          Employer Dashboard
+                        </Link>
+                      ) : (
+                        // Fallback link if user has no specific role
+                        <Link href="/dashboard" className="login-info mr10 home18-sign-btn px30 py-1 bdrs12 ml30 bdr1-dark">
+                          My Account
+                        </Link>
+                      )}
                       {/* You can also add a Logout button here */}
                     </>
                   )}
