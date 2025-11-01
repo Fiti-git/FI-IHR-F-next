@@ -21,9 +21,9 @@ export default function LoginPage() {
   // Redirect based on user role from backend
   const handleRedirect = (user) => {
     if (user.role === 'employer') {
-      router.push('/employer-dashboard');
+      router.push('/job-provider');
     } else if (user.role === 'employee') {
-      router.push('/employee-dashboard');
+      router.push('/freelancer');
     } else {
       router.push('/select-role');
     }

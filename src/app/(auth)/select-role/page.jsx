@@ -388,9 +388,9 @@ export default function SelectRolePage() {
 
             // On success, redirect to the appropriate dashboard
             if (selectedRole === 'employer') {
-                router.push("/employer-dashboard");
+                router.push("/job-provider");
             } else {
-                router.push("/employee-dashboard");
+                router.push("/freelancer");
             }
 
         } catch (error) {

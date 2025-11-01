@@ -83,7 +83,7 @@ export default function RegisterPage() {
         } else {
           // This handles the case where an existing user signs up again.
           // Send them to the appropriate dashboard.
-          const dashboard = data.user.role === 'employer' ? '/employer-dashboard' : '/employee-dashboard';
+          const dashboard = data.user.role === 'employer' ? '/job-provider' : '/freelancer';
           router.push(dashboard);
         }
       }

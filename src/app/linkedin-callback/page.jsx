@@ -34,7 +34,7 @@ export default function LinkedInCallbackPage() {
                         if (data.user && !data.user.role) {
                             router.push("/select-role");
                         } else {
-                            const dashboard = data.user.role === 'employer' ? '/employer-dashboard' : '/employee-dashboard';
+                            const dashboard = data.user.role === 'employer' ? '/job-provider' : '/freelancer';
                             router.push(dashboard);
                         }
                     }
