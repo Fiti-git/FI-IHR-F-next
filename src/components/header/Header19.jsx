@@ -3,23 +3,23 @@
 import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation"; // Use next/navigation for App Router
 import Navigation from "./Navigation";
 import MobileNavigation2 from "./MobileNavigation2";
 
 export default function Header19() {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  // 1. Store the full user object instead of just a boolean
+  const [user, setUser] = useState(null);
+  const router = useRouter();
 
   useEffect(() => {
     const checkAuthStatus = async () => {
-      // Get the access token from local storage
       const accessToken = localStorage.getItem("accessToken");
       if (!accessToken) {
-        // If there's no token, the user is not authenticated
-        setIsAuthenticated(false);
+        setUser(null);
         return;
       }
 
-      // If a token exists, verify it with the backend API
       try {
         const response = await fetch("http://127.0.0.1:8000/api/profile/check-auth/", {
           method: "GET",
@@ -30,22 +30,28 @@ export default function Header19() {
 
         if (response.ok) {
           const data = await response.json();
-          // Set authentication status based on the API response
+          // 2. Set the user state with data from the API (which includes roles)
           if (data.isAuthenticated) {
-            setIsAuthenticated(true);
+            setUser(data);
           }
         } else {
-          // If response is not ok (e.g., 401 Unauthorized), the token is invalid
-          setIsAuthenticated(false);
+          setUser(null); // Token is invalid or expired
         }
       } catch (error) {
         console.error('Error checking authentication status:', error);
-        setIsAuthenticated(false);
+        setUser(null);
       }
     };
 
     checkAuthStatus();
-  }, []); // The empty dependency array ensures this effect runs only once on component mount
+  }, []);
+
+  const handleLogout = () => {
+    localStorage.removeItem("accessToken");
+    setUser(null);
+    // Redirect to login page after logout
+    router.push("/login");
+  };
 
   return (
     <>
@@ -54,17 +60,15 @@ export default function Header19() {
           <div className="container-fluid custom-container custom-container2 posr">
             <div className="row align-items-center justify-content-between">
               <div className="col-auto px-0 px-xl-3">
-                <div className="d-flex align-items-center justify-content-between">
-                  <div className="logos">
-                    <Link className="header-logo logo1" href="/home-20">
-                      <Image
-                        width={133}
-                        height={40}
-                        src="/images/header-logo-dark2.svg"
-                        alt="Header Logo"
-                      />
-                    </Link>
-                  </div>
+                <div className="logos">
+                  <Link className="header-logo logo1" href="/home-20">
+                    <Image
+                      width={133}
+                      height={40}
+                      src="/images/header-logo-dark2.svg"
+                      alt="Header Logo"
+                    />
+                  </Link>
                 </div>
               </div>
               <div className="col-auto px-0 px-xl-3">
@@ -72,7 +76,7 @@ export default function Header19() {
               </div>
               <div className="col-auto pe-0 ">
                 <div className="d-flex align-items-center">
-                  {!isAuthenticated ? (
+                  {!user ? (
                     // Show these links if the user is NOT authenticated
                     <>
                       <Link
@@ -89,14 +93,14 @@ export default function Header19() {
                       </Link>
                     </>
                   ) : (
-                    // Show this content if the user IS authenticated
-                    <>
-                      {user.roles?.includes('employee') ? (
-                        <Link href="/freelancer" className="login-info mr10 home18-sign-btn px30 py-1 bdrs12 ml30 bdr1-dark">
+                    // 3. Implement role-based rendering if the user IS authenticated
+                    <div className="d-flex align-items-center">
+                      {user.roles?.includes('freelancer') ? (
+                        <Link href="/freelancer-dashboard" className="login-info mr10 home18-sign-btn px30 py-1 bdrs12 ml30 bdr1-dark">
                           Freelancer Dashboard
                         </Link>
-                      ) : user.roles?.includes('employer') ? (
-                        <Link href="/job-provider" className="login-info mr10 home18-sign-btn px30 py-1 bdrs12 ml30 bdr1-dark">
+                      ) : user.roles?.includes('job-provider') ? (
+                        <Link href="/job-provider-dashboard" className="login-info mr10 home18-sign-btn px30 py-1 bdrs12 ml30 bdr1-dark">
                           Employer Dashboard
                         </Link>
                       ) : (
@@ -105,8 +109,11 @@ export default function Header19() {
                           My Account
                         </Link>
                       )}
-                      {/* You can also add a Logout button here */}
-                    </>
+
+                      <button onClick={handleLogout} className="ud-btn add-joining home20-join-btn bdrs12 text-white">
+                        Logout
+                      </button>
+                    </div>
                   )}
                 </div>
               </div>

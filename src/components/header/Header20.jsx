@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import Image from "next/image";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 
 import Navigation from "./Navigation";
@@ -9,15 +9,15 @@ import MobileNavigation2 from "./MobileNavigation2";
 
 export default function Header20() {
     const path = usePathname();
-    const [isAuthenticated, setIsAuthenticated] = useState(false);
+    const router = useRouter();
+    // 1. Store the full user object
+    const [user, setUser] = useState(null);
 
     useEffect(() => {
         const checkAuthStatus = async () => {
             const accessToken = localStorage.getItem("accessToken");
             if (!accessToken) {
-                setMessage("Authentication error. Please log in again.");
-                setLoading(false);
-                router.push("/login");
+                setUser(null);
                 return;
             }
 
@@ -30,21 +30,31 @@ export default function Header20() {
                 });
                 if (response.ok) {
                     const data = await response.json();
+                    // 2. Set the user state with API data
                     if (data.isAuthenticated) {
-                        setIsAuthenticated(true);
+                        setUser(data);
                     }
+                } else {
+                    setUser(null);
                 }
             } catch (error) {
                 console.error('Error checking authentication status:', error);
+                setUser(null);
             }
         };
 
         checkAuthStatus();
     }, []);
 
+    const handleLogout = () => {
+        localStorage.removeItem("accessToken");
+        setUser(null);
+        router.push("/login");
+    };
+
     return (
         <>
-            <header className="header-nav nav-innerpage-style main-menu  ">
+            <header className="header-nav nav-innerpage-style main-menu">
                 <nav className="posr">
                     <div className="container-fluid posr menu_bdrt1">
                         <div className="row align-items-center justify-content-between">
@@ -89,12 +99,12 @@ export default function Header20() {
                                     ) : (
                                         // 3. Implement role-based rendering
                                         <div className="d-flex align-items-center gap-3">
-                                            {user.roles?.includes('employee') ? (
-                                                <Link href="/freelancer" className="login-info small-text">
+                                            {user.roles?.includes('freelancer') ? (
+                                                <Link href="/freelancer-dashboard" className="login-info small-text">
                                                     Freelancer Dashboard
                                                 </Link>
-                                            ) : user.roles?.includes('employer') ? (
-                                                <Link href="/job-provider" className="login-info small-text">
+                                            ) : user.roles?.includes('job-provider') ? (
+                                                <Link href="/job-provider-dashboard" className="login-info small-text">
                                                     Employer Dashboard
                                                 </Link>
                                             ) : (
