@@ -9,7 +9,7 @@ export default function Breadcumb10({ path }) {
   const [shareToggle, setShareToggle] = useState(false);
   const [project, setProject] = useState(null);
 
-  const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000/api/project/projects/";
+  const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://206.189.134.117:8000/api/project/projects/";
 
   useEffect(() => {
     const fetchProject = async () => {

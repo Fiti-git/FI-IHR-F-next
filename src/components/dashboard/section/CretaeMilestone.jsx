@@ -33,7 +33,7 @@ export default function CreateMilestone() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   // API URL
-  const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000/api/project/milestones/";
+  const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://206.189.134.117:8000/api/project/milestones/";
 
   // Check authentication on component mount
   useEffect(() => {

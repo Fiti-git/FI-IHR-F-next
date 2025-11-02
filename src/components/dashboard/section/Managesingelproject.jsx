@@ -28,7 +28,7 @@ export default function ManageSingleProject() {
   const [processingProposal, setProcessingProposal] = useState(null);
 
   // API URLs
-  const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000/api/project";
+  const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://206.189.134.117:8000/api/project";
 
   // Check authentication
   useEffect(() => {

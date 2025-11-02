@@ -22,7 +22,7 @@ export default function ProjectDetail1() {
   const [proposalError, setProposalError] = useState(null);
 
   // API URLs
-  const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000/api/project";
+  const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://206.189.134.117:8000/api/project";
 
   // Fetch project details
   useEffect(() => {

@@ -86,7 +86,7 @@ export default function AppliedJobs() {
         }
 
         // Use a relative path so the request goes to the same origin (or Next.js proxy)
-        const res = await fetch("http://127.0.0.1:8000/api/profile/freelancer/", {
+        const res = await fetch("http://206.189.134.117:8000/api/profile/freelancer/", {
           method: "GET",
           headers: {
             "Content-Type": "application/json",
@@ -135,7 +135,7 @@ export default function AppliedJobs() {
           return;
         }
 
-        const res = await fetch(`http://127.0.0.1:8000/api/freelance/${freelancerId}/`, {
+        const res = await fetch(`http://206.189.134.117:8000/api/freelance/${freelancerId}/`, {
           method: "GET",
           headers: {
             "Content-Type": "application/json",
