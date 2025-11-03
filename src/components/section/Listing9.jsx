@@ -26,7 +26,7 @@ export default function Listing9() {
           accessToken = localStorage.getItem("accessToken");
         }
 
-        const response = await fetch("http://127.0.0.1:8000/api/job-posting/", {
+        const response = await fetch("http://206.189.134.117:8000/api/job-posting/", {
           method: "GET",
           headers: {
             'Content-Type': 'application/json',
@@ -55,7 +55,10 @@ export default function Listing9() {
           id: job.job_id || job.id,
           img: "/images/team/client-2.png", // default image
           title: job.job_title || job.title,
-          server: job.job_category || "General",
+          server:
+            typeof job.job_category === "string" && job.job_category.length > 0
+              ? job.job_category[0].toUpperCase() + job.job_category.slice(1)
+              : "General",
           benefits: [
             job.salary_range,
             job.work_mode || 'Full Time',

@@ -25,10 +25,8 @@ export default function BasicInformation2() {
   const [userRole, setUserRole] = useState(null); // 'freelancer' or 'job-provider'
   const [isCheckingRole, setIsCheckingRole] = useState(true);
 
-  // API URLs
-  const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000/api/project/projects/";
-  const FREELANCER_API_URL = process.env.NEXT_PUBLIC_FREELANCER_API_URL || "http://127.0.0.1:8000/api/profile/freelancer/";
-  const JOB_PROVIDER_API_URL = process.env.NEXT_PUBLIC_JOB_PROVIDER_API_URL || "http://127.0.0.1:8000/api/profile/job-provider/";
+  // API URL - should come from environment variable in production
+  const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://206.189.134.117:8000/api/project/projects/";
 
   // Check authentication and user role on component mount
   useEffect(() => {

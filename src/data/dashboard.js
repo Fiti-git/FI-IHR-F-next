@@ -92,7 +92,7 @@ export const dasboardNavigation = [
     icon: "flaticon-photo",
     pathByRole: {
       "Employer": "/jp-profile",
-      freelancer: "/profile",
+      Employee: "/profile",
     },
     roles: ["Employee", "Employer"],
   },
@@ -101,7 +101,7 @@ export const dasboardNavigation = [
     id: 14,
     name: "Logout",
     icon: "flaticon-logout",
-    path: "/login",
+    path: "/logout",
     roles: ["Employee", "Employer"],
   },
     {

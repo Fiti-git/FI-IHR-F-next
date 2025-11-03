@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState,useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Header20 from "@/components/header/Header20";
 import Footer from "@/components/footer/Footer";
+
 
 // Note: I've updated this form to use <select> dropdowns for fields with choices.
 const EmployerForm = ({ onSubmit, loading }) => {
@@ -301,11 +302,19 @@ export default function SelectRolePage() {
     const [loading, setLoading] = useState(false);
     const [message, setMessage] = useState("");
     const [selectedRole, setSelectedRole] = useState(null);
-    const accessToken = localStorage.getItem("accessToken");
+const [accessToken, setAccessToken] = useState(null);
+
+useEffect(() => {
+  if (typeof window !== "undefined") {
+    const token = localStorage.getItem("accessToken");
+    setAccessToken(token);
+  }
+}, []);
+
 
     const handleRoleSelection = async (role) => {
         try {
-            const res = await fetch("http://localhost:8000/myapi/set-role/", {
+            const res = await fetch("http://206.189.134.117:8000/myapi/set-role/", {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
@@ -356,9 +365,9 @@ export default function SelectRolePage() {
         }
 
         if (selectedRole === 'employee') {
-            apiUrl = "http://localhost:8000/api/profile/freelancer/";
+            apiUrl = "http://206.189.134.117:8000/api/profile/freelancer/";
         } else if (selectedRole === 'employer') {
-            apiUrl = "http://localhost:8000/api/profile/job-provider/";
+            apiUrl = "http://206.189.134.117:8000/api/profile/job-provider/";
         } else {
             setMessage("No role selected.");
             setLoading(false);
@@ -388,9 +397,9 @@ export default function SelectRolePage() {
 
             // On success, redirect to the appropriate dashboard
             if (selectedRole === 'employer') {
-                router.push("/employer-dashboard");
+                router.push("/job-provider");
             } else {
-                router.push("/employee-dashboard");
+                router.push("/freelancer");
             }
 
         } catch (error) {

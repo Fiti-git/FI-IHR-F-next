@@ -34,7 +34,7 @@ export default function RegisterPage() {
 
     try {
       // Corrected API endpoint from '/register/' to '/signup/' to match urls.py
-      const res = await fetch("http://localhost:8000/myapi/signup/", {
+      const res = await fetch("http://206.189.134.117:8000/myapi/signup/", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),
@@ -63,7 +63,7 @@ export default function RegisterPage() {
     setLoading(true);
     setMessage("");
     try {
-      const res = await fetch("http://localhost:8000/myapi/google-login/", {
+      const res = await fetch("http://206.189.134.117:8000/myapi/google-login/", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ token: response.credential }),
@@ -83,7 +83,7 @@ export default function RegisterPage() {
         } else {
           // This handles the case where an existing user signs up again.
           // Send them to the appropriate dashboard.
-          const dashboard = data.user.role === 'employer' ? '/employer-dashboard' : '/employee-dashboard';
+          const dashboard = data.user.role === 'employer' ? '/job-provider' : '/freelancer';
           router.push(dashboard);
         }
       }

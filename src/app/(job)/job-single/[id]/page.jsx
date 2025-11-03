@@ -1,3 +1,6 @@
+"use client";
+export const dynamic = 'force-dynamic';
+
 import Breadcumb10 from "@/components/breadcumb/Breadcumb10";
 import Breadcumb13 from "@/components/breadcumb/Breadcumb13";
 import Header20 from "@/components/header/Header20";
@@ -6,9 +9,9 @@ import Header3 from "@/components/header/Header3";
 import JobDetail1 from "@/components/section/JobDetail1";
 import TabSection1 from "@/components/section/TabSection1";
 
-export const metadata = {
-    title: "IHRHUB | Job Single",
-};
+// export const metadata = {
+//     title: "IHRHUB | Job Single",
+// };
 
 export default function page() {
     return (

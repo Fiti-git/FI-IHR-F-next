@@ -26,10 +26,10 @@ export default function ProjectDetail1() {
   const [existingProposal, setExistingProposal] = useState(null);
 
   // API URLs
-  const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000/api/project";
-  const BASE_API_URL = process.env.NEXT_PUBLIC_BASE_API_URL || "http://127.0.0.1:8000";
+   const BASE_API_URL = process.env.NEXT_PUBLIC_BASE_API_URL || "http://206.189.134.117:8000";
+   const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://206.189.134.117:8000/api/project";
 
-// Fetch current user profile to determine role
+   // Fetch current user profile to determine role
 useEffect(() => {
   const fetchCurrentUser = async () => {
     const token = localStorage.getItem('accessToken');

@@ -16,7 +16,7 @@ const fetchJobDetails = async (jobId) => {
       return null;
     }
 
-    const response = await fetch(`http://127.0.0.1:8000/api/job-posting/${jobId}/`, {
+    const response = await fetch(`http://206.189.134.117:8000/api/job-posting/${jobId}/`, {
       method: "GET",
       headers: {
         'Content-Type': 'application/json',
@@ -41,14 +41,528 @@ const fetchJobDetails = async (jobId) => {
   }
 };
 
+const fetchJobApplications = async (jobId) => {
+  try {
+    let accessToken;
+    if (typeof window !== 'undefined') {
+      accessToken = localStorage.getItem('accessToken');
+    }
+    if (!accessToken) {
+      console.error('No access token for applications');
+      return { data: [], error: 'No access token' };
+    }
+    const res = await fetch(`http://206.189.134.117:8000/api/job-application/job/${jobId}/`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'Authorization': `Bearer ${accessToken}`,
+      }
+    });
+    if (!res.ok) {
+      const txt = await res.text().catch(()=>String(res.status));
+      const err = `Failed to fetch applicants: ${res.status} ${txt}`;
+      console.error(err);
+      return { data: [], error: err };
+    }
+    const data = await res.json();
+    // API may return { applications: [...] } or an array directly
+    const arr = data && Array.isArray(data.applications) ? data.applications : data;
+    return { data: Array.isArray(arr) ? arr : [], error: null };
+  } catch (e) {
+    console.error('Error fetching applications', e);
+    return { data: [], error: String(e) };
+  }
+};
+
+// Fetch interview info for a given application id
+const fetchInterviewForApplication = async (applicationId) => {
+  try {
+    if (!applicationId) return null;
+    let accessToken;
+    if (typeof window !== 'undefined') {
+      accessToken = localStorage.getItem('accessToken');
+    }
+    if (!accessToken) {
+      console.error('No access token for interview fetch');
+      return null;
+    }
+    const res = await fetch(`http://206.189.134.117:8000/api/job-interview/application/${applicationId}/`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'Authorization': `Bearer ${accessToken}`,
+      }
+    });
+    if (!res.ok) {
+      // don't fail hard for interview fetches; return null
+      console.debug('No interview data for application', applicationId, res.status);
+      return null;
+    }
+    const data = await res.json().catch(() => null);
+    return data;
+  } catch (e) {
+    console.error('Error fetching interview for application', applicationId, e);
+    return null;
+  }
+};
+
+// Convert backend ISO interview_date (UTC) to a value suitable for <input type="datetime-local"> (local time)
+const convertIsoToDatetimeLocal = (iso) => {
+  if (!iso) return '';
+  try {
+    const d = new Date(iso);
+    if (isNaN(d)) return '';
+    const pad = (n) => String(n).padStart(2, '0');
+    const year = d.getFullYear();
+    const month = pad(d.getMonth() + 1);
+    const day = pad(d.getDate());
+    const hours = pad(d.getHours());
+    const minutes = pad(d.getMinutes());
+    return `${year}-${month}-${day}T${hours}:${minutes}`;
+  } catch (e) {
+    return '';
+  }
+};
+
+// Convert a local datetime-local value to ISO string (UTC) for backend
+const convertDatetimeLocalToIso = (localValue) => {
+  if (!localValue) return null;
+  try {
+    // localValue is like '2025-10-27T14:30'
+    const d = new Date(localValue);
+    if (isNaN(d)) return null;
+    return d.toISOString();
+  } catch (e) {
+    return null;
+  }
+};
+
+// -------------------------------------------------------------------
+// POST /api/job-offer/create
+// -------------------------------------------------------------------
+const createJobOffer = async (applicationId, offerData) => {
+  let accessToken;
+  if (typeof window !== 'undefined') {
+    accessToken = localStorage.getItem('accessToken');
+  }
+  if (!accessToken) throw new Error('No access token');
+
+  const payload = {
+    application_id: applicationId,
+    offer_status: 'Pending',                     // always Pending on creation
+    offer_details: {
+      salary: Number(offerData.salary.trim()),   // numeric
+      start_date: offerData.starting_date,       // YYYY-MM-DD
+      benefits: offerData.benefits
+        .split('\n')                              // textarea → lines
+        .map(l => l.trim())
+        .filter(l => l),                          // non-empty strings
+    },
+  };
+
+  const res = await fetch('http://206.189.134.117:8000/api/job-offer/create/', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Accept: 'application/json',
+      Authorization: `Bearer ${accessToken}`,
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!res.ok) {
+    let txt = '';
+    try { txt = await res.text(); } catch {}
+    throw new Error(`Failed to create offer: ${res.status} ${txt}`);
+  }
+
+  return await res.json(); // {offer_id:…, message:…}
+};
+
 export default function JobDetailPage() {
   const params = useParams();
   const jobId = parseInt(params.id, 10);
   const [job, setJob] = useState(null);
+  const [applicants, setApplicants] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("overview");
   const [showApplicants, setShowApplicants] = useState(true);
   const [showSelected, setShowSelected] = useState(true);
+  const [showHired, setShowHired] = useState(true);
+  const [applicantsLoading, setApplicantsLoading] = useState(false);
+  const [applicantsError, setApplicantsError] = useState(null);
+  const [ratings, setRatings] = useState({});
+  const [showRatingModal, setShowRatingModal] = useState(false);
+  const [ratingApplicant, setRatingApplicant] = useState(null);
+  const [ratingValue, setRatingValue] = useState(5);
+  const [schedules, setSchedules] = useState({});
+  const [showScheduleModal, setShowScheduleModal] = useState(false);
+  const [scheduleApplicant, setScheduleApplicant] = useState(null);
+  const [scheduleData, setScheduleData] = useState({ date_time: '', interview_mode: 'Zoom', interview_link: '', interview_notes: '' });
+  const [scheduleSaving, setScheduleSaving] = useState(false);
+  const [scheduleError, setScheduleError] = useState(null);
+  const [applicationUpdating, setApplicationUpdating] = useState({});
+  const [applicationUpdateError, setApplicationUpdateError] = useState({});
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [confirmApplicant, setConfirmApplicant] = useState(null);
+  const [confirmAction, setConfirmAction] = useState(null); // 'Accepted' or 'Rejected'
+  const [confirmLoading, setConfirmLoading] = useState(false);
+  const [confirmResult, setConfirmResult] = useState(null);
+  // Offer modal state (local-only, no APIs)
+  const [showOfferModal, setShowOfferModal] = useState(false);
+  const [offerApplicant, setOfferApplicant] = useState(null);
+  const [offerData, setOfferData] = useState({ salary: '', starting_date: '', benefits: '' });
+  const [offerSaving, setOfferSaving] = useState(false);
+  const [offerError, setOfferError] = useState(null);
+
+  // helper to extract application_id from applicant.raw or applicant object
+  const getApplicationIdFromApplicant = (applicant) => {
+    if (!applicant) return null;
+    if (applicant.raw) return applicant.raw.application_id || applicant.raw.id || applicant.id;
+    return applicant.application_id || applicant.id || null;
+  };
+
+  // Update application (rating/status/comments) via PUT
+  const updateApplication = async (applicationId, { rating, status, comments } = {}) => {
+    if (!applicationId) throw new Error('Missing application id');
+    setApplicationUpdating(prev => ({ ...prev, [applicationId]: true }));
+    setApplicationUpdateError(prev => ({ ...prev, [applicationId]: null }));
+    try {
+      let accessToken;
+      if (typeof window !== 'undefined') {
+        accessToken = localStorage.getItem('accessToken');
+      }
+      if (!accessToken) throw new Error('No access token found');
+
+      const body = {};
+      if (rating !== undefined && rating !== null) body.rating = String(rating);
+      if (status !== undefined) body.status = status;
+      if (comments !== undefined) body.comments = comments;
+
+      const res = await fetch(`http://206.189.134.117:8000/api/job-application/update/${applicationId}/`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'Authorization': `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify(body),
+      });
+
+      if (!res.ok) {
+        let errText = '';
+        try { errText = await res.text(); } catch (e) { errText = String(res.status); }
+        throw new Error(`Failed to update application: ${res.status} ${errText}`);
+      }
+
+      const data = await res.json().catch(() => null);
+      return data || body;
+    } catch (err) {
+      setApplicationUpdateError(prev => ({ ...prev, [applicationId]: String(err) }));
+      throw err;
+    } finally {
+      setApplicationUpdating(prev => ({ ...prev, [applicationId]: false }));
+    }
+  };
+
+  // Map UI labels to backend enum values expected by the API
+  const INTERVIEW_MODE_MAP = {
+    'Zoom': 'zoom',
+    'Teams': 'teams',
+    'In-person': 'in_person',
+    'Phone': 'phone',
+    'Other': 'other',
+  };
+
+  // Save schedule to backend API (requires application_id, job_id, freelance_id)
+  const handleSaveSchedule = async () => {
+    // basic validation
+    if (!scheduleApplicant || !scheduleApplicant.id) {
+      alert('No applicant selected');
+      return;
+    }
+    if (!scheduleData.date_time) {
+      alert('Please provide date and time for the interview');
+      return;
+    }
+    if (!scheduleData.interview_mode) {
+      alert('Please select an interview mode');
+      return;
+    }
+
+    // Determine application_id: prefer applicant.raw.application_id or raw.id, fallback to applicant.id
+    const applicationId = scheduleApplicant.raw && (scheduleApplicant.raw.application_id || scheduleApplicant.raw.id) ?
+      (scheduleApplicant.raw.application_id || scheduleApplicant.raw.id) : scheduleApplicant.id;
+
+    // Required identifiers for the new API contract
+    const jobIdForPayload = (job && job.id) ? job.id : (Number.isFinite(jobId) ? jobId : null);
+    const freelanceId = (
+      (scheduleApplicant.raw && (scheduleApplicant.raw.freelance_id ?? scheduleApplicant.raw.freelancer_id)) ??
+      scheduleApplicant.freelance_id ??
+      null
+    );
+
+    if (!jobIdForPayload) {
+      alert('Missing job_id for scheduling.');
+      return;
+    }
+    if (!freelanceId) {
+      alert('Missing freelance_id for scheduling.');
+      return;
+    }
+
+    const payload = {
+      application_id: applicationId,
+      job_id: jobIdForPayload,
+      freelance_id: freelanceId,
+      // convert local datetime-local value to ISO for backend
+      date_time: convertDatetimeLocalToIso(scheduleData.date_time),
+      // translate UI value to backend enum if mapping exists
+      interview_mode: INTERVIEW_MODE_MAP[scheduleData.interview_mode] || scheduleData.interview_mode,
+      interview_link: scheduleData.interview_link || null,
+      interview_notes: scheduleData.interview_notes || null,
+    };
+
+    setScheduleSaving(true);
+    setScheduleError(null);
+
+    try {
+      let accessToken;
+      if (typeof window !== 'undefined') {
+        accessToken = localStorage.getItem('accessToken');
+      }
+      if (!accessToken) {
+        throw new Error('No access token found');
+      }
+
+      const res = await fetch('http://206.189.134.117:8000/api/job-interview/schedule/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'Authorization': `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (!res.ok) {
+        // try to read json or text error
+        let errText = '';
+        try { errText = await res.text(); } catch (e) { errText = String(res.status); }
+        throw new Error(`Failed to save schedule: ${res.status} ${errText}`);
+      }
+
+      const responseData = await res.json().catch(() => null);
+
+      // Use responseData if present, otherwise the payload we sent
+      const saved = responseData || payload;
+
+      // update local UI state
+      setSchedules(prev => ({ ...prev, [scheduleApplicant.id]: saved }));
+      setApplicants(prev => prev.map(a => a.id === scheduleApplicant.id ? { ...a, schedule: saved } : a));
+
+      // close modal
+      setShowScheduleModal(false);
+      setScheduleApplicant(null);
+      setScheduleData({ date_time: '', interview_mode: 'Zoom', interview_link: '', interview_notes: '' });
+    } catch (err) {
+      console.error('Schedule save error', err);
+      setScheduleError(String(err));
+      // show a simple alert for now
+      alert('Could not save schedule: ' + (err.message || String(err)));
+    } finally {
+      setScheduleSaving(false);
+    }
+  };
+
+  // Save offer locally (no API) -- attaches offer to applicant in local state
+  const handleSaveOffer = async () => {
+    if (!offerApplicant || !offerApplicant.id) {
+      alert('No applicant selected');
+      return;
+    }
+    if (!offerData.salary || !offerData.starting_date) {
+      alert('Please provide salary and starting date');
+      return;
+    }
+    setOfferSaving(true);
+    setOfferError(null);
+    try {
+      // store offer on applicant locally
+      setApplicants(prev => prev.map(a => a.id === offerApplicant.id ? { ...a, offer: { ...offerData } } : a));
+      // close modal
+      setShowOfferModal(false);
+      setOfferApplicant(null);
+      setOfferData({ salary: '', starting_date: '', benefits: '' });
+    } catch (e) {
+      console.error('Error saving offer', e);
+      setOfferError(String(e));
+      alert('Could not save offer: ' + (e.message || String(e)));
+    } finally {
+      setOfferSaving(false);
+    }
+  };
+
+  // Handle confirm Accept/Reject action (called from confirm modal)
+  const handleConfirmAction = async () => {
+    if (!confirmApplicant || !confirmAction) return;
+    setConfirmLoading(true);
+    setConfirmResult(null);
+    const appId = getApplicationIdFromApplicant(confirmApplicant) || confirmApplicant.id;
+    try {
+      await updateApplication(appId, { status: confirmAction });
+      // update local state to reflect new status
+      setApplicants(prev => prev.map(a => a.id === confirmApplicant.id ? { ...a, status: confirmAction } : a));
+      setConfirmResult(`Applicant is ${confirmAction}`);
+      // If applicant was accepted, reject other applicants and update the job posting to closed
+      if (confirmAction === 'Accepted' && job && job.id) {
+        // capture previous applicants state so we can revert if needed
+        const prevApplicants = applicants;
+        try {
+          // Reject other applicants (optimistic update)
+          const others = Array.isArray(applicants) ? applicants.filter(a => a.id !== confirmApplicant.id && (a.status || '').toLowerCase() !== 'rejected') : [];
+          if (others.length > 0) {
+            // optimistic: mark others as Rejected locally
+            setApplicants(prev => prev.map(a => a.id !== confirmApplicant.id ? { ...a, status: 'Rejected' } : a));
+
+            // send updates in parallel, but capture failures per-applicant
+            const rejectResults = await Promise.all(others.map(async (other) => {
+              const otherAppId = getApplicationIdFromApplicant(other) || other.id;
+              try {
+                await updateApplication(otherAppId, { status: 'Rejected' });
+                return { id: other.id, ok: true };
+              } catch (e) {
+                return { id: other.id, ok: false, error: e };
+              }
+            }));
+
+            const failed = rejectResults.filter(r => !r.ok);
+            if (failed.length > 0) {
+              // revert any that failed back to their original status
+              setApplicants(prev => prev.map(a => {
+                const f = failed.find(x => x.id === a.id);
+                if (f) {
+                  const original = prevApplicants.find(p => p.id === a.id);
+                  return original ? { ...a, status: original.status } : a;
+                }
+                return a;
+              }));
+              console.error('Failed to auto-reject some applicants', failed);
+              alert(`Applicant accepted but failed to reject ${failed.length} other applicant(s). Check console for details.`);
+            }
+          }
+
+          // Close the job posting on the backend
+          try {
+            await updateJobPosting(job.id, { job_status: 'closed' });
+            // update UI state: show Closed
+            setJob(prev => ({ ...prev, status: 'Closed', selectedCandidate: confirmApplicant.name }));
+          } catch (err) {
+            console.error('Could not update job status to closed', err);
+            alert('Applicant accepted but failed to close job: ' + (err.message || String(err)));
+          }
+        } catch (err) {
+          // any unexpected error: revert optimistic applicant changes
+          console.error('Error rejecting other applicants', err);
+          setApplicants(prevApplicants);
+          alert('Applicant accepted but an error occurred while rejecting other applicants: ' + (err.message || String(err)));
+        }
+      }
+    } catch (e) {
+      console.error('Confirm action error', e);
+      alert('Could not update status: ' + (e.message || String(e)));
+    } finally {
+      setConfirmLoading(false);
+    }
+  };
+
+  // Update job posting via PUT to change job_status or other fields
+  const updateJobPosting = async (jobId, updates = {}) => {
+    if (!jobId) throw new Error('Missing job id');
+    try {
+      let accessToken;
+      if (typeof window !== 'undefined') {
+        accessToken = localStorage.getItem('accessToken');
+      }
+      if (!accessToken) throw new Error('No access token found');
+      // Build payload using the original backend fields when available (job.raw)
+      // so we only change job_status while keeping all other fields identical to backend values.
+      const fromRaw = job && job.raw ? job.raw : {};
+      const payload = {
+        job_title: fromRaw.job_title ?? fromRaw.jobTitle ?? job?.title ?? '',
+        department: fromRaw.department ?? job?.department ?? '',
+        job_type: fromRaw.job_type ?? fromRaw.jobType ?? job?.jobType ?? '',
+        work_location: fromRaw.work_location ?? job?.workLocation ?? '',
+        work_mode: fromRaw.work_mode ?? job?.workMode ?? '',
+        role_overview: fromRaw.role_overview ?? job?.roleOverview ?? '',
+        key_responsibilities: fromRaw.key_responsibilities ?? job?.keyResponsibilities ?? '',
+        required_qualifications: fromRaw.required_qualifications ?? job?.requiredQualifications ?? '',
+        preferred_qualifications: fromRaw.preferred_qualifications ?? job?.preferredQualifications ?? '',
+        // backend may use language_required or languages_required
+        languages_required: fromRaw.languages_required ?? fromRaw.language_required ?? job?.languagesRequired ?? '',
+        job_category: fromRaw.job_category ?? fromRaw.category ?? job?.category ?? '',
+        salary_from: fromRaw.salary_from ?? job?.salaryFrom ?? '',
+        salary_to: fromRaw.salary_to ?? job?.salaryTo ?? '',
+        currency: fromRaw.currency ?? job?.currency ?? '',
+        application_deadline: fromRaw.application_deadline ?? job?.applicationDeadline ?? null,
+        application_method: fromRaw.application_method ?? job?.applicationMethod ?? '',
+        interview_mode: fromRaw.interview_mode ?? job?.interviewMode ?? '',
+        hiring_manager: fromRaw.hiring_manager ?? job?.hiringManager ?? '',
+        number_of_openings: fromRaw.number_of_openings ?? job?.numberOfOpenings ?? job?.number_of_openings ?? 1,
+        expected_start_date: fromRaw.expected_start_date ?? job?.expectedStartDate ?? null,
+        screening_questions: fromRaw.screening_questions ?? job?.screeningQuestions ?? '',
+        file_upload: fromRaw.file_upload ?? '',
+        health_insurance: fromRaw.health_insurance ?? job?.benefits?.healthInsurance ?? false,
+        remote_work: fromRaw.remote_work ?? job?.benefits?.remoteWork ?? false,
+        paid_leave: fromRaw.paid_leave ?? job?.benefits?.paidLeave ?? false,
+        bonus: fromRaw.bonus ?? job?.benefits?.bonus ?? false,
+        // set job_status from updates if provided; otherwise keep backend/raw value or fall back
+        job_status: updates.job_status ?? fromRaw.job_status ?? fromRaw.jobStatus ?? (job?.status ? String(job.status).toLowerCase() : 'open'),
+      };
+
+      // Allow callers to override or add fields explicitly
+      Object.assign(payload, updates);
+
+      // Remove empty-string fields before sending. Some backend choice fields
+      // (e.g. application_method) reject empty strings as invalid choices.
+      // Keep boolean false and numeric 0 values; only remove strings that are empty/whitespace.
+      Object.keys(payload).forEach((k) => {
+        const v = payload[k];
+        if (typeof v === 'string' && v.trim() === '') {
+          delete payload[k];
+        }
+      });
+
+      // Debug: show the outgoing payload when running in browser (remove in prod)
+      if (typeof window !== 'undefined' && window.console && process?.env?.NODE_ENV !== 'production') {
+        console.debug('updateJobPosting payload:', payload);
+      }
+
+      const res = await fetch(`http://206.189.134.117:8000/api/job-posting/${jobId}/`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'Authorization': `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (!res.ok) {
+        let txt = '';
+        try { txt = await res.text(); } catch (e) { txt = String(res.status); }
+        throw new Error(`Failed to update job posting: ${res.status} ${txt}`);
+      }
+
+      const data = await res.json().catch(() => null);
+      return data || payload;
+    } catch (err) {
+      console.error('updateJobPosting error', err);
+      throw err;
+    }
+  };
 
   useEffect(() => {
     const loadJobDetails = async () => {
@@ -98,8 +612,64 @@ export default function JobDetailPage() {
           description: jobData.role_overview || "", // Using role_overview as description
           applicants: [], // Add empty array as default for applicants since it's not in the API
           selectedCandidate: null // Add null as default for selectedCandidate
+          ,
+          // keep the original raw API response so we can reuse exact backend field values when PUTting
+          raw: jobData
         };
         setJob(transformedJob);
+        // load applicants for this job
+        setApplicantsLoading(true);
+        const appsRes = await fetchJobApplications(jobId);
+        setApplicantsLoading(false);
+        if (appsRes.error) {
+          setApplicants([]);
+          setApplicantsError(appsRes.error);
+        } else {
+          const mapped = appsRes.data.map(a => ({
+            id: a.application_id || a.id || null,
+            name: a.freelancer_name || a.freelancer?.name || a.applicant_name || (a.freelancer_profile?.full_name) || `Freelancer ${a.freelancer_id || ''}`,
+            resume: a.resume_url || a.resume || a.file || null,
+            cover_letter: a.cover_letter_url || a.cover_letter || a.coverletter || a.message || '',
+            status: a.status || a.application_status || 'Applied',
+            // extract rating from possible backend fields (keep null if not present)
+            rating: a.rating ?? a.application_rating ?? a.applicant_rating ?? a.rating_value ?? null,
+            raw: a,
+          }));
+
+          // populate ratings state so badges render even before user rates manually
+          const ratingsFromApps = {};
+          mapped.forEach((m) => {
+            if (m.id != null && m.rating !== undefined && m.rating !== null && String(m.rating).trim() !== '') {
+              const num = Number(m.rating);
+              if (!Number.isNaN(num)) ratingsFromApps[m.id] = num;
+            }
+          });
+
+          setRatings(ratingsFromApps);
+          setApplicants(mapped);
+          setApplicantsError(null);
+
+          // Fetch interview info for each application to determine scheduled state
+          try {
+            const interviewPromises = mapped.map((m) => {
+              // m.id should be the application id
+              return m.id ? fetchInterviewForApplication(m.id) : Promise.resolve(null);
+            });
+            const interviewResults = await Promise.allSettled(interviewPromises);
+            const schedulesFromApi = {};
+            interviewResults.forEach((r, idx) => {
+              if (r.status === 'fulfilled' && r.value) {
+                const appId = mapped[idx].id;
+                // store the returned interview object keyed by application id
+                schedulesFromApi[appId] = r.value;
+              }
+            });
+            // merge with any existing schedules
+            setSchedules(prev => ({ ...prev, ...schedulesFromApi }));
+          } catch (e) {
+            console.error('Error fetching interviews for applications', e);
+          }
+        }
       }
       setLoading(false);
     };
@@ -141,8 +711,16 @@ export default function JobDetailPage() {
             <p><strong>Date Posted:</strong> {job.date}</p>
             <p>
               <strong>Status:</strong>{" "}
-              <span className={`badge ${job.status === "Open" ? "bg-success" : "bg-danger"}`}>
-                {job.status}
+              <span
+                className={`badge ${
+                  job.status?.toLowerCase() === "open"
+                    ? "bg-success"
+                    : job.status?.toLowerCase() === "closed"
+                    ? "bg-danger"
+                    : "bg-secondary"
+                }`}
+              >
+                {job.status ? job.status.charAt(0).toUpperCase() + job.status.slice(1).toLowerCase() : "Unknown"}
               </span>
             </p>
           </div>
@@ -351,31 +929,124 @@ export default function JobDetailPage() {
                     </tr>
                   </thead>
                   <tbody className="t-body">
-                    {job.applicants.length > 0 ? (
-                      job.applicants.map((applicant) => (
+                    {applicantsLoading ? (
+                      <tr>
+                        <td colSpan="2" className="text-center">Loading applicants...</td>
+                      </tr>
+                    ) : applicantsError ? (
+                      <tr>
+                        <td colSpan="2" className="text-danger">Error loading applicants: {applicantsError}</td>
+                      </tr>
+                    ) : applicants.length > 0 ? (
+                      applicants.map((applicant) => (
                         <tr key={applicant.id}>
-                          <td>{applicant.name}</td>
-<td>
-  <button
-    className="btn btn-sm btn-outline-primary me-2"
-    onClick={() => alert(`View Profile: ${applicant.name}`)}
-  >
-    View Profile
-  </button>
-  <button
-    className="btn btn-sm btn-info me-2"
-    onClick={() => alert(`Move to Interview: ${applicant.name}`)}
-  >
-    To Interview
-  </button>
-  <button
-    className="btn btn-sm btn-outline-danger"
-    onClick={() => alert(`Reject: ${applicant.name}`)}
-  >
-    Reject
-  </button>
-</td>
+                          <td>
+                            {/* Status tag in front of name: Accepted / Rejected / Pending */}
+                            {(() => {
+                              const st = (applicant.status || '').toLowerCase();
+                              let label = 'Pending';
+                              // Put badge after the name, so use ms-2 (margin-start) for spacing
+                              let cls = 'badge bg-secondary text-white ms-2';
+                              if (st === 'accepted') { label = 'Accepted'; cls = 'badge bg-success ms-2'; }
+                              else if (st === 'rejected') { label = 'Rejected'; cls = 'badge bg-danger ms-2'; }
+                              return (
+                                <>
+                                  {applicant.name}
+                                  <span className={cls} title={`Status: ${label}`}>{label}</span>
+                                  {ratings && ratings[applicant.id] ? (
+                                    <span className="badge bg-warning text-dark ms-2" title={`Rating: ${ratings[applicant.id]}/5`}>
+                                      <i className="fal fa-star me-1" />{ratings[applicant.id]}/5
+                                    </span>
+                                  ) : null}
 
+                                  {/* Single interview tag: show only when interview exists. Label: Scheduled or Rescheduled */}
+                                  {(() => {
+                                    const iv = schedules && schedules[applicant.id];
+                                    if (!iv) return null;
+                                    const st = String(iv.status || '').toLowerCase();
+                                    let label = 'Scheduled';
+                                    if (st.includes('resched') || st.includes('rescheduled') || st.includes('reschedule')) {
+                                      label = 'Rescheduled';
+                                    } else if (st.includes('scheduled') || st.includes('confirmed')) {
+                                      label = 'Scheduled';
+                                    }
+                                    const cls = label === 'Rescheduled' ? 'badge bg-primary text-white ms-2' : 'badge bg-info text-white ms-2';
+                                    return (
+                                      <span className={cls} title={iv?.interview_link ? `Interview link: ${iv.interview_link}` : `Status: ${iv.status || ''}`}>{label}</span>
+                                    );
+                                  })()}
+                                </>
+                              );
+                            })()}
+                          </td>
+                          <td>
+                            <button
+                              className="btn btn-sm btn-outline-primary me-2"
+                              title="CV"
+                              onClick={() => { if (applicant.resume) window.open(applicant.resume, '_blank'); else alert('No resume available'); }}
+                            ><i className="fal fa-file-download" /></button>
+                            <button
+                              className="btn btn-sm btn-secondary me-2"
+                              title="Rate"
+                              onClick={() => {
+                                setRatingApplicant(applicant);
+                                setRatingValue(ratings && ratings[applicant.id] ? ratings[applicant.id] : 5);
+                                setShowRatingModal(true);
+                              }}
+                            ><i className="fal fa-star" /></button>
+                            <button
+                              className="btn btn-sm btn-outline-secondary me-2"
+                              title="Schedule"
+                              onClick={async () => {
+                                  setScheduleApplicant(applicant);
+                                  // Try to use cached schedule; if missing, fetch latest from API
+                                  let existing = schedules && schedules[applicant.id] ? schedules[applicant.id] : null;
+                                  if (!existing) {
+                                    try {
+                                      const fetched = await fetchInterviewForApplication(applicant.id);
+                                      if (fetched) {
+                                        setSchedules(prev => ({ ...prev, [applicant.id]: fetched }));
+                                        existing = fetched;
+                                      }
+                                    } catch (e) {
+                                      console.error('Error fetching interview on schedule click', e);
+                                    }
+                                  }
+                                  setScheduleData(existing ? {
+                                    date_time: convertIsoToDatetimeLocal(existing.interview_date) || '',
+                                    interview_mode: existing.interview_mode || 'Zoom',
+                                    interview_link: existing.interview_link || '',
+                                    interview_notes: existing.interview_notes || '',
+                                  } : { date_time: '', interview_mode: 'Zoom', interview_link: '', interview_notes: '' });
+                                  setShowScheduleModal(true);
+                                }}
+                            ><i className="fal fa-calendar-alt" /></button>
+                            <button
+                              className="btn btn-sm btn-info me-2"
+                              title="Chat"
+                              onClick={() => alert(`Open chat with ${applicant.name} (UI-only)`) }
+                            ><i className="fal fa-comments" /></button>
+                            <button
+                              className="btn btn-sm btn-success me-2"
+                              title="Accept"
+                              onClick={() => {
+                                setConfirmApplicant(applicant);
+                                setConfirmAction('Accepted');
+                                setConfirmResult(null);
+                                setShowConfirmModal(true);
+                              }}
+                            ><i className="fal fa-check" /></button>
+                            <button
+                              className="btn btn-sm btn-outline-danger"
+                              title="Reject"
+                              onClick={() => {
+                                setConfirmApplicant(applicant);
+                                setConfirmAction('Rejected');
+                                setConfirmResult(null);
+                                setShowConfirmModal(true);
+                              }}
+                            ><i className="fal fa-times" /></button>
+                          </td>
                         </tr>
                       ))
                     ) : (
@@ -393,30 +1064,335 @@ export default function JobDetailPage() {
         </div>
       </div>
 
-      {/* Selected Candidate (if job closed) */}
-      {job.status === "Closed" && (
-        <div className="row">
-          <div className="col-xl-12">
-            <div className="mb-4 border rounded p-3">
-              <div
-                className="d-flex justify-content-between align-items-center cursor-pointer"
-                onClick={() => setShowSelected(!showSelected)}
-              >
-                <h5 className="fw500 mb-0">Selected Candidate</h5>
-                <span>{showSelected ? "−" : "+"}</span>
+      {/* Rating Modal (UI-only) */}
+      {/* Hired Person List (shows applicants with status 'Accepted') */}
+      <div className="row mt-4">
+        <div className="col-xl-12">
+          <div className="mb-4 border rounded p-3">
+            <div
+              className="d-flex justify-content-between align-items-center cursor-pointer"
+              onClick={() => setShowHired(!showHired)}
+            >
+              <h5 className="fw500 mb-0">Hired Person</h5>
+              <span>{showHired ? "−" : "+"}</span>
+            </div>
+            {showHired && (
+              <div className="mt-3 table-responsive" style={{ maxHeight: "300px", overflowY: "auto" }}>
+                <table className="table-style3 table at-savesearch mb-0">
+                <thead className="t-head">
+                  <tr>
+                    <th>Person</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody className="t-body">
+                  {applicantsLoading ? (
+                    <tr>
+                      <td colSpan="2" className="text-center">Loading hired persons...</td>
+                    </tr>
+                  ) : applicantsError ? (
+                    <tr>
+                      <td colSpan="2" className="text-danger">Error loading applicants: {applicantsError}</td>
+                    </tr>
+                  ) : (
+                    (() => {
+                      const accepted = Array.isArray(applicants) ? applicants.filter(a => (a.status || '').toLowerCase() === 'accepted') : [];
+                      if (accepted.length === 0) {
+                        return (
+                          <tr>
+                            <td colSpan="2" className="text-center">No hired persons yet.</td>
+                          </tr>
+                        );
+                      }
+                      return accepted.map((applicant) => (
+                        <tr key={applicant.id}>
+                          <td>
+                            {applicant.name}
+                            {(() => {
+                              const iv = schedules && schedules[applicant.id];
+                              if (!iv) return null;
+                              const st = String(iv.status || '').toLowerCase();
+                              let label = 'Scheduled';
+                              if (st.includes('resched') || st.includes('rescheduled') || st.includes('reschedule')) {
+                                label = 'Rescheduled';
+                              }
+                              const cls = label === 'Rescheduled' ? 'badge bg-primary text-white ms-2' : 'badge bg-info text-white ms-2';
+                              return (
+                                <span className={cls} title={iv?.interview_link ? `Interview link: ${iv.interview_link}` : `Status: ${iv.status || ''}`}>{label}</span>
+                              );
+                            })()}
+                          </td>
+                          <td>
+                            <button
+                              className="btn btn-sm btn-success me-2"
+                              title="Offer"
+                              onClick={() => {
+                                // open local offer modal
+                                setOfferApplicant(applicant);
+                                setOfferData({ salary: (applicant.offer && applicant.offer.salary) || '', starting_date: (applicant.offer && applicant.offer.starting_date) || '', benefits: (applicant.offer && applicant.offer.benefits) || '' });
+                                setShowOfferModal(true);
+                              }}
+                            >Offer</button>
+                            <button
+                              className="btn btn-sm btn-info me-2"
+                              title="Chat"
+                              onClick={() => alert(`Open chat with ${applicant.name} (UI-only)`) }
+                            ><i className="fal fa-comments" /></button>
+                          </td>
+                        </tr>
+                      ));
+                    })()
+                  )}
+                </tbody>
+                </table>
               </div>
-              {showSelected && (
-                <div className="mt-3">
-                  <p className="text-muted">
-                    <strong>Candidate Selected:</strong> {job.selectedCandidate}
-                  </p>
-                </div>
+            )}
+          </div>
+        </div>
+      </div>
+      {showRatingModal && ratingApplicant && (
+        <div className="modal-backdrop" style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1050 }}>
+          <div className="d-flex justify-content-center align-items-center" style={{ minHeight: '100vh' }}>
+            <div className="bg-white p-4 rounded" style={{ width: 360 }}>
+              <h5 className="mb-3">Rate {ratingApplicant.name}</h5>
+              <div className="mb-3 d-flex align-items-center">
+                {[1,2,3,4,5].map((n) => (
+                  <button
+                    key={n}
+                    type="button"
+                    className={`btn btn-sm me-2 ${ratingValue >= n ? 'btn-warning text-dark' : 'btn-outline-secondary'}`}
+                    onClick={() => setRatingValue(n)}
+                    title={`${n} star${n>1?'s':''}`}
+                  >
+                    <i className="fal fa-star" /> {n}
+                  </button>
+                ))}
+              </div>
+              <div className="d-flex justify-content-end">
+                <button className="btn btn-secondary me-2" onClick={() => { setShowRatingModal(false); setRatingApplicant(null); }}>Cancel</button>
+                <button className="btn btn-primary" onClick={async () => {
+                  if (!ratingApplicant || !ratingApplicant.id) {
+                    alert('No applicant selected');
+                    return;
+                  }
+                  const appId = getApplicationIdFromApplicant(ratingApplicant) || ratingApplicant.id;
+                  // optimistic UI
+                  setRatings(prev => ({ ...prev, [ratingApplicant.id]: ratingValue }));
+                  setApplicants(prev => prev.map(a => a.id === ratingApplicant.id ? { ...a, rating: ratingValue } : a));
+                  try {
+                    await updateApplication(appId, { rating: ratingValue });
+                    setShowRatingModal(false);
+                    setRatingApplicant(null);
+                  } catch (e) {
+                    // revert on error
+                    setRatings(prev => {
+                      const next = { ...prev };
+                      delete next[ratingApplicant.id];
+                      return next;
+                    });
+                    setApplicants(prev => prev.map(a => a.id === ratingApplicant.id ? ({ ...a, rating: undefined }) : a));
+                    alert('Could not save rating: ' + (e.message || String(e)));
+                  }
+                }}>Save</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Schedule Modal (UI-only) */}
+      {showScheduleModal && scheduleApplicant && (
+        <div className="modal-backdrop" style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1050 }}>
+          <div className="d-flex justify-content-center align-items-center" style={{ minHeight: '100vh' }}>
+            <div className="bg-white p-4 rounded" style={{ width: 520 }}>
+              <h5 className="mb-3">Schedule interview for {scheduleApplicant.name}</h5>
+              <div className="mb-2">
+                <label className="form-label">Date & Time *</label>
+                <input
+                  type="datetime-local"
+                  className="form-control"
+                  value={scheduleData.date_time}
+                  onChange={(e) => setScheduleData(prev => ({ ...prev, date_time: e.target.value }))}
+                />
+              </div>
+              <div className="mb-2">
+                <label className="form-label">Interview Mode *</label>
+                <select
+                  className="form-select"
+                  value={scheduleData.interview_mode}
+                  onChange={(e) => setScheduleData(prev => ({ ...prev, interview_mode: e.target.value }))}
+                >
+                  <option>Zoom</option>
+                  <option>Teams</option>
+                  <option>In-person</option>
+                  <option>Phone</option>
+                  <option>Other</option>
+                </select>
+              </div>
+              <div className="mb-2">
+                <label className="form-label">Interview Link (optional)</label>
+                <input
+                  type="url"
+                  className="form-control"
+                  placeholder="https://zoom.us/meeting/..."
+                  maxLength={200}
+                  value={scheduleData.interview_link}
+                  onChange={(e) => setScheduleData(prev => ({ ...prev, interview_link: e.target.value }))}
+                />
+              </div>
+              <div className="mb-3">
+                <label className="form-label">Interview Notes (optional)</label>
+                <textarea
+                  className="form-control"
+                  rows={3}
+                  value={scheduleData.interview_notes}
+                  onChange={(e) => setScheduleData(prev => ({ ...prev, interview_notes: e.target.value }))}
+                />
+              </div>
+              <div className="d-flex justify-content-end">
+                <button className="btn btn-secondary me-2" onClick={() => { setShowScheduleModal(false); setScheduleApplicant(null); }}>Cancel</button>
+                <button
+                  className="btn btn-primary"
+                  onClick={() => handleSaveSchedule()}
+                  disabled={scheduleSaving}
+                >
+                  {scheduleSaving ? 'Saving...' : 'Save'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Confirm Accept/Reject Modal */}
+      {showConfirmModal && confirmApplicant && (
+        <div className="modal-backdrop" style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1060 }}>
+          <div className="d-flex justify-content-center align-items-center" style={{ minHeight: '100vh' }}>
+            <div className="bg-white p-4 rounded" style={{ width: 420 }}>
+              {!confirmResult ? (
+                <>
+                  <h5 className="mb-3">{confirmAction} applicant</h5>
+                  <p>Are you sure you want to <strong>{confirmAction.toLowerCase()}</strong> <strong>{confirmApplicant.name}</strong>?</p>
+                  <div className="d-flex justify-content-end">
+                    <button className="btn btn-secondary me-2" onClick={() => { setShowConfirmModal(false); setConfirmApplicant(null); setConfirmAction(null); setConfirmResult(null); }}>Cancel</button>
+                    <button className="btn btn-primary" onClick={() => handleConfirmAction()} disabled={confirmLoading}>
+                      {confirmLoading ? 'Saving...' : confirmAction}
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <h5 className="mb-3">{confirmResult}</h5>
+                  <div className="d-flex justify-content-end">
+                    <button className="btn btn-primary" onClick={() => { setShowConfirmModal(false); setConfirmApplicant(null); setConfirmAction(null); setConfirmResult(null); }}>OK</button>
+                  </div>
+                </>
               )}
             </div>
           </div>
         </div>
       )}
 
+      {/* Offer Modal – now persists to the backend */}
+      {showOfferModal && offerApplicant && (
+        <div className="modal-backdrop" style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1050 }}>
+          <div className="d-flex justify-content-center align-items-center" style={{ minHeight: '100vh' }}>
+            <div className="bg-white p-4 rounded" style={{ width: 520 }}>
+              <h5 className="mb-3">Send Offer to {offerApplicant.name}</h5>
+
+              <div className="mb-2">
+                <label className="form-label">Salary * (numeric)</label>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  className="form-control"
+                  placeholder="e.g. 2500"
+                  value={offerData.salary}
+                  onChange={e => setOfferData(prev => ({ ...prev, salary: e.target.value }))}
+                />
+              </div>
+
+              <div className="mb-2">
+                <label className="form-label">Starting Date *</label>
+                <input
+                  type="date"
+                  className="form-control"
+                  value={offerData.starting_date}
+                  onChange={e => setOfferData(prev => ({ ...prev, starting_date: e.target.value }))}
+                />
+              </div>
+
+              <div className="mb-3">
+                <label className="form-label">Benefits (one per line, optional)</label>
+                <textarea
+                  className="form-control"
+                  rows={4}
+                  placeholder="Health insurance&#10;Remote work&#10;Paid leave"
+                  value={offerData.benefits}
+                  onChange={e => setOfferData(prev => ({ ...prev, benefits: e.target.value }))}
+                />
+              </div>
+
+              {offerError && <div className="text-danger mb-2">{offerError}</div>}
+
+              <div className="d-flex justify-content-end">
+                <button
+                  className="btn btn-secondary me-2"
+                  onClick={() => {
+                    setShowOfferModal(false);
+                    setOfferApplicant(null);
+                    setOfferData({ salary: '', starting_date: '', benefits: '' });
+                    setOfferError(null);
+                  }}
+                >
+                  Cancel
+                </button>
+
+                <button
+                  className="btn btn-primary"
+                  disabled={offerSaving}
+                  onClick={async () => {
+                    if (!offerData.salary || !offerData.starting_date) {
+                      alert('Salary and Starting Date are required');
+                      return;
+                    }
+
+                    setOfferSaving(true);
+                    setOfferError(null);
+
+                    try {
+                      const applicationId = getApplicationIdFromApplicant(offerApplicant) || offerApplicant.id;
+                      const apiResult = await createJobOffer(applicationId, offerData);
+
+                      setApplicants(prev =>
+                        prev.map(a =>
+                          a.id === offerApplicant.id
+                            ? { ...a, offer: { ...offerData, offer_id: apiResult.offer_id } }
+                            : a
+                        )
+                      );
+
+                      setShowOfferModal(false);
+                      setOfferApplicant(null);
+                      setOfferData({ salary: '', starting_date: '', benefits: '' });
+                      alert('Offer sent successfully!');
+                    } catch (err) {
+                      console.error(err);
+                      setOfferError(err.message || String(err));
+                      alert('Could not send offer: ' + (err.message || String(err)));
+                    } finally {
+                      setOfferSaving(false);
+                    }
+                  }}
+                >
+                  {offerSaving ? 'Sending...' : 'Send Offer'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
