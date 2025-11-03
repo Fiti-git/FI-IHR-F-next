@@ -26,7 +26,7 @@ export default function Listing9() {
           accessToken = localStorage.getItem("accessToken");
         }
 
-        const response = await fetch("http://206.189.134.117:8000/api/job-posting/", {
+        const response = await fetch("http://127.0.0.1:8000/api/job-posting/", {
           method: "GET",
           headers: {
             'Content-Type': 'application/json',

@@ -16,7 +16,7 @@ const fetchJobDetails = async (jobId) => {
       return null;
     }
 
-    const response = await fetch(`http://206.189.134.117:8000/api/job-posting/${jobId}/`, {
+    const response = await fetch(`http://127.0.0.1:8000/api/job-posting/${jobId}/`, {
       method: "GET",
       headers: {
         'Content-Type': 'application/json',
@@ -51,7 +51,7 @@ const fetchJobApplications = async (jobId) => {
       console.error('No access token for applications');
       return { data: [], error: 'No access token' };
     }
-    const res = await fetch(`http://206.189.134.117:8000/api/job-application/job/${jobId}/`, {
+    const res = await fetch(`http://127.0.0.1:8000/api/job-application/job/${jobId}/`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
@@ -87,7 +87,7 @@ const fetchInterviewForApplication = async (applicationId) => {
       console.error('No access token for interview fetch');
       return null;
     }
-    const res = await fetch(`http://206.189.134.117:8000/api/job-interview/application/${applicationId}/`, {
+    const res = await fetch(`http://127.0.0.1:8000/api/job-interview/application/${applicationId}/`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
@@ -162,7 +162,7 @@ const createJobOffer = async (applicationId, offerData) => {
     },
   };
 
-  const res = await fetch('http://206.189.134.117:8000/api/job-offer/create/', {
+  const res = await fetch('http://127.0.0.1:8000/api/job-offer/create/', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -241,7 +241,7 @@ export default function JobDetailPage() {
       if (status !== undefined) body.status = status;
       if (comments !== undefined) body.comments = comments;
 
-      const res = await fetch(`http://206.189.134.117:8000/api/job-application/update/${applicationId}/`, {
+      const res = await fetch(`http://127.0.0.1:8000/api/job-application/update/${applicationId}/`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -337,7 +337,7 @@ export default function JobDetailPage() {
         throw new Error('No access token found');
       }
 
-      const res = await fetch('http://206.189.134.117:8000/api/job-interview/schedule/', {
+      const res = await fetch('http://127.0.0.1:8000/api/job-interview/schedule/', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -540,7 +540,7 @@ export default function JobDetailPage() {
         console.debug('updateJobPosting payload:', payload);
       }
 
-      const res = await fetch(`http://206.189.134.117:8000/api/job-posting/${jobId}/`, {
+      const res = await fetch(`http://127.0.0.1:8000/api/job-posting/${jobId}/`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',

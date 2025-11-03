@@ -23,7 +23,7 @@ export default function AppliedJobDetailPage() {
           throw new Error("Access token not found. Please log in again.");
         }
 
-        const res = await fetch(`http://206.189.134.117:8000/api/job-posting/${jobId}/`, {
+        const res = await fetch(`http://127.0.0.1:8000/api/job-posting/${jobId}/`, {
           method: "GET",
           headers: {
             "Content-Type": "application/json",
@@ -58,7 +58,7 @@ export default function AppliedJobDetailPage() {
           return;
         }
 
-        const res = await fetch(`http://206.189.134.117:8000/api/interview/${jobId}/`, {
+        const res = await fetch(`http://127.0.0.1:8000/api/interview/${jobId}/`, {
           method: "GET",
           headers: {
             "Content-Type": "application/json",

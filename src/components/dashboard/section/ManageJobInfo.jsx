@@ -20,7 +20,7 @@ const fetchJobs = async () => {
       return [];
     }
 
-    const response = await fetch("http://206.189.134.117:8000/api/job-manage/", {
+    const response = await fetch("http://127.0.0.1:8000/api/job-manage/", {
       method: "GET",
       headers: {
         'Content-Type': 'application/json',
