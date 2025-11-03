@@ -314,7 +314,7 @@ useEffect(() => {
 
     const handleRoleSelection = async (role) => {
         try {
-            const res = await fetch("http://127.0.0.1:8000/myapi/set-role/", {
+            const res = await fetch("http://206.189.134.117:8000/myapi/set-role/", {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
@@ -365,9 +365,9 @@ useEffect(() => {
         }
 
         if (selectedRole === 'employee') {
-            apiUrl = "http://127.0.0.1:8000/api/profile/freelancer/";
+            apiUrl = "http://206.189.134.117:8000/api/profile/freelancer/";
         } else if (selectedRole === 'employer') {
-            apiUrl = "http://127.0.0.1:8000/api/profile/job-provider/";
+            apiUrl = "http://206.189.134.117:8000/api/profile/job-provider/";
         } else {
             setMessage("No role selected.");
             setLoading(false);

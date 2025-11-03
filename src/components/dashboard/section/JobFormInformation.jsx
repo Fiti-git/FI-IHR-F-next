@@ -170,7 +170,7 @@ export default function JobPostForm({ initialData = null, mode = "create", jobId
       };
       if (accessToken) headers.Authorization = `Bearer ${accessToken}`;
 
-      const url = mode === 'edit' && jobId ? `http://127.0.0.1:8000/api/job-posting/${jobId}/` : `http://127.0.0.1:8000/api/job-posting/`;
+      const url = mode === 'edit' && jobId ? `http://206.189.134.117:8000/api/job-posting/${jobId}/` : `http://206.189.134.117:8000/api/job-posting/`;
       const method = mode === 'edit' && jobId ? 'PUT' : 'POST';
 
       const response = await fetch(url, {

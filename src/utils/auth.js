@@ -1,20 +1,20 @@
 // auth.js
 export const getAuthToken = () => {
     if (typeof window !== 'undefined') {
-        return localStorage.getItem('authToken');
+        return localStorage.getItem('accessToken');
     }
     return null;
 };
 
 export const setAuthToken = (token) => {
     if (typeof window !== 'undefined') {
-        localStorage.setItem('authToken', token);
+        localStorage.setItem('accessToken', token);
     }
 };
 
 export const removeAuthToken = () => {
     if (typeof window !== 'undefined') {
-        localStorage.removeItem('authToken');
+        localStorage.removeItem('accessToken');
     }
 };
 
@@ -22,3 +22,4 @@ export const isAuthenticated = () => {
     const token = getAuthToken();
     return !!token;
 };
+

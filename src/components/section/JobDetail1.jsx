@@ -26,7 +26,7 @@ export default function JobDetail1() {
         const headers = { 'Content-Type': 'application/json' };
         if (accessToken) headers.Authorization = `Bearer ${accessToken}`;
 
-        const res = await fetch(`http://127.0.0.1:8000/api/job-posting/${id}/`, { headers });
+        const res = await fetch(`http://206.189.134.117:8000/api/job-posting/${id}/`, { headers });
         if (!res.ok) throw new Error(`Failed to fetch job (${res.status})`);
         const data = await res.json();
         setJob(data);
@@ -49,7 +49,7 @@ export default function JobDetail1() {
 
       const checkRole = async () => {
         try {
-          const res = await fetch('http://127.0.0.1:8000/api/profile/job-provider/', {
+          const res = await fetch('http://206.189.134.117:8000/api/profile/job-provider/', {
             method: 'GET',
             headers: {
               'Accept': 'application/json',
@@ -123,7 +123,7 @@ export default function JobDetail1() {
       let freelancerProfileId = null;
       try {
         if (token) {
-          const pfRes = await fetch('http://127.0.0.1:8000/api/profile/freelancer/', {
+          const pfRes = await fetch('http://206.189.134.117:8000/api/profile/freelancer/', {
             method: 'GET',
             headers: {
               'Content-Type': 'application/json',
@@ -159,7 +159,7 @@ export default function JobDetail1() {
         try {
           const fd = new FormData();
           fd.append('file', resumeFile);
-          const upRes = await fetch('http://127.0.0.1:8000/api/upload/', {
+          const upRes = await fetch('http://206.189.134.117:8000/api/upload/', {
             method: 'POST',
             headers: token ? { 'Authorization': `Bearer ${token}` } : {},
             body: fd,
@@ -222,7 +222,7 @@ export default function JobDetail1() {
       const headers = { 'Content-Type': 'application/json' };
       headers['Authorization'] = `Bearer ${token}`;
 
-      const res = await fetch('http://127.0.0.1:8000/api/job-application/', {
+      const res = await fetch('http://206.189.134.117:8000/api/job-application/', {
         method: 'POST',
         headers,
         body: JSON.stringify(payload),

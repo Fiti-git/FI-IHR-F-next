@@ -24,7 +24,7 @@ export default function EditJobPage() {
           if (token) headers.Authorization = `Bearer ${token}`;
         }
 
-        const res = await fetch(`http://127.0.0.1:8000/api/job-posting/${jobId}/`, { headers });
+        const res = await fetch(`http://206.189.134.117:8000/api/job-posting/${jobId}/`, { headers });
         if (!res.ok) throw new Error(`Failed to fetch job (${res.status})`);
         const data = await res.json();
         setInitialData(data);

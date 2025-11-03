@@ -6,28 +6,34 @@ import { useEffect, useState } from "react";
 
 export default function AppliedJobDetailPage() {
   const params = useParams();
-  const jobId = parseInt(params.id, 10);
+  // Ensure jobId is an integer
+  const jobId = parseInt(params.id, 10); 
+  
   const [job, setJob] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [userApplicationStatus, setUserApplicationStatus] = useState("");
   const [interviewDetails, setInterviewDetails] = useState(null);
+  
+  // Base URL for API calls
+  const API_BASE_URL = "http://206.189.134.117:8000/api";
 
+  // --- Fetch Job Details ---
   useEffect(() => {
     async function fetchJob() {
       try {
-        // ✅ Get token from localStorage (or cookie)
+        // Get token from localStorage (or cookie)
         const token = localStorage.getItem("accessToken");
 
         if (!token) {
           throw new Error("Access token not found. Please log in again.");
         }
 
-        const res = await fetch(`http://127.0.0.1:8000/api/job-posting/${jobId}/`, {
+        const res = await fetch(`${API_BASE_URL}/job-posting/${jobId}/`, {
           method: "GET",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`, // ✅ Send token here
+            Authorization: `Bearer ${token}`, // Send token here
           },
         });
 
@@ -48,17 +54,16 @@ export default function AppliedJobDetailPage() {
     fetchJob();
   }, [jobId]);
 
-  // Fetch interview info for this job and populate status + details
+  // --- Fetch Interview Info (FIXED) ---
   useEffect(() => {
     async function fetchInterviews() {
       try {
         const token = localStorage.getItem("accessToken");
         if (!token) {
-          // If user isn't authenticated, skip interview fetch
           return;
         }
 
-        const res = await fetch(`http://127.0.0.1:8000/api/interview/${jobId}/`, {
+        const res = await fetch(`${API_BASE_URL}/job-interview/${jobId}/`, {
           method: "GET",
           headers: {
             "Content-Type": "application/json",
@@ -67,23 +72,42 @@ export default function AppliedJobDetailPage() {
         });
 
         if (!res.ok) {
-          // Non-fatal; just no interview to show
-          console.warn(`Failed to fetch interviews (Status: ${res.status})`);
+          console.warn(`Failed to fetch interviews (Status: ${res.status}). Continuing.`);
+          setUserApplicationStatus(""); 
+          setInterviewDetails(null);
           return;
         }
 
         const data = await res.json();
-        const interviews = Array.isArray(data?.interviews) ? data.interviews : [];
-        if (interviews.length === 0) return;
+        
+        // 🚀 FIX: Handle both single object and array responses
+        let interviews = [];
+        if (Array.isArray(data)) {
+            // Case 1: API returns an array of interviews
+            interviews = data;
+        } else if (data && typeof data === 'object' && data.interview_id) {
+            // Case 2: API returns a single interview object (based on your example)
+            interviews = [data]; 
+        }
 
-        // Pick the latest interview by date
+        if (interviews.length === 0) {
+            // If no interview data, assume default status or leave blank
+            return;
+        }
+
+        // Filter and sort by 'date_time' (which is present in your API example)
         const latest = interviews
-          .filter(iv => iv && iv.interview_date)
-          .sort((a, b) => new Date(b.interview_date) - new Date(a.interview_date))[0] || interviews[0];
+          .filter(iv => iv && iv.date_time)
+          .sort((a, b) => new Date(b.date_time) - new Date(a.date_time))[0] || interviews[0];
 
         if (!latest) return;
 
-        const d = new Date(latest.interview_date);
+        // Use 'date_time' from the API response
+        const d = new Date(latest.date_time); 
+        
+        // Use "Scheduled" as a default status if the 'status' field is missing in the interview object
+        const status = (latest.status || "Scheduled").trim(); 
+
         if (!isNaN(d)) {
           const date = d.toLocaleDateString();
           const time = d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
@@ -92,30 +116,35 @@ export default function AppliedJobDetailPage() {
             time,
             link: latest.interview_link || "",
             mode: latest.interview_mode || "",
-            status: latest.status || "",
+            status: status, 
             notes: latest.interview_notes || "",
           });
         } else {
+          // Fallback for invalid date
           setInterviewDetails({
-            date: latest.interview_date,
-            time: "",
+            date: latest.date_time,
+            time: "Time N/A",
             link: latest.interview_link || "",
             mode: latest.interview_mode || "",
-            status: latest.status || "",
+            status: status,
             notes: latest.interview_notes || "",
           });
         }
 
-        // Use backend status if available; default to "Interviewed" for backward-compat
-        const backendStatus = (latest.status || "").trim();
-        setUserApplicationStatus(backendStatus || "Interviewed");
+        // Update the main application status based on the latest interview status
+        setUserApplicationStatus(status);
       } catch (err) {
         console.error("Error fetching interviews:", err);
       }
     }
 
-    fetchInterviews();
+    // Only run if a valid jobId is present
+    if (jobId && !isNaN(jobId)) {
+        fetchInterviews();
+    }
   }, [jobId]);
+
+  // --- Render Logic ---
 
   if (loading) {
     return (
@@ -137,14 +166,16 @@ export default function AppliedJobDetailPage() {
     );
   }
 
-  // userApplicationStatus and interviewDetails are now populated from the interview API
-
   const statusBadgeClass = {
     Rejected: "badge bg-danger",
-    Interviewed: "badge bg-warning text-dark",
+    Interview: "badge bg-warning text-dark",
     Hired: "badge bg-success",
-    Scheduled: "badge bg-info text-white",
+    Scheduled: "badge bg-info text-white", // Added for new interview status
+    // Default to 'Pending' if the status is empty string or unrecognized
   };
+
+  const currentStatus = userApplicationStatus || "Pending";
+  const badgeClass = statusBadgeClass[currentStatus] || "badge bg-secondary";
 
   return (
     <div className="dashboard__content hover-bgc-color container mt-5">
@@ -156,7 +187,7 @@ export default function AppliedJobDetailPage() {
               <p className="text">Full Job Description and Your Application Status</p>
             </div>
             <div>
-              <Link href="/manage-myjobs" className="ud-btn btn-dark default-box-shadow2">
+              <Link href="/applied-jobs" className="ud-btn btn-dark default-box-shadow2">
                 Back to Applied Jobs
               </Link>
             </div>
@@ -167,8 +198,8 @@ export default function AppliedJobDetailPage() {
       {/* Status */}
       <div className="mb-4">
         <strong>Status: </strong>
-        <span className={statusBadgeClass[userApplicationStatus] || "badge bg-secondary"}>
-          {userApplicationStatus || "Pending"}
+        <span className={badgeClass}>
+          {currentStatus}
         </span>
       </div>
 
@@ -206,7 +237,7 @@ export default function AppliedJobDetailPage() {
       <div className="ps-widget bgc-white bdrs4 p30 mb30 overflow-hidden position-relative">
         <h5 className="fw500 mb-3">Application Info</h5>
         <p><strong>Application Deadline:</strong> {job.application_deadline}</p>
-        <p><strong>Interview Mode:</strong> {job.interview_mode}</p>
+        <p><strong>Interview Mode (Job Setting):</strong> {job.interview_mode}</p>
         <p><strong>Hiring Manager:</strong> {job.hiring_manager}</p>
         <p><strong>Number of Openings:</strong> {job.number_of_openings}</p>
         <p><strong>Expected Start Date:</strong> {job.expected_start_date}</p>
@@ -227,13 +258,15 @@ export default function AppliedJobDetailPage() {
         </ul>
       </div>
 
-      {/* Interview Details */}
+      {/* Interview Details (Fixed to Show) */}
       {interviewDetails && (
         <div className="ps-widget bgc-white bdrs4 p30 mb30 overflow-hidden position-relative">
-          <h5 className="fw500 mb-3">Interview Details</h5>
+          <h5 className="fw500 mb-3">Interview Details (Latest Update)</h5>
+          <p><strong>Status:</strong> <span className={statusBadgeClass[interviewDetails.status] || "badge bg-secondary"}>{interviewDetails.status}</span></p>
           <p><strong>Date:</strong> {interviewDetails.date}</p>
           <p><strong>Time:</strong> {interviewDetails.time}</p>
-          {(interviewDetails.link && String(interviewDetails.mode).toLowerCase() === 'zoom') ? (
+          {/* Check if a link exists AND the mode suggests a link is appropriate (e.g., Zoom/Online) */}
+          {(interviewDetails.link && String(interviewDetails.mode).toLowerCase().includes('zoom')) ? (
             <p>
               <strong>Link:</strong>{" "}
               <a

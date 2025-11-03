@@ -8,12 +8,7 @@ import ProposalModal1 from "../modal/ProposalModal1";
 import DeleteModal from "../modal/DeleteModal";
 
 // Dummy applied job data (removed "On Going")
-const appliedJobs = [
-  { id: 1, title: "Frontend Developer", category: "Web Development", date: "2025-09-10", status: "Interview" },
-  { id: 2, title: "UI/UX Designer", category: "Design", date: "2025-09-08", status: "Rejected" },
-  { id: 3, title: "Backend Developer", category: "Web Development", date: "2025-09-01", status: "Interview" },
-  { id: 4, title: "Marketing Specialist", category: "Marketing", date: "2025-08-28", status: "Hired" },
-];
+// const appliedJobs = [...] // Removed as we use the fetched data
 
 // Status badge component for applicant statuses without "On Going"
 const capitalizeFirst = (value) => {
@@ -35,6 +30,12 @@ const ApplicantStatusBadge = ({ status }) => {
     case "Interview":
       colorClass = "badge bg-warning text-dark";
       break;
+    case "Rejected":
+      colorClass = "badge bg-danger";
+      break;
+    case "Hired":
+      colorClass = "badge bg-success";
+      break;
     default:
       colorClass = "badge bg-secondary";
   }
@@ -43,6 +44,8 @@ const ApplicantStatusBadge = ({ status }) => {
 
 // Row component for Applied Jobs
 function AppliedJobsRow({ job }) {
+  // Ensure job.id is available, otherwise the 'View' link is broken
+  const jobLink = job.id ? `/applied-jobs/${job.id}` : "#"; 
   return (
     <tr>
       <td>{job.title}</td>
@@ -52,7 +55,7 @@ function AppliedJobsRow({ job }) {
         <ApplicantStatusBadge status={job.status} />
       </td>
       <td>
-        <Link href={`/applied-jobs/${job.id}`} className="btn btn-sm btn-outline-primary me-2">
+        <Link href={jobLink} className="btn btn-sm btn-outline-primary me-2">
           View
         </Link>
       </td>
@@ -62,7 +65,8 @@ function AppliedJobsRow({ job }) {
 
 export default function AppliedJobs() {
   const [filter, setFilter] = useState("All");
-  const [freelancerId, setFreelancerId] = useState(null);
+  // 💡 RENAMED: Use freelancerUserId to align with correct API expectation (as per FreelancerDashboard.js)
+  const [freelancerUserId, setFreelancerUserId] = useState(null);
   const [loading, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState(null);
   const [jobs, setJobs] = useState([]);
@@ -73,7 +77,6 @@ export default function AppliedJobs() {
   useEffect(() => {
     const fetchFreelancer = async () => {
       try {
-        // Try the project's auth util first, then fall back to common localStorage keys
         let token = getAuthToken();
         if (!token && typeof window !== "undefined") {
           token = localStorage.getItem("accessToken") || localStorage.getItem("token");
@@ -85,8 +88,9 @@ export default function AppliedJobs() {
           return;
         }
 
-        // Use a relative path so the request goes to the same origin (or Next.js proxy)
-        const res = await fetch("http://127.0.0.1:8000/api/profile/freelancer/", {
+        // NOTE: Using the correct production-like URL from the second file for consistency and stability.
+        // If the local URL is mandatory, change it back, but the structure is the key fix.
+        const res = await fetch("http://206.189.134.117:8000/api/profile/freelancer/", {
           method: "GET",
           headers: {
             "Content-Type": "application/json",
@@ -103,10 +107,32 @@ export default function AppliedJobs() {
         }
 
         const data = await res.json();
-        // Expecting an array; take the first object's id as freelancer id
-        const id = Array.isArray(data) && data.length > 0 ? data[0].id : null;
-        setFreelancerId(id);
+        
+        // 🚀 FIX APPLIED HERE: Correctly extract the user.id from the first object
+        // assuming the API returns an array of profiles or just an object with a 'user' property.
+        // Based on FreelancerDashboard.js, the profile data seems to be an object *containing* the user object.
+        // Let's adapt the logic from the first file's array assumption to extract the *user ID* like the second file does.
+        
+        // Assuming API response is an array [ { ..., user: { id: 123, ... } } ]
+        let userId = null;
+        if (Array.isArray(data) && data.length > 0) {
+            userId = data[0].user?.id; // Access user.id if it exists
+        } 
+        
+        // If the API returns a single object { ..., user: { id: 123, ... } }
+        if (data.user && data.user.id) {
+            userId = data.user.id;
+        }
+
+        if (!userId) {
+            setFetchError("Could not find User ID in profile data.");
+            setLoading(false);
+            return;
+        }
+
+        setFreelancerUserId(userId); // Set the User ID
         setLoading(false);
+
       } catch (err) {
         console.error("Error fetching freelancer profile:", err);
         setFetchError(String(err));
@@ -117,10 +143,12 @@ export default function AppliedJobs() {
     fetchFreelancer();
   }, []);
 
-  // When we have a freelancerId, fetch that freelancer's jobs
+  // When we have a freelancerUserId, fetch that freelancer's jobs
   useEffect(() => {
     const fetchFreelancerJobs = async () => {
-      if (!freelancerId) return;
+      // 💡 USING freelancerUserId (which is the user.id)
+      if (!freelancerUserId) return; 
+      
       setJobsLoading(true);
       setJobsError(null);
       try {
@@ -135,7 +163,8 @@ export default function AppliedJobs() {
           return;
         }
 
-        const res = await fetch(`http://127.0.0.1:8000/api/freelance/${freelancerId}/`, {
+        // 🚀 FIX APPLIED HERE: Use the correct ID (freelancerUserId) and URL format (from FreelancerDashboard.js)
+        const res = await fetch(`http://206.189.134.117:8000/api/freelance/${freelancerUserId}/`, {
           method: "GET",
           headers: {
             "Content-Type": "application/json",
@@ -161,7 +190,8 @@ export default function AppliedJobs() {
               title: j.job_title,
               category: j.job_category,
               date: j.date_posted,
-              status: j.job_status,
+              // Ensure job_status matches the expected case for the badge component
+              status: capitalizeFirst(j.job_status), 
             }))
           : [];
 
@@ -176,12 +206,14 @@ export default function AppliedJobs() {
     };
 
     fetchFreelancerJobs();
-  }, [freelancerId]);
+  }, [freelancerUserId]); // 💡 DEPENDENCY: Use the new state variable
 
   
 
   const filteredJobs =
     filter === "All" ? jobs : jobs.filter((job) => job.status === filter);
+
+  // --- JSX REMAINS LARGELY THE SAME ---
 
   return (
     <>
@@ -194,8 +226,12 @@ export default function AppliedJobs() {
             <div className="dashboard_title_area">
               <h2>Applied Jobs</h2>
               <p className="text">Manage all your applied job listings and their statuses.</p>
-              {/* Freelancer ID display removed per request */}
-              {/* (job numbers removed) */}
+               {/* Display current user ID for debugging */}
+               <p className="text-muted small">
+                User ID: **{freelancerUserId || 'N/A'}** | 
+                Profile Status: **{loading ? 'Fetching...' : fetchError ? 'Error' : 'Ready'}** | 
+                Jobs Status: **{jobsLoading ? 'Fetching...' : jobsError ? 'Error' : `${jobs.length} jobs loaded`}**
+               </p>
             </div>
           </div>
           <div className="col-lg-3">
@@ -238,7 +274,19 @@ export default function AppliedJobs() {
                     </tr>
                   </thead>
                   <tbody className="t-body">
-                    {filteredJobs.length > 0 ? (
+                    {jobsLoading ? (
+                        <tr>
+                            <td colSpan="5" className="text-center">
+                            Loading jobs...
+                            </td>
+                        </tr>
+                    ) : jobsError ? (
+                        <tr>
+                            <td colSpan="5" className="text-center text-danger">
+                            Error fetching jobs: {jobsError}
+                            </td>
+                        </tr>
+                    ) : filteredJobs.length > 0 ? (
                       filteredJobs.map((job) => (
                         <AppliedJobsRow key={job.id} job={job} />
                       ))

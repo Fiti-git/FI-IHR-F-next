@@ -27,7 +27,7 @@ export default function ProjectDetail1() {
 
   // API URLs
    const BASE_API_URL = process.env.NEXT_PUBLIC_BASE_API_URL || "http://206.189.134.117:8000";
-   const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000/api/project";
+   const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://206.189.134.117:8000/api/project";
 
    // Fetch current user profile to determine role
 useEffect(() => {
