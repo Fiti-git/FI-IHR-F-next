@@ -126,7 +126,10 @@ export default function JobProviderProfile() {
             setInitialProfileData(data);
             setHasProfile(true);
             if (data.profile_image) {
-              setSelectedImage(data.profile_image);
+              const fullImageUrl = data.profile_image.startsWith("http")
+                ? data.profile_image
+                : `http://206.189.134.117:8000${data.profile_image}`;
+              setSelectedImage(fullImageUrl);
             }
           } else {
             setIsEditMode(true);
@@ -146,13 +149,14 @@ export default function JobProviderProfile() {
     fetchProfileData();
   }, [router]);
 
-  const handleImageChange = (event) => {
-    const file = event.target.files[0];
-    if (file) {
-      setSelectedImage(URL.createObjectURL(file));
-      setProfileData({ ...profileData, profile_image: file });
-    }
-  };
+const handleResumeChange = (event) => {
+  const file = event.target.files[0];
+  if (file) {
+    setSelectedResume(file.name);
+    setProfileData({ ...profileData, resume: file });
+  }
+};
+
 
   const handleChange = (e) => {
     const { name, value } = e.target;

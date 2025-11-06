@@ -5,93 +5,80 @@ import { useState, useEffect } from "react";
 import Pagination1 from "@/components/section/Pagination1";
 import ProposalModal1 from "../modal/ProposalModal1";
 import DeleteModal from "../modal/DeleteModal";
+import { useRouter } from "next/navigation"; // Next.js 13+ app router
 
-const fetchJobs = async () => {
+// Fetch jobs function
+const fetchJobs = async (accessToken) => {
+  if (!accessToken) {
+    return { jobs: [], unauthorized: true }; // signal to redirect
+  }
+
   try {
-    let accessToken;
-    
-    // Get token safely in client-side
-    if (typeof window !== 'undefined') {
-      accessToken = localStorage.getItem("accessToken");
-    }
-
-    if (!accessToken) {
-      console.error('No access token found');
-      return [];
-    }
-
     const response = await fetch("http://206.189.134.117:8000/api/job-manage/", {
       method: "GET",
       headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        "Authorization": `Bearer ${accessToken}`
-      }
+        "Content-Type": "application/json",
+        Accept: "application/json",
+        Authorization: `Bearer ${accessToken}`,
+      },
     });
+
+    if (response.status === 401) {
+      return { jobs: [], unauthorized: true }; // invalid token
+    }
 
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
 
     const data = await response.json();
-    
-    // Transform the data to match the component's expected format
-    return data.jobs.map(job => ({
+
+    const jobsData = data.jobs.map((job) => ({
       id: job.job_id,
       title: job.job_title,
       category: job.job_category,
       date: job.date_posted,
-      status: job.job_status || "Open", // Default to "Open" if status is not provided
+      status: job.job_status || "Open",
       salary: job.salary_range,
-      location: job.location
+      location: job.location,
     }));
+
+    return { jobs: jobsData, unauthorized: false };
   } catch (error) {
-    console.error('Error fetching jobs:', error);
-    return [];
+    console.error("Error fetching jobs:", error);
+    return { jobs: [], unauthorized: false };
   }
 };
 
-// Icon button component for consistent style
-const IconButton = ({ onClick, title, iconClass, colorClass }) => (
-  <button
-    onClick={onClick}
-    title={title}
-    className={`btn btn-icon btn-sm ${colorClass || "btn-primary"} me-2`}
-    style={{ border: "none", background: "transparent", cursor: "pointer" }}
-  >
-    <i className={iconClass} />
-  </button>
-);
-
 // Status badge component
 const StatusBadge = ({ status }) => {
-  const raw = (status ?? '').toString().trim();
+  const raw = (status ?? "").toString().trim();
   const key = raw.toLowerCase();
 
   const colorClass = (() => {
     switch (key) {
-      case 'open':
-        return 'badge bg-success'; // green
-      case 'closed':
-        return 'badge bg-danger'; // red
-      case 'pending':
-      case 'in review':
-      case 'in-review':
-        return 'badge bg-warning text-dark'; // yellow
-      case 'draft':
-        return 'badge bg-secondary'; // gray
-      case 'paused':
-        return 'badge bg-info text-dark'; // light blue
-      case 'filled':
-        return 'badge bg-primary'; // blue
+      case "open":
+        return "badge bg-success";
+      case "closed":
+        return "badge bg-danger";
+      case "pending":
+      case "in review":
+      case "in-review":
+        return "badge bg-warning text-dark";
+      case "draft":
+        return "badge bg-secondary";
+      case "paused":
+        return "badge bg-info text-dark";
+      case "filled":
+        return "badge bg-primary";
       default:
-        return 'badge bg-secondary';
+        return "badge bg-secondary";
     }
   })();
 
   const label = raw
     ? raw.toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase())
-    : 'Unknown';
+    : "Unknown";
 
   return <span className={colorClass}>{label}</span>;
 };
@@ -101,17 +88,20 @@ function PostedJobsRow({ job }) {
   return (
     <tr>
       <td>{job.title}</td>
-      <td>{
-        typeof job.category === 'string' && job.category.length > 0
+      <td>
+        {typeof job.category === "string" && job.category.length > 0
           ? job.category[0].toUpperCase() + job.category.slice(1)
-          : job.category
-      }</td>
-      <td>{job.date ? new Date(job.date).toLocaleDateString() : 'N/A'}</td>
+          : job.category}
+      </td>
+      <td>{job.date ? new Date(job.date).toLocaleDateString() : "N/A"}</td>
       <td>
         <StatusBadge status={job.status} />
       </td>
       <td>
-        <Link href={`/jobs/${job.id}`} className="btn btn-sm btn-outline-primary me-2">
+        <Link
+          href={`/jobs/${job.id}`}
+          className="btn btn-sm btn-outline-primary me-2"
+        >
           View
         </Link>
       </td>
@@ -119,21 +109,35 @@ function PostedJobsRow({ job }) {
   );
 }
 
+// Main Component
 export default function PostedJobs() {
   const [filter, setFilter] = useState("All");
   const [jobs, setJobs] = useState([]);
   const [loading, setLoading] = useState(true);
+  const router = useRouter();
 
   useEffect(() => {
     const loadJobs = async () => {
       setLoading(true);
-      const jobsData = await fetchJobs();
+
+      let accessToken;
+      if (typeof window !== "undefined") {
+        accessToken = localStorage.getItem("accessToken");
+      }
+
+      const { jobs: jobsData, unauthorized } = await fetchJobs(accessToken);
+
+      if (unauthorized) {
+        router.push("/login"); // redirect if no token or invalid
+        return;
+      }
+
       setJobs(jobsData);
       setLoading(false);
     };
 
     loadJobs();
-  }, []);
+  }, [router]);
 
   const filteredJobs =
     filter === "All" ? jobs : jobs.filter((job) => job.status === filter);
@@ -153,7 +157,10 @@ export default function PostedJobs() {
           </div>
           <div className="col-lg-3">
             <div className="text-lg-end">
-              <Link href="/create-jobs" className="ud-btn btn-dark default-box-shadow2">
+              <Link
+                href="/create-jobs"
+                className="ud-btn btn-dark default-box-shadow2"
+              >
                 Post Job <i className="fal fa-arrow-right-long" />
               </Link>
             </div>

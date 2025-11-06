@@ -128,8 +128,22 @@ export default function ProfileDetails() {
             setInitialProfileData(fullProfileData);
             setHasProfile(true);
 
-            if (data.profile_image) setSelectedImage(data.profile_image);
-            if (data.resume) setSelectedResumeName(data.resume.split('/').pop());
+            if (data.profile_image) {
+              const fullImageUrl = data.profile_image.startsWith("http")
+                ? data.profile_image
+                : `http://206.189.134.117:8000${data.profile_image}`;
+              setSelectedImage(fullImageUrl);
+            }
+
+            if (data.resume) {
+              const fullResumeUrl = data.resume.startsWith("http")
+                ? data.resume
+                : `http://206.189.134.117:8000${data.resume}`;
+              setSelectedResumeName(fullResumeUrl.split('/').pop());
+              // Store full URL so we can link it later
+              setProfileData((prev) => ({ ...prev, resume: fullResumeUrl }));
+            }
+
           } else {
             setIsEditMode(true);
             setHasProfile(false);
@@ -273,7 +287,26 @@ export default function ProfileDetails() {
         {/* ... (The rest of your JSX remains exactly the same) ... */}
         <div className="profile-box d-sm-flex align-items-center mb30">
           <div className="profile-img mb20-sm">
-            <Image height={71} width={71} className="rounded-circle wa-xs" src={selectedImage || "/images/team/fl-1.png"} style={{ height: "71px", width: "71px", objectFit: "cover" }} alt="profile" />
+            {selectedImage ? (
+  <Image
+    height={71}
+    width={71}
+    className="rounded-circle wa-xs"
+    src={selectedImage}
+    style={{ height: "71px", width: "71px", objectFit: "cover" }}
+    alt="profile"
+  />
+) : (
+  <Image
+    height={71}
+    width={71}
+    className="rounded-circle wa-xs"
+    src="/images/team/fl-1.png"
+    style={{ height: "71px", width: "71px", objectFit: "cover" }}
+    alt="default-profile"
+  />
+)}
+
           </div>
           {isEditMode &&
             <div className="profile-content ml20 ml0-xs">
@@ -378,7 +411,25 @@ export default function ProfileDetails() {
                       <span className="ud-btn btn-white">Choose File<i className="fal fa-arrow-right-long ms-2"></i></span>
                     </label>
                   )}
-                  {selectedResumeName && <p className="mb-0 text-muted">Current: {selectedResumeName}</p>}
+{profileData.resume && !(profileData.resume instanceof File) && (
+  <p className="mb-0 text-muted">
+    Current:{" "}
+    <a
+      href={
+        typeof profileData.resume === "string" && profileData.resume.startsWith("http")
+          ? profileData.resume
+          : `http://206.189.134.117:8000${profileData.resume}`
+      }
+      target="_blank"
+      rel="noopener noreferrer"
+      className="text-thm"
+    >
+      {selectedResumeName || "View Resume"}
+    </a>
+  </p>
+)}
+
+
                 </div>
               </div>
             </div>
