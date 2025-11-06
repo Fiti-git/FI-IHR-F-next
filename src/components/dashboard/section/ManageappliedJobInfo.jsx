@@ -290,3 +290,4 @@ export default function AppliedJobDetailPage() {
     </div>
   );
 }
+// End of AppliedJobDetailPage component
