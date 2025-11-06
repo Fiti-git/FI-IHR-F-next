@@ -1155,18 +1155,18 @@ export default function JobDetailPage() {
           <div className="d-flex justify-content-center align-items-center" style={{ minHeight: '100vh' }}>
             <div className="bg-white p-4 rounded" style={{ width: 360 }}>
               <h5 className="mb-3">Rate {ratingApplicant.name}</h5>
-              <div className="mb-3 d-flex align-items-center">
-                {[1,2,3,4,5].map((n) => (
-                  <button
-                    key={n}
-                    type="button"
-                    className={`btn btn-sm me-2 ${ratingValue >= n ? 'btn-warning text-dark' : 'btn-outline-secondary'}`}
-                    onClick={() => setRatingValue(n)}
-                    title={`${n} star${n>1?'s':''}`}
-                  >
-                    <i className="fal fa-star" /> {n}
-                  </button>
-                ))}
+              <div className="mb-3">
+                <label className="form-label">Rating (0 - 5)</label>
+                <input
+                  type="number"
+                  min="0"
+                  max="5"
+                  step="0.5"
+                  className="form-control"
+                  placeholder="Enter rating"
+                  value={ratingValue}
+                  onChange={(e) => setRatingValue(e.target.value)}
+                />
               </div>
               <div className="d-flex justify-content-end">
                 <button className="btn btn-secondary me-2" onClick={() => { setShowRatingModal(false); setRatingApplicant(null); }}>Cancel</button>
@@ -1176,11 +1176,21 @@ export default function JobDetailPage() {
                     return;
                   }
                   const appId = getApplicationIdFromApplicant(ratingApplicant) || ratingApplicant.id;
+                  // parse and validate rating
+                  const parsed = Number(ratingValue);
+                  if (Number.isNaN(parsed)) {
+                    alert('Please enter a valid numeric rating');
+                    return;
+                  }
+                  if (parsed < 0 || parsed > 5) {
+                    alert('Please enter a rating between 0 and 5');
+                    return;
+                  }
                   // optimistic UI
-                  setRatings(prev => ({ ...prev, [ratingApplicant.id]: ratingValue }));
-                  setApplicants(prev => prev.map(a => a.id === ratingApplicant.id ? { ...a, rating: ratingValue } : a));
+                  setRatings(prev => ({ ...prev, [ratingApplicant.id]: parsed }));
+                  setApplicants(prev => prev.map(a => a.id === ratingApplicant.id ? { ...a, rating: parsed } : a));
                   try {
-                    await updateApplication(appId, { rating: ratingValue });
+                    await updateApplication(appId, { rating: parsed });
                     setShowRatingModal(false);
                     setRatingApplicant(null);
                   } catch (e) {
