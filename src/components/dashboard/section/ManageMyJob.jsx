@@ -226,12 +226,13 @@ export default function AppliedJobs() {
             <div className="dashboard_title_area">
               <h2>Applied Jobs</h2>
               <p className="text">Manage all your applied job listings and their statuses.</p>
-               {/* Display current user ID for debugging */}
-               <p className="text-muted small">
-                User ID: **{freelancerUserId || 'N/A'}** | 
-                Profile Status: **{loading ? 'Fetching...' : fetchError ? 'Error' : 'Ready'}** | 
-                Jobs Status: **{jobsLoading ? 'Fetching...' : jobsError ? 'Error' : `${jobs.length} jobs loaded`}**
-               </p>
+          {/* Debug info hidden per request
+          <p className="text-muted small">
+           User ID: **{freelancerUserId || 'N/A'}** | 
+           Profile Status: **{loading ? 'Fetching...' : fetchError ? 'Error' : 'Ready'}** | 
+           Jobs Status: **{jobsLoading ? 'Fetching...' : jobsError ? 'Error' : `${jobs.length} jobs loaded`}**
+          </p>
+          */}
             </div>
           </div>
           <div className="col-lg-3">

@@ -12,11 +12,68 @@ export default function AppliedJobDetailPage() {
   const [job, setJob] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  // Status coming from interviews (e.g., Scheduled)
   const [userApplicationStatus, setUserApplicationStatus] = useState("");
   const [interviewDetails, setInterviewDetails] = useState(null);
+  // Status coming from Job Provider decision (Accepted/Rejected/Pending)
+  const [applicationStatus, setApplicationStatus] = useState("");
+  // Whether the job is open or closed (derived)
+  const [isJobOpen, setIsJobOpen] = useState(true);
   
   // Base URL for API calls
   const API_BASE_URL = "http://206.189.134.117:8000/api";
+
+  // --- Helpers ---
+  function safeParseInt(value) {
+    const n = parseInt(value, 10);
+    return Number.isFinite(n) ? n : null;
+  }
+
+  function decodeJwt(token) {
+    try {
+      const base64Url = token.split(".")[1];
+      if (!base64Url) return null;
+      const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
+      const jsonPayload = decodeURIComponent(
+        atob(base64)
+          .split("")
+          .map(function (c) {
+            return "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2);
+          })
+          .join("")
+      );
+      return JSON.parse(jsonPayload);
+    } catch (e) {
+      return null;
+    }
+  }
+
+  function getCurrentFreelancerId() {
+    // Try common localStorage keys first
+    const lsKeys = [
+      "freelancerId",
+      "freelance_id",
+      "freelancer_id",
+      "userId",
+      "user_id",
+    ];
+    for (const k of lsKeys) {
+      const v = localStorage.getItem(k);
+      const parsed = safeParseInt(v);
+      if (parsed) return parsed;
+    }
+    // Fallback: try to decode from JWT
+    const token = localStorage.getItem("accessToken");
+    if (token) {
+      const payload = decodeJwt(token) || {};
+      const possibleKeys = ["freelancer_id", "freelance_id", "user_id", "id"]; 
+      for (const k of possibleKeys) {
+        const parsed = safeParseInt(payload?.[k]);
+        if (parsed) return parsed;
+      }
+    }
+    return null;
+  }
 
   // --- Fetch Job Details ---
   useEffect(() => {
@@ -43,6 +100,17 @@ export default function AppliedJobDetailPage() {
 
         const data = await res.json();
         setJob(data);
+        // Derive Open/Closed from application_deadline when available
+        try {
+          if (data?.application_deadline) {
+            const deadline = new Date(data.application_deadline);
+            setIsJobOpen(!isNaN(deadline) ? Date.now() <= deadline.getTime() : true);
+          } else {
+            setIsJobOpen(true);
+          }
+        } catch {
+          setIsJobOpen(true);
+        }
       } catch (err) {
         console.error("Error fetching job:", err);
         setError(err.message);
@@ -144,6 +212,54 @@ export default function AppliedJobDetailPage() {
     }
   }, [jobId]);
 
+  // --- Fetch Application Status (Accepted/Rejected/Pending) ---
+  useEffect(() => {
+    async function fetchApplications() {
+      try {
+        const token = localStorage.getItem("accessToken");
+        if (!token) return;
+        const res = await fetch(`${API_BASE_URL}/job-application/job/${jobId}`, {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        if (!res.ok) {
+          console.warn(`Failed to fetch applications (Status: ${res.status}).`);
+          setApplicationStatus("");
+          return;
+        }
+
+        const data = await res.json();
+        const apps = Array.isArray(data) ? data : Array.isArray(data?.applications) ? data.applications : [];
+        if (!apps.length) {
+          setApplicationStatus("");
+          return;
+        }
+
+        const myFreelancerId = getCurrentFreelancerId();
+        if (!myFreelancerId) {
+          console.warn("Could not determine current freelancer id. Skipping application status.");
+          setApplicationStatus("");
+          return;
+        }
+
+        const mine = apps.find(a => safeParseInt(a?.freelance_id) === myFreelancerId);
+        const status = (mine?.status || "").trim();
+        setApplicationStatus(status);
+      } catch (err) {
+        console.error("Error fetching applications:", err);
+        setApplicationStatus("");
+      }
+    }
+
+    if (jobId && !isNaN(jobId)) {
+      fetchApplications();
+    }
+  }, [jobId]);
+
   // --- Render Logic ---
 
   if (loading) {
@@ -171,11 +287,24 @@ export default function AppliedJobDetailPage() {
     Interview: "badge bg-warning text-dark",
     Hired: "badge bg-success",
     Scheduled: "badge bg-info text-white", // Added for new interview status
+    Accepted: "badge bg-success",
+    Open: "badge bg-primary",
+    Closed: "badge bg-dark",
     // Default to 'Pending' if the status is empty string or unrecognized
   };
 
-  const currentStatus = userApplicationStatus || "Pending";
-  const badgeClass = statusBadgeClass[currentStatus] || "badge bg-secondary";
+  // Compute the display status with precedence:
+  // Rejected > Accepted > Scheduled > Open/Closed > Pending
+  const displayStatus = (() => {
+    const app = (applicationStatus || "").toLowerCase();
+    if (app === "rejected") return "Rejected";
+    if (app === "accepted") return "Accepted";
+    const iv = (userApplicationStatus || interviewDetails?.status || "").toLowerCase();
+    if (iv.includes("scheduled")) return "Scheduled";
+    return isJobOpen ? "Open" : "Closed";
+  })();
+
+  const badgeClass = statusBadgeClass[displayStatus] || "badge bg-secondary";
 
   return (
     <div className="dashboard__content hover-bgc-color container mt-5">
@@ -199,7 +328,7 @@ export default function AppliedJobDetailPage() {
       <div className="mb-4">
         <strong>Status: </strong>
         <span className={badgeClass}>
-          {currentStatus}
+          {displayStatus}
         </span>
       </div>
 
