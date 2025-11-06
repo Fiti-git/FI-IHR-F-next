@@ -58,7 +58,7 @@ export default function Listing11() {
     const imageUrl = provider.profile_image 
       ? (provider.profile_image.startsWith('http') 
           ? provider.profile_image 
-          : `http://127.0.0.1:8000${provider.profile_image}`)
+          : `http://206.189.134.117:8000/${provider.profile_image}`)
       : "/images/team/default-company.png";
 
     // Extract user data from nested user object
