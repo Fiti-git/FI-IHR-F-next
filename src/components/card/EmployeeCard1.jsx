@@ -10,22 +10,28 @@ export default function EmployeeCard1({ data }) {
             height={60}
             width={60}
             className="wa"
-            src={data.img}
-            alt="icon"
+            src={data.img || "/images/team/default-company.png"}
+            alt={data.server || "Company"}
           />
           <h6 className="mb-0 ml20">
-            <Link href={`/employee-single/${data.id}`}>{data.server}</Link>
+            <Link href={`/employee-single/${data.id}`}>
+              {data.server || data.companyName || "Company"}
+            </Link>
           </h6>
           <span className="fav-icon flaticon-star" />
         </div>
         <div className="details">
           <p>
             <i className="fas fa-star fz10 review-color pr10" />
-            <span className="dark-color">{data.rating}</span> ({data.review}
-            reviews)
+            <span className="dark-color">{data.rating || "0.0"}</span> (
+            {data.review || "0"} reviews)
           </p>
-          <p className="list-inline-item mb-3">{data.location}</p>
-          <p className="list-inline-item mb-3 bdrl1 pl15">Open 29 Jobs</p>
+          <p className="list-inline-item mb-3">
+            {data.location || data.country || "Location"}
+          </p>
+          <p className="list-inline-item mb-3 bdrl1 pl15">
+            {data.category || "Industry"} • {data.jobs || "Job Type"}
+          </p>
         </div>
       </div>
     </>

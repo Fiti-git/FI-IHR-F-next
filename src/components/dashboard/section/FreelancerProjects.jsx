@@ -113,7 +113,8 @@ export default function FreelancerProjects() {
       }
 
       // Fetch proposals submitted by the authenticated freelancer
-      const response = await fetch(`${API_URL}my_proposals/`, {
+      // FIXED: Added '/proposals/' before '/my_proposals/'
+      const response = await fetch(`${API_URL}/proposals/my_proposals/`, {
         method: "GET",
         headers: {
           "Content-Type": "application/json",

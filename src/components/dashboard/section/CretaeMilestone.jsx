@@ -37,8 +37,8 @@ export default function CreateMilestone() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [actionLoading, setActionLoading] = useState({}); // Track loading state for individual actions
 
-  // API URL
-  const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://206.189.134.117:8000/api/project/milestones/";
+  // API URL - FIXED: Changed to base API URL without /milestones/
+  const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://206.189.134.117:8000/api/project";
 
   // Verify freelancer access on component mount
   useEffect(() => {
@@ -72,8 +72,9 @@ export default function CreateMilestone() {
     const token = localStorage.getItem('accessToken');
     
     try {
+      // FIXED: Added proper slash before milestones
       const response = await fetch(
-        `${API_URL}milestones/verify_freelancer_access/?project_id=${project.id}`,
+        `${API_URL}/milestones/verify_freelancer_access/?project_id=${project.id}`,
         {
           method: "GET",
           headers: {
@@ -121,8 +122,9 @@ export default function CreateMilestone() {
     const token = localStorage.getItem('accessToken');
     
     try {
+      // FIXED: Added proper slash before milestones
       const response = await fetch(
-        `${API_URL}milestones/?project_id=${project.id}`,
+        `${API_URL}/milestones/?project_id=${project.id}`,
         {
           method: "GET",
           headers: {
@@ -229,7 +231,8 @@ export default function CreateMilestone() {
     try {
       console.log("Creating milestone:", milestoneData);
 
-      const response = await fetch(`${API_URL}milestones/`, {
+      // FIXED: Added proper slash before milestones
+      const response = await fetch(`${API_URL}/milestones/`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -311,7 +314,8 @@ export default function CreateMilestone() {
     const token = localStorage.getItem('accessToken');
     
     try {
-      const response = await fetch(`${API_URL}milestones/${milestoneId}/complete/`, {
+      // FIXED: Added proper slash before milestones
+      const response = await fetch(`${API_URL}/milestones/${milestoneId}/complete/`, {
         method: "PATCH",
         headers: {
           "Authorization": `Bearer ${token}`,
@@ -348,7 +352,8 @@ export default function CreateMilestone() {
     const token = localStorage.getItem('accessToken');
     
     try {
-      const response = await fetch(`${API_URL}milestones/${milestoneId}/`, {
+      // FIXED: Added proper slash before milestones
+      const response = await fetch(`${API_URL}/milestones/${milestoneId}/`, {
         method: "PATCH",
         headers: {
           "Authorization": `Bearer ${token}`,
@@ -390,7 +395,8 @@ export default function CreateMilestone() {
     const token = localStorage.getItem('accessToken');
     
     try {
-      const response = await fetch(`${API_URL}milestones/${milestoneId}/`, {
+      // FIXED: Added proper slash before milestones
+      const response = await fetch(`${API_URL}/milestones/${milestoneId}/`, {
         method: "DELETE",
         headers: {
           "Authorization": `Bearer ${token}`
