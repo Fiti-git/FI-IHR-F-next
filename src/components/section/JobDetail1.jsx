@@ -98,6 +98,70 @@ export default function JobDetail1() {
     return () => { cancelled = true; };
   }, [accessToken]);
 
+  // Check job applications to see if the current freelancer already applied to this job
+  useEffect(() => {
+    if (!id) return;
+    let cancelled = false;
+
+    const checkApplications = async () => {
+      try {
+        const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
+
+        // Try to obtain freelancer profile id first
+        let freelancerProfileId = null;
+        try {
+          if (token) {
+            const pfRes = await fetch('http://127.0.0.1:8000/api/profile/freelancer/', {
+              method: 'GET',
+              headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                'Authorization': `Bearer ${token}`,
+              }
+            });
+            if (pfRes.ok) {
+              const profiles = await pfRes.json().catch(() => null);
+              const arr = Array.isArray(profiles) ? profiles : (profiles && profiles.results) ? profiles.results : [];
+              if (arr && arr.length > 0 && arr[0].id != null) {
+                freelancerProfileId = Number(arr[0].id);
+              }
+            }
+          }
+        } catch (e) {
+          console.debug('Could not fetch freelancer profile for applied-check', e);
+        }
+
+        // Fallback to localStorage user_id
+        const candidateId = (freelancerProfileId != null) ? Number(freelancerProfileId) : (typeof window !== 'undefined' ? Number(localStorage.getItem('user_id')) : null);
+        if (!candidateId) return;
+
+        // Fetch all applications and check for a matching job + freelancer_id
+        const headers = { 'Content-Type': 'application/json', 'Accept': 'application/json' };
+        if (token) headers.Authorization = `Bearer ${token}`;
+
+        const res = await fetch('http://127.0.0.1:8000/api/job-application/', { method: 'GET', headers });
+        if (!res.ok) return;
+        const apps = await res.json().catch(() => null);
+        const appsArray = Array.isArray(apps) ? apps : (apps && apps.results) ? apps.results : [];
+
+        const found = appsArray.some(a => {
+          try {
+            return Number(a.job) === Number(id) && Number(a.freelancer_id) === Number(candidateId);
+          } catch (e) {
+            return false;
+          }
+        });
+
+        if (!cancelled && found) setApplied(true);
+      } catch (e) {
+        console.error('Error checking existing applications', e);
+      }
+    };
+
+    checkApplications();
+    return () => { cancelled = true; };
+  }, [accessToken, id]);
+
   const handleApply = () => setApplied(true);
   // Local modal state for application (no APIs)
   const [showApplyModal, setShowApplyModal] = useState(false);
@@ -328,7 +392,10 @@ export default function JobDetail1() {
                         <i className="fal fa-arrow-right-long" />
                       </button>
                     ) : (
-                      <div className="success-message">Successfully Applied</div>
+                      <div className="alert alert-primary d-flex align-items-center mb-0" role="alert">
+                        <i className="fal fa-lock fa-lg me-3" aria-hidden="true" />
+                        <div className="mb-0">Your Application is in Progress</div>
+                      </div>
                     )
                   )}
                 </div>
