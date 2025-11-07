@@ -3,11 +3,14 @@
 import { useState, useEffect } from "react";
 import { useParams, useSearchParams } from "next/navigation";
 import Link from "next/link";
+import Sticky from "react-stickynode";
+import useScreen from "@/hook/useScreen";
 
 export default function JobDetail1() {
   const params = useParams();
   const search = useSearchParams();
   const id = params?.id || search?.get("id");
+  const isMatchedScreen = useScreen(1216);
   const [job, setJob] = useState(null);
   const [loading, setLoading] = useState(true);
   const [applied, setApplied] = useState(false);
@@ -314,9 +317,9 @@ export default function JobDetail1() {
     if (!text) return null;
     const lines = String(text).split(/\r?\n/).map(l => l.trim()).filter(Boolean);
     if (lines.length === 0) return null;
-    if (lines.length === 1) return <p className="text mb30">{lines[0]}</p>;
+    if (lines.length === 1) return <p className="text mb20">{lines[0]}</p>;
     return (
-      <div className="list-style1 mb60 pr50 pr0-lg">
+      <div className="list-style1 mb30 pr30 pr0-lg">
         <ul>
           {lines.map((line, idx) => (
             <li key={idx}><i className="far fa-check text-thm3 bgc-thm3-light" /> {line}</li>
@@ -326,103 +329,144 @@ export default function JobDetail1() {
     );
   };
 
+  // Apply control to render in sidebar (keeps existing logic)
+  const applyControl = (!isJobProvider) ? (
+    <>
+      {!applied ? (
+        <div className="d-grid mb-3">
+          <button
+            className="ud-btn btn-thm2"
+            onClick={(e) => {
+              e.preventDefault();
+              openApplyModal();
+            }}
+          >
+            Apply For Job
+            <i className="fal fa-arrow-right-long" />
+          </button>
+        </div>
+      ) : (
+        <div className="alert alert-primary d-flex align-items-center mb-3" role="alert">
+          <i className="fal fa-lock fa-lg me-3" aria-hidden="true" />
+          <div className="mb-0">Your Application is in Progress</div>
+        </div>
+      )}
+
+      {/* Job meta shown beneath the apply control */}
+      <div className="job-sidebar-meta mt-2">
+        <ul className="list-unstyled mb-0 small">
+          <li><strong>Application Deadline:</strong> {job?.application_deadline ? new Date(job.application_deadline).toLocaleDateString() : 'N/A'}</li>
+          <li><strong>Expected Start Date:</strong> {job?.expected_start_date ? new Date(job.expected_start_date).toLocaleDateString() : 'N/A'}</li>
+          <li><strong>Interview Mode:</strong> {job?.interview_mode || 'N/A'}</li>
+          <li><strong>Salary Range:</strong> {job?.salary_from || '-'} - {job?.salary_to || '-'} {job?.currency || ''}</li>
+          <li><strong>Job Type:</strong> {job?.job_type || 'N/A'}</li>
+          <li><strong>Work Location:</strong> {job?.work_location || 'N/A'}</li>
+        </ul>
+      </div>
+    </>
+  ) : null;
+
   return (
     <>
-      <section className="pt10 pb90 pb30-md">
+      <section className="pt20 pb60">
         <div className="container">
-          <div className="row wow fadeInUp">
-            <div className="col-lg-8 mx-auto">
-              <div className="service-about">
-                <h4 className="mb-4">Description</h4>
-                {job.role_overview ? (
-                  <p className="text mb30">{job.role_overview}</p>
-                ) : (
-                  <p className="text mb30">No description provided.</p>
-                )}
-
-                {job.key_responsibilities && (
-                  <>
-                    <h4 className="mb30">Key Responsibilities</h4>
-                    {renderMultiline(job.key_responsibilities)}
-                  </>
-                )}
-
-                {job.required_qualifications && (
-                  <>
-                    <h4 className="mb30">Required Qualifications</h4>
-                    {renderMultiline(job.required_qualifications)}
-                  </>
-                )}
-
-                {job.preferred_qualifications && (
-                  <>
-                    <h4 className="mb30">Preferred Qualifications</h4>
-                    {renderMultiline(job.preferred_qualifications)}
-                  </>
-                )}
-
-                <div className="job-single-meta">
-                  <h4 className="mb20">Additional Information</h4>
-                  <ul className="list-style-type-bullet mb40">
-                    <li><strong>Department:</strong> {job.department}</li>
-                    <li><strong>Job Type:</strong> {job.job_type}</li>
-                    <li><strong>Work Location:</strong> {job.work_location}</li>
-                    <li><strong>Work Mode:</strong> {job.work_mode}</li>
-                    <li><strong>Languages Required:</strong> {job.language_required || job.languages_required || 'None specified'}</li>
-                    <li><strong>Salary Range:</strong> {job.salary_from || '-'} - {job.salary_to || '-'} {job.currency || ''}</li>
-                    <li><strong>Application Deadline:</strong> {job.application_deadline ? new Date(job.application_deadline).toLocaleDateString() : 'N/A'}</li>
-                    <li><strong>Interview Mode:</strong> {job.interview_mode}</li>
-                    <li><strong>Hiring Manager:</strong> {job.hiring_manager}</li>
-                    <li><strong>Number of Openings:</strong> {job.number_of_openings ?? 'N/A'}</li>
-                    <li><strong>Expected Start Date:</strong> {job.expected_start_date ? new Date(job.expected_start_date).toLocaleDateString() : 'N/A'}</li>
-                  </ul>
-                </div>
-
-                <div className="d-grid mb60">
-                  {!isJobProvider && (
-                    !applied ? (
-                      <button
-                        className="ud-btn btn-thm2"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          openApplyModal();
-                        }}
-                      >
-                        Apply For Job
-                        <i className="fal fa-arrow-right-long" />
-                      </button>
+          <div className="row wrap">
+            <div className="col-lg-8">
+              <div className="column">
+                <div className="scrollbalance-inner">
+                  <div className="service-about">
+                    <h4 className="mb-4">Description</h4>
+                    {job.role_overview ? (
+                      <p className="text mb20">{job.role_overview}</p>
                     ) : (
-                      <div className="alert alert-primary d-flex align-items-center mb-0" role="alert">
-                        <i className="fal fa-lock fa-lg me-3" aria-hidden="true" />
-                        <div className="mb-0">Your Application is in Progress</div>
-                      </div>
-                    )
-                  )}
-                </div>
+                      <p className="text mb20">No description provided.</p>
+                    )}
 
-                {showApplyModal && (
-                  <>
-                    <div className="modal-overlay" style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.5)',zIndex:1050}} onClick={closeApplyModal} />
-                    <div className="apply-modal" style={{position:'fixed',left:'50%',top:'50%',transform:'translate(-50%,-50%)',zIndex:1051,width:'90%',maxWidth:700,background:'#fff',padding:20,borderRadius:8}}>
-                      <h4>Apply for {job.job_title || job.title || job.job_category}</h4>
-                      <form onSubmit={handleLocalSubmit}>
-                        <div style={{marginTop:12}}>
-                          <label className="mb-2 d-block">Upload Resume (PDF, DOC)</label>
-                          <input type="file" accept=".pdf,.doc,.docx" onChange={onResumeChange} />
-                        </div>
-                        {/* Removed resume URL input - file upload only now */}
-                        <div style={{marginTop:12}}>
-                          <label className="mb-2 d-block">Cover Letter</label>
-                          <textarea className="form-control" rows={6} value={coverLetter} onChange={(e)=>setCoverLetter(e.target.value)} />
-                        </div>
-                        {submitError && <div className="alert alert-danger mt-3">{submitError}</div>}
-                        <div className="mt-3 d-flex justify-content-end">
-                          <button type="button" className="btn btn-secondary me-2" onClick={closeApplyModal}>Close</button>
-                          <button type="submit" className="btn btn-primary">Submit</button>
-                        </div>
-                      </form>
+                    {job.key_responsibilities && (
+                      <>
+                        <h4 className="mb20">Key Responsibilities</h4>
+                        {renderMultiline(job.key_responsibilities)}
+                      </>
+                    )}
+
+                    {job.required_qualifications && (
+                      <>
+                        <h4 className="mb20">Required Qualifications</h4>
+                        {renderMultiline(job.required_qualifications)}
+                      </>
+                    )}
+
+                    {job.preferred_qualifications && (
+                      <>
+                        <h4 className="mb20">Preferred Qualifications</h4>
+                        {renderMultiline(job.preferred_qualifications)}
+                      </>
+                    )}
+
+                    <div className="job-single-meta">
+                      <h4 className="mb20">Additional Information</h4>
+                      <div className="list-style1 mb30 pr30 pr0-lg">
+                        <ul>
+                          <li><i className="far fa-check text-thm3 bgc-thm3-light me-2" /> <strong>Department:</strong> {job.department}</li>
+                          <li><i className="far fa-check text-thm3 bgc-thm3-light me-2" /> <strong>Work Mode:</strong> {job.work_mode}</li>
+                          <li><i className="far fa-check text-thm3 bgc-thm3-light me-2" /> <strong>Languages Required:</strong> {job.language_required || job.languages_required || 'None specified'}</li>
+                          <li><i className="far fa-check text-thm3 bgc-thm3-light me-2" /> <strong>Hiring Manager:</strong> {job.hiring_manager}</li>
+                          <li><i className="far fa-check text-thm3 bgc-thm3-light me-2" /> <strong>Number of Openings:</strong> {job.number_of_openings ?? 'N/A'}</li>
+                        </ul>
+                      </div>
                     </div>
-                  </>
+
+                    {/* Apply button moved to sidebar */}
+
+                    {showApplyModal && (
+                      <>
+                        <div className="modal-overlay" style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.5)',zIndex:1050}} onClick={closeApplyModal} />
+                        <div className="apply-modal" style={{position:'fixed',left:'50%',top:'50%',transform:'translate(-50%,-50%)',zIndex:1051,width:'90%',maxWidth:700,background:'#fff',padding:20,borderRadius:8}}>
+                          <h4>Apply for {job.job_title || job.title || job.job_category}</h4>
+                          <form onSubmit={handleLocalSubmit}>
+                            <div style={{marginTop:12}}>
+                              <label className="mb-2 d-block">Upload Resume (PDF, DOC)</label>
+                              <input type="file" accept=".pdf,.doc,.docx" onChange={onResumeChange} />
+                            </div>
+                            {/* Removed resume URL input - file upload only now */}
+                            <div style={{marginTop:12}}>
+                              <label className="mb-2 d-block">Cover Letter</label>
+                              <textarea className="form-control" rows={6} value={coverLetter} onChange={(e)=>setCoverLetter(e.target.value)} />
+                            </div>
+                            {submitError && <div className="alert alert-danger mt-3">{submitError}</div>}
+                            <div className="mt-3 d-flex justify-content-end">
+                              <button type="button" className="btn btn-secondary me-2" onClick={closeApplyModal}>Close</button>
+                              <button type="submit" className="btn btn-primary">Submit</button>
+                            </div>
+                          </form>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Sidebar */}
+            <div className="col-lg-4" id="stikyContainer">
+              <div className="column">
+                {isMatchedScreen ? (
+                  <Sticky bottomBoundary="#stikyContainer">
+                    <div className="scrollbalance-inner">
+                      <div className="blog-sidebar ms-lg-auto">
+                        <div className="card mb20 p-3">
+                          {applyControl}
+                        </div>
+                        {/* Sidebar left intentionally blank for other widgets */}
+                      </div>
+                    </div>
+                  </Sticky>
+                ) : (
+                  <div className="scrollbalance-inner">
+                    <div className="blog-sidebar ms-lg-auto">
+                      {/* Sidebar left intentionally blank to preserve job content only */}
+                    </div>
+                  </div>
                 )}
               </div>
             </div>
