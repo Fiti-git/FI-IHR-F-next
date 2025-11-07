@@ -21,6 +21,7 @@ export default function BasicInformation2() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(false);
+  const [createdProject, setCreatedProject] = useState(null); // Store created project data
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [userRole, setUserRole] = useState(null); // 'freelancer' or 'job-provider'
   const [isCheckingRole, setIsCheckingRole] = useState(true);
@@ -142,14 +143,27 @@ export default function BasicInformation2() {
       }
 
       // Validate file type
-      if (!file.type.startsWith('image/')) {
-        setError("Please select a valid image file");
+      const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+      if (!validTypes.includes(file.type)) {
+        setError("Please select a valid image file (JPG, PNG, GIF, WEBP)");
         return;
       }
 
       setImage(file);
-      setImagePreview(URL.createObjectURL(file));
+      
+      // Create preview using FileReader
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(reader.result);
+      };
+      reader.readAsDataURL(file);
+      
       setError(null);
+      console.log("Image selected:", {
+        name: file.name,
+        size: `${(file.size / 1024).toFixed(2)} KB`,
+        type: file.type
+      });
     }
   };
 
@@ -162,6 +176,7 @@ export default function BasicInformation2() {
     if (fileInput) {
       fileInput.value = '';
     }
+    console.log("Image removed");
   };
 
   // Handle form submission
@@ -170,6 +185,7 @@ export default function BasicInformation2() {
     setLoading(true);
     setError(null);
     setSuccess(false);
+    setCreatedProject(null);
 
     // Check if user is authenticated
     const token = localStorage.getItem('accessToken');
@@ -258,27 +274,48 @@ export default function BasicInformation2() {
       return;
     }
 
-    // Prepare data for API using FormData (required for file upload)
+    // Prepare FormData for file upload
     const formData = new FormData();
     formData.append('title', title.trim());
     formData.append('description', description.trim());
     formData.append('category', category.option);
-    formData.append('budget', numericBudget);
+    formData.append('budget', numericBudget.toString());
     formData.append('project_type', projectType.value === "fixed_price" ? "fixed_price" : "hourly");
-    formData.append('deadline', deadline);
+    
+    // Format deadline to ISO string (Django expects datetime in ISO format)
+    const formattedDeadline = new Date(deadline).toISOString();
+    formData.append('deadline', formattedDeadline);
+    
     formData.append('visibility', visibility.value);
     
-    // Add image if selected
+    // Add image if selected (IMPORTANT: Must match the field name in Django model)
     if (image) {
-      formData.append('image', image);
+      formData.append('image', image, image.name);
+      console.log("Image attached to form:", {
+        name: image.name,
+        size: `${(image.size / 1024).toFixed(2)} KB`,
+        type: image.type
+      });
+    }
+
+    // Debug: Log FormData contents
+    console.log("FormData contents:");
+    for (let [key, value] of formData.entries()) {
+      if (value instanceof File) {
+        console.log(`${key}: [File] ${value.name} (${value.size} bytes)`);
+      } else {
+        console.log(`${key}: ${value}`);
+      }
     }
 
     try {
-      console.log("Sending project data...");
+      console.log("Sending project data to:", API_URL);
       
       const response = await fetch(API_URL, {
         method: "POST",
         headers: {
+          // IMPORTANT: Do NOT set Content-Type header when sending FormData
+          // Browser will automatically set it with the correct boundary
           "Authorization": `Bearer ${token}`
         },
         body: formData,
@@ -346,12 +383,19 @@ export default function BasicInformation2() {
       const data = await response.json();
       console.log("Project created successfully:", data);
       
-      setSuccess(true);
+      // Log the image URL if available
+      if (data.image_url) {
+        console.log("Project image URL:", data.image_url);
+      }
       
-      setTimeout(() => {
-        resetForm();
-        window.location.href = '/my-projects';
-      }, 2000);
+      setSuccess(true);
+      setCreatedProject(data); // Store the created project data
+      
+      // Scroll to top to show success message
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      
+      // DON'T auto-redirect - let user decide what to do next
+      // User can click "View Project" or "Create Another" buttons
       
     } catch (err) {
       console.error("Error creating project:", err);
@@ -378,11 +422,18 @@ export default function BasicInformation2() {
     setImagePreview(null);
     setError(null);
     setSuccess(false);
+    setCreatedProject(null);
     
     const fileInput = document.getElementById('projectImage');
     if (fileInput) {
       fileInput.value = '';
     }
+  };
+
+  // Handle "Create Another Project" button
+  const handleCreateAnother = () => {
+    resetForm();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   // Get today's date in YYYY-MM-DD format for min date
@@ -522,7 +573,7 @@ export default function BasicInformation2() {
           </div>
         )}
 
-        {isAuthenticated && userRole === 'job-provider' && (
+        {isAuthenticated && userRole === 'job-provider' && !success && (
           <div className="alert alert-success mb20 d-flex align-items-center" role="alert">
             <i className="fal fa-check-circle me-2"></i>
             <div>
@@ -532,233 +583,338 @@ export default function BasicInformation2() {
           </div>
         )}
 
-        <form className="form-style1" onSubmit={handleSubmit}>
-          {success && (
-            <div className="alert alert-success mb20 d-flex align-items-center" role="alert">
-              <i className="fal fa-check-circle fa-2x me-3"></i>
-              <div>
-                <h5 className="alert-heading mb-2">Success!</h5>
-                <p className="mb-0">Project created successfully!</p>
-                <small className="text-muted">Redirecting to your projects...</small>
+        {/* SUCCESS MESSAGE - Enhanced with project details and action buttons */}
+        {success && createdProject && (
+          <div className="alert alert-success mb30 border-0 shadow-sm" role="alert">
+            <div className="d-flex align-items-start">
+              <div className="flex-shrink-0">
+                <i className="fal fa-check-circle fa-3x text-success me-3"></i>
               </div>
-            </div>
-          )}
+              <div className="flex-grow-1">
+                <h4 className="alert-heading mb-3">
+                  <i className="fal fa-party-horn me-2"></i>
+                  Project Created Successfully!
+                </h4>
+                <p className="mb-3">
+                  <strong>"{createdProject.title}"</strong> has been created and is now live on the platform.
+                </p>
+                
+                {/* Project Details Preview */}
+                <div className="bg-light p-3 rounded mb-3">
+                  <div className="row g-2">
+                    <div className="col-md-6">
+                      <small className="text-muted d-block">Category</small>
+                      <strong>{createdProject.category}</strong>
+                    </div>
+                    <div className="col-md-6">
+                      <small className="text-muted d-block">Budget</small>
+                      <strong>${createdProject.budget}</strong>
+                    </div>
+                    <div className="col-md-6">
+                      <small className="text-muted d-block">Project Type</small>
+                      <strong className="text-capitalize">{createdProject.project_type?.replace('_', ' ')}</strong>
+                    </div>
+                    <div className="col-md-6">
+                      <small className="text-muted d-block">Status</small>
+                      <span className="badge bg-success text-capitalize">{createdProject.status}</span>
+                    </div>
+                  </div>
+                  
+                  {createdProject.image_url && (
+                    <div className="mt-3">
+                      <small className="text-muted d-block mb-2">Project Image</small>
+                      <img 
+                        src={createdProject.image_url} 
+                        alt={createdProject.title}
+                        className="img-fluid rounded"
+                        style={{ maxHeight: '150px', objectFit: 'cover' }}
+                      />
+                    </div>
+                  )}
+                </div>
 
-          {error && (
-            <div className="alert alert-danger mb20 d-flex align-items-center" role="alert">
-              <i className="fal fa-times-circle me-2"></i>
-              <div>
-                <strong>Error:</strong> {error}
-              </div>
-            </div>
-          )}
-
-          <div className="row">
-            <div className="col-sm-12 mb20">
-              <label className="heading-color ff-heading fw500 mb10">
-                Project Title <span className="text-danger">*</span>
-              </label>
-              <input
-                type="text"
-                className="form-control"
-                placeholder="e.g. Redesign Company Website"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                required
-                maxLength={200}
-                disabled={loading || userRole === 'freelancer' || !isAuthenticated}
-              />
-              <small className="text-muted">{title.length}/200 characters</small>
-            </div>
-
-            <div className="col-sm-12 mb20">
-              <label className="heading-color ff-heading fw500 mb10">
-                Description <span className="text-danger">*</span>
-              </label>
-              <textarea
-                className="form-control"
-                rows={6}
-                placeholder="Describe your project in detail: requirements, goals, deliverables..."
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                required
-                maxLength={5000}
-                disabled={loading || userRole === 'freelancer' || !isAuthenticated}
-              />
-              <small className="text-muted">{description.length}/5000 characters</small>
-            </div>
-
-            <div className="col-sm-12 mb20">
-              <label className="heading-color ff-heading fw500 mb10">
-                Project Image
-              </label>
-              <input
-                id="projectImage"
-                type="file"
-                className="form-control"
-                accept="image/*"
-                onChange={handleImageChange}
-                disabled={loading || userRole === 'freelancer' || !isAuthenticated}
-              />
-              <small className="text-muted">Recommended: 800x600px, Max 5MB (JPG, PNG, GIF)</small>
-              
-              {imagePreview && (
-                <div className="mt-3 position-relative" style={{ maxWidth: '300px' }}>
-                  <img 
-                    src={imagePreview} 
-                    alt="Preview" 
-                    className="img-fluid rounded border"
-                    style={{ width: '100%', height: 'auto', objectFit: 'cover' }}
-                  />
+                <hr className="my-3" />
+                
+                {/* Action Buttons */}
+                <div className="d-flex gap-2 flex-wrap">
+                  <Link 
+                    href={`/project/${createdProject.id}`} 
+                    className="btn btn-success"
+                  >
+                    <i className="fal fa-eye me-2"></i>
+                    View Project
+                  </Link>
+                  
+                  <Link 
+                    href="/my-projects" 
+                    className="btn btn-primary"
+                  >
+                    <i className="fal fa-briefcase me-2"></i>
+                    My Projects
+                  </Link>
+                  
                   <button
                     type="button"
-                    className="btn btn-sm btn-danger position-absolute top-0 end-0 m-2"
-                    onClick={handleRemoveImage}
-                    disabled={loading || userRole === 'freelancer' || !isAuthenticated}
-                    title="Remove image"
+                    className="btn btn-outline-success"
+                    onClick={handleCreateAnother}
                   >
-                    <i className="fal fa-times"></i>
+                    <i className="fal fa-plus-circle me-2"></i>
+                    Create Another Project
                   </button>
+                  
+                  <Link 
+                    href="/dashboard" 
+                    className="btn btn-outline-secondary"
+                  >
+                    <i className="fal fa-home me-2"></i>
+                    Dashboard
+                  </Link>
                 </div>
-              )}
-            </div>
 
-            <div className="col-sm-6 mb20">
-              <div className={loading || userRole === 'freelancer' || !isAuthenticated ? 'opacity-50' : ''}>
-                <SelectInput
-                  label="Category *"
-                  defaultSelect={category}
-                  handler={(option, value) => setCategory({ option, value })}
-                  data={[
-                    { option: "Web Development", value: "web_development" },
-                    { option: "Mobile Development", value: "mobile_development" },
-                    { option: "Design & Creative", value: "design" },
-                    { option: "Writing & Content", value: "writing" },
-                    { option: "Marketing & SEO", value: "marketing" },
-                    { option: "Data Science & Analytics", value: "data_science" },
-                    { option: "Video & Animation", value: "video" },
-                    { option: "Music & Audio", value: "music" },
-                  ]}
-                />
-              </div>
-            </div>
-
-            <div className="col-sm-6 mb20">
-              <label className="heading-color ff-heading fw500 mb10">
-                Budget (USD) <span className="text-danger">*</span>
-              </label>
-              <input
-                type="number"
-                className="form-control"
-                placeholder="1000"
-                min="1"
-                step="0.01"
-                value={budget}
-                onChange={(e) => setBudget(e.target.value)}
-                required
-                disabled={loading || userRole === 'freelancer' || !isAuthenticated}
-              />
-              <small className="text-muted">Enter amount in US Dollars</small>
-            </div>
-
-            <div className="col-sm-6 mb20">
-              <label className="heading-color ff-heading fw500 mb10">
-                Deadline / Due Date <span className="text-danger">*</span>
-              </label>
-              <input
-                type="date"
-                className="form-control"
-                min={getTodayDate()}
-                value={deadline}
-                onChange={(e) => setDeadline(e.target.value)}
-                required
-                disabled={loading || userRole === 'freelancer' || !isAuthenticated}
-              />
-              <small className="text-muted">Project completion date</small>
-            </div>
-
-            <div className="col-sm-6 mb20">
-              <div className={loading || userRole === 'freelancer' || !isAuthenticated ? 'opacity-50' : ''}>
-                <SelectInput
-                  label="Project Type *"
-                  defaultSelect={projectType}
-                  handler={(option, value) => setProjectType({ option, value })}
-                  data={[
-                    { option: "Fixed Price", value: "fixed_price" },
-                    { option: "Hourly Rate", value: "hourly" },
-                  ]}
-                />
-              </div>
-              <small className="text-muted">
-                {projectType.value === "fixed_price" 
-                  ? "One-time payment for the entire project" 
-                  : projectType.value === "hourly"
-                  ? "Pay based on hours worked"
-                  : "Select how you want to pay"}
-              </small>
-            </div>
-
-            <div className="col-sm-12 mb20">
-              <div className={loading || userRole === 'freelancer' || !isAuthenticated ? 'opacity-50' : ''}>
-                <SelectInput
-                  label="Project Visibility"
-                  defaultSelect={visibility}
-                  handler={(option, value) => setVisibility({ option, value })}
-                  data={[
-                    { option: "Public", value: "public" },
-                    { option: "Private", value: "private" },
-                  ]}
-                />
-              </div>
-              <small className="text-muted">
-                {visibility.value === "public" 
-                  ? "Visible to all freelancers on the platform" 
-                  : "Only visible to invited freelancers"}
-              </small>
-            </div>
-
-            <div className="col-sm-12 mb20">
-              <div className="alert alert-info">
-                <small>
-                  <i className="fal fa-info-circle me-2"></i>
-                  <strong>Note:</strong> Fields marked with <span className="text-danger">*</span> are required.
-                </small>
-              </div>
-            </div>
-
-            <div className="col-md-12 mt-3">
-              <div className="d-flex gap-3">
-                <button
-                  type="submit"
-                  className="ud-btn btn-thm"
-                  disabled={loading || !isAuthenticated || userRole === 'freelancer'}
-                >
-                  {loading ? (
-                    <>
-                      <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
-                      Creating Project...
-                    </>
-                  ) : (
-                    <>
-                      <i className="fal fa-plus me-2"></i>
-                      Create Project
-                    </>
-                  )}
-                </button>
-                
-                <button
-                  type="button"
-                  className="ud-btn btn-white"
-                  onClick={resetForm}
-                  disabled={loading || userRole === 'freelancer' || !isAuthenticated}
-                >
-                  <i className="fal fa-redo me-2"></i>
-                  Reset Form
-                </button>
+                <div className="mt-3 p-2 bg-info bg-opacity-10 rounded">
+                  <small className="text-info">
+                    <i className="fal fa-info-circle me-1"></i>
+                    <strong>What's Next?</strong> Your project is now visible to freelancers. 
+                    You'll receive proposals soon. Check your notifications and email for updates.
+                  </small>
+                </div>
               </div>
             </div>
           </div>
-        </form>
+        )}
+
+        {error && (
+          <div className="alert alert-danger mb20 d-flex align-items-center" role="alert">
+            <i className="fal fa-times-circle me-2"></i>
+            <div>
+              <strong>Error:</strong> {error}
+            </div>
+          </div>
+        )}
+
+        {/* Only show form if not successful */}
+        {!success && (
+          <form className="form-style1" onSubmit={handleSubmit}>
+            <div className="row">
+              <div className="col-sm-12 mb20">
+                <label className="heading-color ff-heading fw500 mb10">
+                  Project Title <span className="text-danger">*</span>
+                </label>
+                <input
+                  type="text"
+                  className="form-control"
+                  placeholder="e.g. Redesign Company Website"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  required
+                  maxLength={200}
+                  disabled={loading || userRole === 'freelancer' || !isAuthenticated}
+                />
+                <small className="text-muted">{title.length}/200 characters</small>
+              </div>
+
+              <div className="col-sm-12 mb20">
+                <label className="heading-color ff-heading fw500 mb10">
+                  Description <span className="text-danger">*</span>
+                </label>
+                <textarea
+                  className="form-control"
+                  rows={6}
+                  placeholder="Describe your project in detail: requirements, goals, deliverables..."
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  required
+                  maxLength={5000}
+                  disabled={loading || userRole === 'freelancer' || !isAuthenticated}
+                />
+                <small className="text-muted">{description.length}/5000 characters</small>
+              </div>
+
+              <div className="col-sm-12 mb20">
+                <label className="heading-color ff-heading fw500 mb10">
+                  Project Image
+                </label>
+                <input
+                  id="projectImage"
+                  type="file"
+                  className="form-control"
+                  accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
+                  onChange={handleImageChange}
+                  disabled={loading || userRole === 'freelancer' || !isAuthenticated}
+                />
+                <small className="text-muted d-block mt-1">
+                  <i className="fal fa-info-circle me-1"></i>
+                  Recommended: 800x600px or 16:9 ratio, Max 5MB (JPG, PNG, GIF, WEBP)
+                </small>
+                
+                {imagePreview && (
+                  <div className="mt-3 position-relative" style={{ maxWidth: '400px' }}>
+                    <div className="border rounded overflow-hidden">
+                      <img 
+                        src={imagePreview} 
+                        alt="Project preview" 
+                        className="img-fluid"
+                        style={{ width: '100%', height: 'auto', objectFit: 'cover', maxHeight: '300px' }}
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      className="btn btn-sm btn-danger position-absolute top-0 end-0 m-2"
+                      onClick={handleRemoveImage}
+                      disabled={loading || userRole === 'freelancer' || !isAuthenticated}
+                      title="Remove image"
+                      style={{ zIndex: 10 }}
+                    >
+                      <i className="fal fa-times"></i> Remove
+                    </button>
+                    {image && (
+                      <small className="text-muted d-block mt-2">
+                        <i className="fal fa-file-image me-1"></i>
+                        {image.name} ({(image.size / 1024).toFixed(2)} KB)
+                      </small>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              <div className="col-sm-6 mb20">
+                <div className={loading || userRole === 'freelancer' || !isAuthenticated ? 'opacity-50' : ''}>
+                  <SelectInput
+                    label="Category *"
+                    defaultSelect={category}
+                    handler={(option, value) => setCategory({ option, value })}
+                    data={[
+                      { option: "Web Development", value: "web_development" },
+                      { option: "Mobile Development", value: "mobile_development" },
+                      { option: "Design & Creative", value: "design" },
+                      { option: "Writing & Content", value: "writing" },
+                      { option: "Marketing & SEO", value: "marketing" },
+                      { option: "Data Science & Analytics", value: "data_science" },
+                      { option: "Video & Animation", value: "video" },
+                      { option: "Music & Audio", value: "music" },
+                    ]}
+                  />
+                </div>
+              </div>
+
+              <div className="col-sm-6 mb20">
+                <label className="heading-color ff-heading fw500 mb10">
+                  Budget (USD) <span className="text-danger">*</span>
+                </label>
+                <input
+                  type="number"
+                  className="form-control"
+                  placeholder="1000"
+                  min="1"
+                  step="0.01"
+                  value={budget}
+                  onChange={(e) => setBudget(e.target.value)}
+                  required
+                  disabled={loading || userRole === 'freelancer' || !isAuthenticated}
+                />
+                <small className="text-muted">Enter amount in US Dollars</small>
+              </div>
+
+              <div className="col-sm-6 mb20">
+                <label className="heading-color ff-heading fw500 mb10">
+                  Deadline / Due Date <span className="text-danger">*</span>
+                </label>
+                <input
+                  type="date"
+                  className="form-control"
+                  min={getTodayDate()}
+                  value={deadline}
+                  onChange={(e) => setDeadline(e.target.value)}
+                  required
+                  disabled={loading || userRole === 'freelancer' || !isAuthenticated}
+                />
+                <small className="text-muted">Project completion date</small>
+              </div>
+
+              <div className="col-sm-6 mb20">
+                <div className={loading || userRole === 'freelancer' || !isAuthenticated ? 'opacity-50' : ''}>
+                  <SelectInput
+                    label="Project Type *"
+                    defaultSelect={projectType}
+                    handler={(option, value) => setProjectType({ option, value })}
+                    data={[
+                      { option: "Fixed Price", value: "fixed_price" },
+                      { option: "Hourly Rate", value: "hourly" },
+                    ]}
+                  />
+                </div>
+                <small className="text-muted">
+                  {projectType.value === "fixed_price" 
+                    ? "One-time payment for the entire project" 
+                    : projectType.value === "hourly"
+                    ? "Pay based on hours worked"
+                    : "Select how you want to pay"}
+                </small>
+              </div>
+
+              <div className="col-sm-12 mb20">
+                <div className={loading || userRole === 'freelancer' || !isAuthenticated ? 'opacity-50' : ''}>
+                  <SelectInput
+                    label="Project Visibility"
+                    defaultSelect={visibility}
+                    handler={(option, value) => setVisibility({ option, value })}
+                    data={[
+                      { option: "Public", value: "public" },
+                      { option: "Private", value: "private" },
+                    ]}
+                  />
+                </div>
+                <small className="text-muted">
+                  {visibility.value === "public" 
+                    ? "Visible to all freelancers on the platform" 
+                    : "Only visible to invited freelancers"}
+                </small>
+              </div>
+
+              <div className="col-sm-12 mb20">
+                <div className="alert alert-info">
+                  <small>
+                    <i className="fal fa-info-circle me-2"></i>
+                    <strong>Note:</strong> Fields marked with <span className="text-danger">*</span> are required.
+                    {image && " Your project image will be uploaded with the form."}
+                  </small>
+                </div>
+              </div>
+
+              <div className="col-md-12 mt-3">
+                <div className="d-flex gap-3">
+                  <button
+                    type="submit"
+                    className="ud-btn btn-thm"
+                    disabled={loading || !isAuthenticated || userRole === 'freelancer'}
+                  >
+                    {loading ? (
+                      <>
+                        <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                        Creating Project...
+                      </>
+                    ) : (
+                      <>
+                        <i className="fal fa-plus me-2"></i>
+                        Create Project
+                      </>
+                    )}
+                  </button>
+                  
+                  <button
+                    type="button"
+                    className="ud-btn btn-white"
+                    onClick={resetForm}
+                    disabled={loading || userRole === 'freelancer' || !isAuthenticated}
+                  >
+                    <i className="fal fa-redo me-2"></i>
+                    Reset Form
+                  </button>
+                </div>
+              </div>
+            </div>
+          </form>
+        )}
       </div>
     </div>
   );

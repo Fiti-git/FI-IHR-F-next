@@ -1,6 +1,26 @@
+"use client";
+import { useState } from "react";
 import Image from "next/image";
 
-export default function Breadcumb9() {
+export default function Breadcumb9({ onSearch }) {
+  const [searchKeyword, setSearchKeyword] = useState("");
+
+  // Search handler
+  const handleSearch = () => {
+    if (onSearch) {
+      onSearch({
+        keyword: searchKeyword.trim()
+      });
+    }
+  };
+
+  // Handle Enter key press
+  const handleKeyPress = (e) => {
+    if (e.key === 'Enter') {
+      handleSearch();
+    }
+  };
+
   return (
     <>
       <section className="breadcumb-section pt-0">
@@ -32,22 +52,30 @@ export default function Breadcumb9() {
                 <div className="position-relative">
                   <h2>Projects List</h2>
                   <p className="text mb30">
-                    All the Lorem Ipsum generators on the Internet tend to
-                    repeat.
+                    Search and discover exciting projects across various categories.
                   </p>
                 </div>
                 <div className="advance-search-tab bgc-white p10 bdrs4 zi1 position-relative">
                   <div className="row">
                     <div className="col-md-8 col-xl-9">
-                      <div className="advance-search-field ">
-                        <form className="form-search position-relative">
+                      <div className="advance-search-field">
+                        <form 
+                          className="form-search position-relative"
+                          onSubmit={(e) => {
+                            e.preventDefault();
+                            handleSearch();
+                          }}
+                        >
                           <div className="box-search bb1-sm">
                             <span className="icon far fa-magnifying-glass" />
                             <input
                               className="form-control"
                               type="text"
                               name="search"
-                              placeholder="What are you looking for?"
+                              placeholder="Search by title, description, category..."
+                              value={searchKeyword}
+                              onChange={(e) => setSearchKeyword(e.target.value)}
+                              onKeyPress={handleKeyPress}
                             />
                           </div>
                         </form>
@@ -55,7 +83,11 @@ export default function Breadcumb9() {
                     </div>
                     <div className="col-md-4 col-xl-3">
                       <div className="text-center text-xl-start">
-                        <button className="ud-btn btn-thm w-100" type="button">
+                        <button 
+                          className="ud-btn btn-thm w-100" 
+                          type="button"
+                          onClick={handleSearch}
+                        >
                           Search
                         </button>
                       </div>

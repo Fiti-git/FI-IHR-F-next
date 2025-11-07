@@ -6,16 +6,16 @@ export default function ProjectContactWidget1({ projectData }) {
   // Get user display name
   const getUserName = () => {
     if (!projectData?.user) return "Anonymous";
-    
-    if (projectData.user.first_name && projectData.user.last_name) {
-      return `${projectData.user.first_name} ${projectData.user.last_name}`;
+
+    if (projectData.company_name) {
+      return projectData.company_name;
     }
     
-    if (projectData.user.first_name) {
-      return projectData.user.first_name;
+    if (projectData.company_name) {
+      return projectData.company_name;
     }
     
-    return projectData.user.username || "Anonymous";
+    return projectData.company_name || "Anonymous";
   };
 
   // // Get user image
@@ -110,21 +110,9 @@ export default function ProjectContactWidget1({ projectData }) {
         {/* Client Details */}
         <div className="details">
           {/* Username & Email */}
-          <div className="mb-3">
-            <p className="text-muted fz14 mb-1">
-              <i className="flaticon-user me-2"></i>
-              Username
-            </p>
-            <p className="mb-2 fw500">{projectData.user.username || "N/A"}</p>
-            
-            <p className="text-muted fz14 mb-1">
-              <i className="flaticon-mail me-2"></i>
-              Email
-            </p>
-            <p className="mb-0 fw500 text-break">{getUserEmail()}</p>
-          </div>
 
-          <hr className="opacity-100 my-3" />
+
+
 
           {/* Stats Grid */}
           <div className="fl-meta d-flex align-items-center justify-content-between flex-wrap">

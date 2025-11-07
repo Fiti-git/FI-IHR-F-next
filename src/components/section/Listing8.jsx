@@ -8,11 +8,13 @@ import listingStore from "@/store/listingStore";
 import priceStore from "@/store/priceStore";
 import ListingSidebarModal2 from "../modal/ListingSidebarModal2";
 
-export default function Listing8() {
+export default function Listing8({ searchFilters }) {
   // State for API data
   const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   // Store states for filters
   const getCategory = listingStore((state) => state.getCategory);
@@ -27,6 +29,11 @@ export default function Listing8() {
 
   // API URL
   const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://206.189.134.117:8000/api/project/projects/";
+
+  // Reset to page 1 when search filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchFilters]);
 
   // Fetch projects from API
   useEffect(() => {
@@ -50,46 +57,64 @@ export default function Listing8() {
         console.log("Fetched projects:", data);
         
         // Transform API data to match ProjectCard1 structure
-        const transformedProjects = data.map((project) => ({
-          id: project.id,
-          title: project.title,
-          description: project.description,
-          category: project.category,
-          budget: parseFloat(project.budget),
-          projectType: project.project_type,
-          deadline: project.deadline,
-          visibility: project.visibility,
-          status: project.status,
-          user: project.user,
-          createdAt: project.created_at,
-          updatedAt: project.updated_at,
-          
-          // Add fields that ProjectCard1 might expect
-          price: {
-            min: parseFloat(project.budget),
-            max: parseFloat(project.budget)
-          },
-          location: project.user?.first_name || "Remote",
-          skills: project.category || "",
-          skill: [project.category] || [], // Array format
-          tags: [project.category] || [], // Tags array
-          brief: project.description?.substring(0, 100) + "..." || "No description",
-          language: "English",
-          englishLevel: "Fluent",
-          
-          // Image field - use project image if exists, otherwise use user avatar or default
-          img: project.image || project.user?.profile_image || "/images/team/default-avatar.png",
-          imgUrl: project.image || project.user?.profile_image || "/images/team/default-avatar.png",
-          
-          author: project.user?.username || "Anonymous",
-          authorImg: project.user?.profile_image || "/images/team/default-avatar.png",
-          rating: 5.0,
-          reviews: 0,
-          jobDone: 0,
-          
-          // Original project data for reference
-          originalData: project
-        }));
+        const transformedProjects = data.map((project) => {
+          // Handle image URL properly - use image_url from serializer or construct it
+          const imageUrl = project.image_url 
+            || (project.image 
+                ? (project.image.startsWith('http') 
+                    ? project.image 
+                    : `http://127.0.0.1:8000${project.image}`)
+                : null);
+
+          // Handle user profile image
+          const userProfileImage = project.user?.profile_image_url
+            || (project.user?.profile_image
+                ? (project.user.profile_image.startsWith('http')
+                    ? project.user.profile_image
+                    : `http://127.0.0.1:8000${project.user.profile_image}`)
+                : "/images/team/default-avatar.png");
+
+          return {
+            id: project.id,
+            title: project.title,
+            description: project.description,
+            category: project.category,
+            budget: parseFloat(project.budget),
+            projectType: project.project_type,
+            deadline: project.deadline,
+            visibility: project.visibility,
+            status: project.status,
+            user: project.user,
+            createdAt: project.created_at,
+            updatedAt: project.updated_at,
+            
+            // Add fields that ProjectCard1 might expect
+            price: {
+              min: parseFloat(project.budget),
+              max: parseFloat(project.budget)
+            },
+            location: project.user?.first_name || "Remote",
+            skills: project.category || "",
+            skill: [project.category] || [], // Array format
+            tags: [project.category] || [], // Tags array
+            brief: project.description?.substring(0, 100) + "..." || "No description",
+            language: "English",
+            englishLevel: "Fluent",
+            
+            // Image field - use project image if exists, otherwise use user avatar or default
+            img: imageUrl || userProfileImage,
+            imgUrl: imageUrl || userProfileImage,
+            
+            author: project.user?.username || "Anonymous",
+            authorImg: userProfileImage,
+            rating: 5.0,
+            reviews: 0,
+            jobDone: 0,
+            
+            // Original project data for reference
+            originalData: project
+          };
+        });
 
         setProjects(transformedProjects);
       } catch (err) {
@@ -102,6 +127,32 @@ export default function Listing8() {
 
     fetchProjects();
   }, []);
+
+  // NEW: Breadcrumb search filter (searches across multiple fields)
+  const breadcrumbSearchFilter = (item) => {
+    if (!searchFilters || !searchFilters.keyword || searchFilters.keyword.trim() === '') {
+      return true;
+    }
+
+    const keyword = searchFilters.keyword.toLowerCase().trim();
+    
+    // Search in these fields
+    const searchableFields = [
+      item.title,
+      item.description,
+      item.category,
+      item.projectType,
+      item.status,
+      item.location,
+      item.author,
+      item.skills,
+      item.brief
+    ];
+
+    return searchableFields.some(field => 
+      field && field.toString().toLowerCase().includes(keyword)
+    );
+  };
 
   // Filter functions
   const categoryFilter = (item) =>
@@ -151,6 +202,7 @@ export default function Listing8() {
 
   // Apply all filters to projects
   const filteredProjects = projects
+    .filter(breadcrumbSearchFilter)  // NEW: Apply breadcrumb search first
     .filter(categoryFilter)
     .filter(projectTypeFilter)
     .filter(priceFilter)
@@ -160,6 +212,11 @@ export default function Listing8() {
     .filter(speakFilter)
     .filter(englishLevelFilter)
     .filter(sortByFilter);
+
+  // Pagination
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentItems = filteredProjects.slice(indexOfFirstItem, indexOfLastItem);
 
   // Render content
   let content;
@@ -187,7 +244,8 @@ export default function Listing8() {
         </div>
       </div>
     );
-  } else if (filteredProjects.length === 0) {
+  } else if (currentItems.length === 0) {
+    const isSearchActive = searchFilters && searchFilters.keyword;
     content = (
       <div className="col-12 text-center py-5">
         <div className="text-muted">
@@ -200,20 +258,27 @@ export default function Listing8() {
           ) : (
             <>
               <i className="flaticon-search fz60 mb-3 d-block"></i>
-              <h5>No projects found matching your criteria.</h5>
-              <p>Try adjusting your filters to see more results.</p>
+              <h5>No projects found</h5>
+              <p>
+                {isSearchActive 
+                  ? `No results found for "${searchFilters.keyword}". Try different keywords or adjust your filters.`
+                  : "Try adjusting your filters to see more results."}
+              </p>
             </>
           )}
         </div>
       </div>
     );
   } else {
-    content = filteredProjects.map((item) => (
+    content = currentItems.map((item) => (
       <div key={item.id} className="col-md-6 col-lg-12">
         <ProjectCard1 data={item} />
       </div>
     ));
   }
+
+  // Check if search is active
+  const isSearchActive = searchFilters && searchFilters.keyword;
 
   return (
     <>
@@ -224,11 +289,30 @@ export default function Listing8() {
               <ListingSidebar2 />
             </div>
             <div className="col-lg-9">
+              {/* Search Results Info */}
+              {isSearchActive && (
+                <div className="row mb-3">
+                  <div className="col-12">
+                    <div className="alert alert-info d-flex justify-content-between align-items-center">
+                      <span>
+                        Found <strong>{filteredProjects.length}</strong> project{filteredProjects.length !== 1 ? 's' : ''}
+                        {searchFilters.keyword && ` for "${searchFilters.keyword}"`}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               <ListingOption2 itemLength={filteredProjects?.length || 0} />
               <div className="row">{content}</div>
-              {!loading && !error && filteredProjects.length > 0 && (
+              {!loading && !error && filteredProjects.length > itemsPerPage && (
                 <div className="mt30">
-                  <Pagination1 />
+                  <Pagination1
+                    totalItems={filteredProjects.length}
+                    itemsPerPage={itemsPerPage}
+                    currentPage={currentPage}
+                    onPageChange={setCurrentPage}
+                  />
                 </div>
               )}
             </div>

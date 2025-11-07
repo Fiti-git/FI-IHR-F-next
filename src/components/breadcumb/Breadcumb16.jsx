@@ -1,6 +1,26 @@
+"use client";
+import { useState } from "react";
 import Image from "next/image";
 
-export default function Breadcumb16() {
+export default function Breadcumb16({ onSearch }) {
+  const [searchKeyword, setSearchKeyword] = useState("");
+
+  // Search handler
+  const handleSearch = () => {
+    if (onSearch) {
+      onSearch({
+        keyword: searchKeyword.trim()
+      });
+    }
+  };
+
+  // Handle Enter key press
+  const handleKeyPress = (e) => {
+    if (e.key === 'Enter') {
+      handleSearch();
+    }
+  };
+
   return (
     <>
       <section className="breadcumb-section pt-0">
@@ -28,13 +48,51 @@ export default function Breadcumb16() {
           />
           <div className="container">
             <div className="row wow fadeInUp">
-              <div className="col-xl-5">
+              <div className="col-xl-7">
                 <div className="position-relative">
                   <h2>Freelancer List</h2>
-                  <p className="text mb-0">
-                    All the Lorem Ipsum generators on the Internet tend to
-                    repeat.
+                  <p className="text mb30">
+                    Search and discover talented freelancers with the skills you need.
                   </p>
+                </div>
+                <div className="advance-search-tab bgc-white p10 bdrs4 zi1 position-relative">
+                  <div className="row">
+                    <div className="col-md-8 col-xl-9">
+                      <div className="advance-search-field">
+                        <form 
+                          className="form-search position-relative"
+                          onSubmit={(e) => {
+                            e.preventDefault();
+                            handleSearch();
+                          }}
+                        >
+                          <div className="box-search bb1-sm">
+                            <span className="icon far fa-magnifying-glass" />
+                            <input
+                              className="form-control"
+                              type="text"
+                              name="search"
+                              placeholder="Search by name, title, skills, location..."
+                              value={searchKeyword}
+                              onChange={(e) => setSearchKeyword(e.target.value)}
+                              onKeyPress={handleKeyPress}
+                            />
+                          </div>
+                        </form>
+                      </div>
+                    </div>
+                    <div className="col-md-4 col-xl-3">
+                      <div className="text-center text-xl-start">
+                        <button 
+                          className="ud-btn btn-thm w-100" 
+                          type="button"
+                          onClick={handleSearch}
+                        >
+                          Search
+                        </button>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>

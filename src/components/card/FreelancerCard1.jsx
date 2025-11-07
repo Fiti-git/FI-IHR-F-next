@@ -2,6 +2,18 @@ import Image from "next/image";
 import Link from "next/link";
 
 export default function FreelancerCard1({ data }) {
+  // Use profile_image_url from API or fallback to default
+  const imageUrl = data.profile_image_url || data.img || "/images/team/fl-1.png";
+  
+  // Parse skills if it's a string
+  const skillsList = Array.isArray(data.skills_list) 
+    ? data.skills_list 
+    : (Array.isArray(data.skills) 
+      ? data.skills 
+      : (typeof data.skills === 'string' 
+        ? data.skills.split(',').map(s => s.trim()) 
+        : []));
+
   return (
     <>
       <div className="freelancer-style1 text-center bdr1 hover-box-shadow">
@@ -10,24 +22,31 @@ export default function FreelancerCard1({ data }) {
             height={90}
             width={90}
             className="rounded-circle mx-auto"
-            src={data.img || "/images/team/fl-1.png"}
-            alt={data.name || "Freelancer"}
+            src={imageUrl}
+            alt={data.full_name || data.name || "Freelancer"}
+            onError={(e) => {
+              e.target.src = "/images/team/fl-1.png";
+            }}
           />
           <span className="online" />
         </div>
         <div className="details">
-          <h5 className="title mb-1">{data.name || "Freelancer"}</h5>
-          <p className="mb-0">{data.profession || "Professional"}</p>
+          <h5 className="title mb-1">
+            {data.full_name || data.name || "Freelancer"}
+          </h5>
+          <p className="mb-0">
+            {data.professional_title || data.profession || "Professional"}
+          </p>
           <div className="review">
             <p>
               <i className="fas fa-star fz10 review-color pr10" />
-              <span className="dark-color fw500">{data.rating || "0.0"}</span> (
+              <span className="dark-color fw500">{data.rating || "5.0"}</span> (
               {data.reviews || "0"} reviews)
             </p>
           </div>
           <div className="skill-tags d-flex align-items-center justify-content-center mb5">
-            {data.skills && data.skills.length > 0 ? (
-              data.skills.map((skill, index) => (
+            {skillsList && skillsList.length > 0 ? (
+              skillsList.slice(0, 3).map((skill, index) => (
                 <span key={index} className={`tag ${index > 0 ? 'mx10' : ''}`}>
                   {skill}
                 </span>
@@ -45,20 +64,28 @@ export default function FreelancerCard1({ data }) {
             <a className="meta fw500 text-start">
               Location
               <br />
-              <span className="fz14 fw400">{data.location || "Location"}</span>
+              <span className="fz14 fw400">
+                {data.city && data.country 
+                  ? `${data.city}, ${data.country}` 
+                  : data.location || "Location"}
+              </span>
             </a>
             <a className="meta fw500 text-start">
               Rate
               <br />
               <span className="fz14 fw400">
-                {data.hourlyRate || `$${data.price || 0} / hr`}
+                {data.hourly_rate ? `$${data.hourly_rate}/hr` : (data.price ? `$${data.price}/hr` : "$0/hr")}
               </span>
             </a>
             <a className="meta fw500 text-start">
               Level
               <br />
               <span className="fz14 fw400">
-                {data.level ? data.level.charAt(0).toUpperCase() + data.level.slice(1) : "Mid"}
+                {data.experience_level 
+                  ? data.experience_level.charAt(0).toUpperCase() + data.experience_level.slice(1) 
+                  : (data.level 
+                    ? data.level.charAt(0).toUpperCase() + data.level.slice(1) 
+                    : "Mid")}
               </span>
             </a>
           </div>
