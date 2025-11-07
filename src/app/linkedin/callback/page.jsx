@@ -17,7 +17,7 @@ export default function LinkedInCallback() {
     }
 
     if (code) {
-      fetch(`http://206.189.134.117:8000/myapi/linkedin-oauth-callback/?code=${code}`)
+      fetch(`http://127.0.0.1:8000/myapi/linkedin-oauth-callback/?code=${code}`)
         .then(async (res) => {
           const data = await res.json();
 

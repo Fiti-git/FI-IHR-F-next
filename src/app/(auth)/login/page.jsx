@@ -46,7 +46,7 @@ function LoginPageContent() {
     setMessage("");
 
     try {
-      const res = await fetch("http://206.189.134.117:8000/myapi/login/", {
+      const res = await fetch("http://127.0.0.1:8000/myapi/login/", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),
@@ -77,7 +77,7 @@ function LoginPageContent() {
   const handleGoogleResponse = async (response) => {
     setLoading(true);
     try {
-      const res = await fetch("http://206.189.134.117:8000/myapi/google-login/", {
+      const res = await fetch("http://127.0.0.1:8000/myapi/google-login/", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ token: response.credential }),

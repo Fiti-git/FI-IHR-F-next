@@ -30,7 +30,6 @@ export default function CreateJobInfo() {
         <div className="row">
           <div className="col-xl-12">
             <Jobform />
-            <UploadAttachment />
           </div>
         </div>
       </div>

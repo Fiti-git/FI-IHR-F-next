@@ -28,7 +28,7 @@ export default function Listing8({ searchFilters }) {
   const getEnglishLevel = listingStore((state) => state.getEnglishLevel);
 
   // API URL
-  const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://206.189.134.117:8000/api/project/projects/";
+  const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000/api/project/projects/";
 
   // Reset to page 1 when search filters change
   useEffect(() => {

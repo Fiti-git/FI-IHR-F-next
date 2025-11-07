@@ -26,7 +26,7 @@ export default function JobDetail1() {
         const headers = { 'Content-Type': 'application/json' };
         if (accessToken) headers.Authorization = `Bearer ${accessToken}`;
 
-        const res = await fetch(`http://206.189.134.117:8000/api/job-posting/${id}/`, { headers });
+        const res = await fetch(`http://127.0.0.1:8000/api/job-posting/${id}/`, { headers });
         if (!res.ok) throw new Error(`Failed to fetch job (${res.status})`);
         const data = await res.json();
         setJob(data);
@@ -49,7 +49,7 @@ export default function JobDetail1() {
 
       const checkRole = async () => {
         try {
-          const res = await fetch('http://206.189.134.117:8000/api/profile/job-provider/', {
+          const res = await fetch('http://127.0.0.1:8000/api/profile/job-provider/', {
             method: 'GET',
             headers: {
               'Accept': 'application/json',
@@ -74,7 +74,6 @@ export default function JobDetail1() {
   // Local modal state for application (no APIs)
   const [showApplyModal, setShowApplyModal] = useState(false);
   const [resumeFile, setResumeFile] = useState(null);
-  const [resumeUrlInput, setResumeUrlInput] = useState("");
   const [coverLetter, setCoverLetter] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState(null);
@@ -84,7 +83,6 @@ export default function JobDetail1() {
   const closeApplyModal = () => {
     setShowApplyModal(false);
     setResumeFile(null);
-    setResumeUrlInput("");
     setCoverLetter("");
     setSubmitError(null);
   };
@@ -99,9 +97,10 @@ export default function JobDetail1() {
     e.preventDefault();
     setSubmitError(null);
     setSubmitSuccess(false);
-    // Require a resume file or a resume URL, and a cover letter
-    if (!resumeFile && (!resumeUrlInput || String(resumeUrlInput).trim().length === 0)) {
-      setSubmitError('Please upload your resume or provide a resume URL before submitting.');
+
+    // Require a resume file and a cover letter
+    if (!resumeFile) {
+      setSubmitError('Please upload your resume before submitting.');
       return;
     }
     if (!coverLetter || String(coverLetter).trim().length < 1) {
@@ -123,7 +122,7 @@ export default function JobDetail1() {
       let freelancerProfileId = null;
       try {
         if (token) {
-          const pfRes = await fetch('http://206.189.134.117:8000/api/profile/freelancer/', {
+          const pfRes = await fetch('http://127.0.0.1:8000/api/profile/freelancer/', {
             method: 'GET',
             headers: {
               'Content-Type': 'application/json',
@@ -153,79 +152,24 @@ export default function JobDetail1() {
         return;
       }
 
-      // Determine resume URL: upload file if provided, otherwise use supplied URL
-      let resumeUrl = null;
-      if (resumeFile) {
-        try {
-          const fd = new FormData();
-          fd.append('file', resumeFile);
-          const upRes = await fetch('http://206.189.134.117:8000/api/upload/', {
-            method: 'POST',
-            headers: token ? { 'Authorization': `Bearer ${token}` } : {},
-            body: fd,
-          });
-          if (!upRes.ok) {
-            const txt = await upRes.text();
-            console.error('Upload failed:', upRes.status, txt);
-            setSubmitError('Resume upload failed. Please try again.');
-            setSubmitting(false);
-            return;
-          }
-          const ct = upRes.headers.get('content-type') || '';
-          if (ct.includes('application/json')) {
-            const j = await upRes.json();
-            resumeUrl = j.url || j.file_url || j.file || j.resume_url || j.data?.url || null;
-          } else {
-            const txt = await upRes.text();
-            console.warn('Upload returned non-json response:', txt);
-          }
-        } catch (e) {
-          console.error('Resume upload error', e);
-          setSubmitError('Resume upload failed. Please try again.');
-          setSubmitting(false);
-          return;
-        }
+      // Build multipart form data with the resume file and other fields
+      const fd = new FormData();
+      fd.append('resume', resumeFile);
+      // preserve previous keys used by backend (job and freelancer_id)
+  // include both job and job_id fields because backend serializers sometimes expect one or the other
+  fd.append('job', String(id));
+  fd.append('job_id', String(id));
+      fd.append('freelancer_id', String(userId));
+      fd.append('cover_letter', coverLetter);
 
-        if (!resumeUrl || typeof resumeUrl !== 'string' || resumeUrl.length < 1 || resumeUrl.length > 200) {
-          setSubmitError('Invalid resume URL returned from upload.');
-          setSubmitting(false);
-          return;
-        }
-      } else {
-        // use provided resume URL
-        resumeUrl = String(resumeUrlInput).trim();
-        if (resumeUrl.length < 1 || resumeUrl.length > 200) {
-          setSubmitError('Resume URL must be between 1 and 200 characters.');
-          setSubmitting(false);
-          return;
-        }
-        // basic URL validation
-        try {
-          new URL(resumeUrl);
-        } catch (e) {
-          setSubmitError('Please provide a valid resume URL (include https://).');
-          setSubmitting(false);
-          return;
-        }
-      }
-
-      // Build payload according to API schema
-      const payload = {
-        job_id: Number(id),
-        // Use freelancer profile id (profile.id) when available; otherwise fall back to stored user_id
-        freelancer_id: Number(userId),
-        resume: resumeUrl,
-        cover_letter: coverLetter,
-        job: Number(id),
+      const headers = {
+        'Authorization': `Bearer ${token}`,
       };
 
-      const headers = { 'Content-Type': 'application/json' };
-      headers['Authorization'] = `Bearer ${token}`;
-
-      const res = await fetch('http://206.189.134.117:8000/api/job-application/', {
+      const res = await fetch('http://127.0.0.1:8000/api/job-application/', {
         method: 'POST',
         headers,
-        body: JSON.stringify(payload),
+        body: fd,
       });
 
       if (res.status === 401) {
@@ -235,19 +179,24 @@ export default function JobDetail1() {
       }
 
       if (!res.ok) {
-        // try parse JSON error
+        // try parse JSON error and present clearer messages
         try {
           const jsonErr = await res.json();
           console.error('Submission error', jsonErr);
-          // find first useful message
-          const vals = Object.values(jsonErr);
-          const first = Array.isArray(vals) && vals.length ? vals[0] : null;
-          const msg = Array.isArray(first) && first.length ? String(first[0]) : JSON.stringify(jsonErr);
-          setSubmitError(`Submission failed: ${msg}`);
+          if (jsonErr && typeof jsonErr === 'object') {
+            const parts = Object.entries(jsonErr).map(([k, v]) => {
+              if (Array.isArray(v)) return `${k}: ${v.join(' ')}`;
+              if (typeof v === 'object') return `${k}: ${JSON.stringify(v)}`;
+              return `${k}: ${String(v)}`;
+            });
+            setSubmitError(`Submission failed: ${parts.join('; ')}`);
+          } else {
+            setSubmitError(`Submission failed: ${JSON.stringify(jsonErr)}`);
+          }
         } catch (e) {
           const txt = await res.text();
           console.error('Submission failed body:', txt);
-          setSubmitError(`Submission failed: ${res.status}`);
+          setSubmitError(`Submission failed: ${res.status} ${txt ? '- ' + txt : ''}`);
         }
         setSubmitting(false);
         return;
@@ -366,17 +315,7 @@ export default function JobDetail1() {
                           <label className="mb-2 d-block">Upload Resume (PDF, DOC)</label>
                           <input type="file" accept=".pdf,.doc,.docx" onChange={onResumeChange} />
                         </div>
-                        <div style={{marginTop:8}}>
-                          <label className="mb-2 d-block">Or paste resume URL</label>
-                          <input
-                            type="url"
-                            className="form-control"
-                            placeholder="https://example.com/myresume.pdf"
-                            value={resumeUrlInput}
-                            onChange={(e) => setResumeUrlInput(e.target.value)}
-                          />
-                          <small className="form-text text-muted">You can either upload a file or provide a public URL to your resume. If both are provided, uploaded file takes precedence.</small>
-                        </div>
+                        {/* Removed resume URL input - file upload only now */}
                         <div style={{marginTop:12}}>
                           <label className="mb-2 d-block">Cover Letter</label>
                           <textarea className="form-control" rows={6} value={coverLetter} onChange={(e)=>setCoverLetter(e.target.value)} />

@@ -32,7 +32,7 @@ export default function Listing13({ searchFilters }) {
     const fetchFreelancers = async () => {
       try {
         setLoading(true);
-        const response = await fetch("http://206.189.134.117:8000/api/profile/freelancers/", {
+        const response = await fetch("http://127.0.0.1:8000/api/profile/freelancers/", {
           method: "GET",
           headers: {
             "Content-Type": "application/json",

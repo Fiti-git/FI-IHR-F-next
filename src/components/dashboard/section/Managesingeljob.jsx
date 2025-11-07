@@ -4,6 +4,17 @@ import { useParams } from "next/navigation";
 import Link from "next/link";
 import { useState, useEffect } from "react";
 
+  // Normalize resume URL similar to ProfileDetails.jsx
+const getFullResumeUrl = (resume) => {
+  if (!resume) return null;
+  if (typeof resume !== 'string') return null;
+  // if already absolute URL, return as-is
+  if (resume.startsWith('http')) return resume;
+  // otherwise prefix with local dev server host
+  const base = 'http://127.0.0.1:8000';
+  return base + (resume.startsWith('/') ? resume : '/' + resume);
+};
+
 const fetchJobDetails = async (jobId) => {
   try {
     let accessToken;
@@ -16,7 +27,7 @@ const fetchJobDetails = async (jobId) => {
       return null;
     }
 
-    const response = await fetch(`http://206.189.134.117:8000/api/job-posting/${jobId}/`, {
+    const response = await fetch(`http://127.0.0.1:8000/api/job-posting/${jobId}/`, {
       method: "GET",
       headers: {
         'Content-Type': 'application/json',
@@ -51,7 +62,7 @@ const fetchJobApplications = async (jobId) => {
       console.error('No access token for applications');
       return { data: [], error: 'No access token' };
     }
-    const res = await fetch(`http://206.189.134.117:8000/api/job-application/job/${jobId}/`, {
+    const res = await fetch(`http://127.0.0.1:8000/api/job-application/job/${jobId}/`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
@@ -87,7 +98,7 @@ const fetchInterviewForApplication = async (applicationId) => {
       console.error('No access token for interview fetch');
       return null;
     }
-    const res = await fetch(`http://206.189.134.117:8000/api/job-interview/application/${applicationId}/`, {
+    const res = await fetch(`http://127.0.0.1:8000/api/job-interview/application/${applicationId}/`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
@@ -162,7 +173,7 @@ const createJobOffer = async (applicationId, offerData) => {
     },
   };
 
-  const res = await fetch('http://206.189.134.117:8000/api/job-offer/create/', {
+  const res = await fetch('http://127.0.0.1:8000/api/job-offer/create/', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -241,7 +252,7 @@ export default function JobDetailPage() {
       if (status !== undefined) body.status = status;
       if (comments !== undefined) body.comments = comments;
 
-      const res = await fetch(`http://206.189.134.117:8000/api/job-application/update/${applicationId}/`, {
+      const res = await fetch(`http://127.0.0.1:8000/api/job-application/update/${applicationId}/`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -337,7 +348,7 @@ export default function JobDetailPage() {
         throw new Error('No access token found');
       }
 
-      const res = await fetch('http://206.189.134.117:8000/api/job-interview/schedule/', {
+      const res = await fetch('http://127.0.0.1:8000/api/job-interview/schedule/', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -540,7 +551,7 @@ export default function JobDetailPage() {
         console.debug('updateJobPosting payload:', payload);
       }
 
-      const res = await fetch(`http://206.189.134.117:8000/api/job-posting/${jobId}/`, {
+      const res = await fetch(`http://127.0.0.1:8000/api/job-posting/${jobId}/`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -983,7 +994,19 @@ export default function JobDetailPage() {
                             <button
                               className="btn btn-sm btn-outline-primary me-2"
                               title="CV"
-                              onClick={() => { if (applicant.resume) window.open(applicant.resume, '_blank'); else alert('No resume available'); }}
+                              onClick={() => {
+                                if (!applicant.resume) {
+                                  alert('No resume available');
+                                  return;
+                                }
+                                const url = getFullResumeUrl(applicant.resume) || applicant.resume;
+                                try {
+                                  window.open(url, '_blank');
+                                } catch (e) {
+                                  // fallback
+                                  window.location.href = url;
+                                }
+                              }}
                             ><i className="fal fa-file-download" /></button>
                             <button
                               className="btn btn-sm btn-secondary me-2"
