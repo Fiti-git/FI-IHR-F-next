@@ -13,6 +13,7 @@ export default function JobDetail1() {
   const [applied, setApplied] = useState(false);
   const [error, setError] = useState(null);
   const [isJobProvider, setIsJobProvider] = useState(false);
+  const [accessToken, setAccessToken] = useState(typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null);
 
   useEffect(() => {
     const load = async () => {
@@ -41,34 +42,61 @@ export default function JobDetail1() {
     load();
   }, [id]);
 
-  // Determine if current user is a Job Provider to hide the Apply button
+  // Keep accessToken in state and update from localStorage (and cross-tab storage events)
   useEffect(() => {
+    const onStorage = (e) => {
+      if (!e) return;
+      if (e.key === 'accessToken') setAccessToken(e.newValue);
+    };
     try {
-      const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
-      if (!token) return;
-
-      const checkRole = async () => {
-        try {
-          const res = await fetch('http://127.0.0.1:8000/api/profile/job-provider/', {
-            method: 'GET',
-            headers: {
-              'Accept': 'application/json',
-              'Authorization': `Bearer ${token}`,
-            },
-          });
-          if (!res.ok) return; // if unauthorized or error, leave as false
-          const data = await res.json().catch(() => null);
-          const arr = Array.isArray(data) ? data : (data && data.results) ? data.results : [];
-          setIsJobProvider(Array.isArray(arr) && arr.length > 0);
-        } catch (e) {
-          // ignore and keep default false
-        }
-      };
-      checkRole();
+      window.addEventListener('storage', onStorage);
+    } catch (e) {
+      // ignore if not supported
+    }
+    // pick up current value on mount
+    try {
+      const cur = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
+      setAccessToken(cur);
     } catch (e) {
       // ignore
     }
+    return () => {
+      try { window.removeEventListener('storage', onStorage); } catch (e) {}
+    };
   }, []);
+
+  // Call check-auth whenever accessToken changes to determine role flags
+  useEffect(() => {
+    if (!accessToken) {
+      setIsJobProvider(false);
+      return;
+    }
+
+    let cancelled = false;
+    const checkAuth = async () => {
+      try {
+        const res = await fetch('http://127.0.0.1:8000/api/profile/check-auth/', {
+          method: 'GET',
+          headers: {
+            'Accept': 'application/json',
+            'Authorization': `Bearer ${accessToken}`,
+          },
+        });
+        if (!res.ok) {
+          if (!cancelled) setIsJobProvider(false);
+          return;
+        }
+        const data = await res.json().catch(() => null);
+        if (cancelled) return;
+        setIsJobProvider(Boolean(data && data.is_job_provider));
+      } catch (e) {
+        if (!cancelled) setIsJobProvider(false);
+      }
+    };
+
+    checkAuth();
+    return () => { cancelled = true; };
+  }, [accessToken]);
 
   const handleApply = () => setApplied(true);
   // Local modal state for application (no APIs)
