@@ -31,7 +31,6 @@ export default function Listing9() {
           headers: {
             'Content-Type': 'application/json',
             'Accept': 'application/json',
-            "Authorization": accessToken ? `Bearer ${accessToken}` : ''
           }
         });
 
