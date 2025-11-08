@@ -46,7 +46,7 @@ useEffect(() => {
       setUserProfileLoading(true);
 
       // Try freelancer profile first
-      const freelancerRes = await fetch(`${BASE_API_URL}/api/profile/freelancer/`, {
+      const freelancerRes = await fetch(`${BASE_API_URL}api/profile/freelancer/`, {
         method: "GET",
         headers: {
           "Content-Type": "application/json",
