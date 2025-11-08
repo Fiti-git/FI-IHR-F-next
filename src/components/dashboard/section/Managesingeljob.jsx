@@ -3,6 +3,7 @@
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 
   // Normalize resume URL similar to ProfileDetails.jsx
 const getFullResumeUrl = (resume) => {
@@ -11,8 +12,36 @@ const getFullResumeUrl = (resume) => {
   // if already absolute URL, return as-is
   if (resume.startsWith('http')) return resume;
   // otherwise prefix with local dev server host
-  const base = 'http://127.0.0.1:8000';
+  const base = 'http://206.189.134.117:8000';
   return base + (resume.startsWith('/') ? resume : '/' + resume);
+};
+// -------------------------------------------------------------------
+// POST /api/chat/start/
+// -------------------------------------------------------------------
+const startChat = async (userId) => {
+    let accessToken;
+    if (typeof window !== 'undefined') {
+        accessToken = localStorage.getItem('accessToken');
+    }
+    if (!accessToken) throw new Error('No access token');
+
+    const res = await fetch('http://206.189.134.117:8000/api/chat/start/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            Accept: 'application/json',
+            Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({ user_id: userId }),
+    });
+
+    if (!res.ok) {
+        let txt = '';
+        try { txt = await res.text(); } catch { }
+        throw new Error(`Failed to start chat: ${res.status} ${txt}`);
+    }
+
+    return await res.json();
 };
 
 const fetchJobDetails = async (jobId) => {
@@ -195,6 +224,7 @@ const createJobOffer = async (applicationId, offerData) => {
 export default function JobDetailPage() {
   const params = useParams();
   const jobId = parseInt(params.id, 10);
+  const router = useRouter(); // <-- Add this line
   const [job, setJob] = useState(null);
   const [applicants, setApplicants] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -227,6 +257,11 @@ export default function JobDetailPage() {
   const [offerData, setOfferData] = useState({ salary: '', starting_date: '', benefits: '' });
   const [offerSaving, setOfferSaving] = useState(false);
   const [offerError, setOfferError] = useState(null);
+  // Chat modal state
+  const [showChatModal, setShowChatModal] = useState(false);
+  const [currentChatApplicant, setCurrentChatApplicant] = useState(null);
+  const [conversationId, setConversationId] = useState(null);
+  
 
   // helper to extract application_id from applicant.raw or applicant object
   const getApplicationIdFromApplicant = (applicant) => {
@@ -277,7 +312,27 @@ export default function JobDetailPage() {
       setApplicationUpdating(prev => ({ ...prev, [applicationId]: false }));
     }
   };
+// Start chat with applicant
+const handleStartChat = async (applicant) => {
+  if (loading) return;
+  setLoading(true);
+  try {
+    const userId = applicant.raw.freelancer_user_id;
+    if (!userId) throw new Error("No user ID found for this applicant.");
+    const conversation = await startChat(userId);
 
+    if (conversation?.id) {
+      router.push(`/message?conversation_id=${conversation.id}`);
+    } else {
+      throw new Error("Conversation ID missing from server response.");
+    }
+  } catch (error) {
+    console.error("Failed to start chat:", error);
+    alert("Could not start chat: " + error.message);
+  } finally {
+    setLoading(false);
+  }
+};
   // Map UI labels to backend enum values expected by the API
   const INTERVIEW_MODE_MAP = {
     'Zoom': 'zoom',
@@ -1045,10 +1100,10 @@ export default function JobDetailPage() {
                                 }}
                             ><i className="fal fa-calendar-alt" /></button>
                             <button
-                              className="btn btn-sm btn-info me-2"
-                              title="Chat"
-                              onClick={() => alert(`Open chat with ${applicant.name} (UI-only)`) }
-                            ><i className="fal fa-comments" /></button>
+  className="btn btn-sm btn-info me-2"
+  title="Chat"
+  onClick={() => handleStartChat(applicant)}
+><i className="fal fa-comments" /></button>
                             <button
                               className="btn btn-sm btn-success me-2"
                               title="Accept"
@@ -1156,11 +1211,11 @@ export default function JobDetailPage() {
                                 setShowOfferModal(true);
                               }}
                             >Offer</button>
-                            <button
-                              className="btn btn-sm btn-info me-2"
-                              title="Chat"
-                              onClick={() => alert(`Open chat with ${applicant.name} (UI-only)`) }
-                            ><i className="fal fa-comments" /></button>
+<button
+  className="btn btn-sm btn-info me-2"
+  title="Chat"
+  onClick={() => handleStartChat(applicant)}
+><i className="fal fa-comments" /></button>
                           </td>
                         </tr>
                       ));
