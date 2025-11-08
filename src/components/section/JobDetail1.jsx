@@ -260,7 +260,7 @@ export default function JobDetail1() {
                     </div>
                     <div className="col-md-3 col-6 mb-3">
                       <div className="iconbox-style1 contact-style d-flex align-items-start">
-                        <div className="icon flex-shrink-0"><span className="flaticon-location text-thm2 fz40" /></div>
+                        <div className="icon flex-shrink-0"><span className="flaticon-place text-thm2 fz40" /></div>
                         <div className="details">
                           <h5 className="title">Location</h5>
                           <p className="mb-0 text">{job.work_location || 'Remote'}</p>
@@ -307,6 +307,13 @@ export default function JobDetail1() {
                       <button
                         className="ud-btn btn-thm mt-3"
                         onClick={() => {
+                          // If no access token, redirect to login page
+                          const token = localStorage.getItem("accessToken");
+                          if (!token) {
+                            // Use the same redirect approach used elsewhere in the app
+                            window.location.href = '/login';
+                            return;
+                          }
                           setSubmitError(null);
                           setSubmitSuccess(false);
                           setResumeFile(null);
