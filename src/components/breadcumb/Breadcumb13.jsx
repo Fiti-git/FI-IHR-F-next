@@ -74,13 +74,13 @@ export default function Breadcumb13() {
                   <div className="list-meta d-lg-flex align-items-end justify-content-between">
                     <div className="wrapper d-sm-flex align-items-center mb20-md">
                       <a className="position-relative freelancer-single-style">
-                        <Image
+                        {/* <Image
                           height={100}
                           width={100}
                           className="wa"
                           src="/images/team/job-single.png"
                           alt="job-single"
-                        />
+                        /> */}
                       </a>
                       <div className="ml20 ml0-xs mt15-sm">
                         <h4 className="title">{titleText}</h4>

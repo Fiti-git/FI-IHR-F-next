@@ -20,7 +20,7 @@ export default function JobSinglePage() {
         <JobDetail1 />
       </Suspense>
 
-      <Breadcumb10 path={["Home", "Services", "Design & Creative"]} />
+      
       <Breadcumb13 />
     </>
   );

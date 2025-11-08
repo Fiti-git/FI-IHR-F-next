@@ -407,10 +407,10 @@ export default function JobPostForm({ initialData = null, mode = "create", jobId
             <textarea name="screening_questions" rows={3} value={formData.screening_questions} onChange={handleChange} className="form-control" />
           </div>
 
-          <div className="col-md-12 mb20">
+          {/* <div className="col-md-12 mb20">
             <label>File Upload</label>
             <input type="file" name="file_upload" onChange={handleChange} className="form-control" />
-          </div>
+          </div> */}
 
           {/* Checkboxes */}
           <div className="col-md-12 mb20">
