@@ -8,6 +8,7 @@ import Breadcumb13 from "@/components/breadcumb/Breadcumb13";
 import Header20 from "@/components/header/Header20";
 import JobDetail1 from "@/components/section/JobDetail1";
 import TabSection1 from "@/components/section/TabSection1";
+import JobDetailHeader from "@/components/JobDetailHeader";
 
 export default function JobSinglePage() {
   return (
@@ -17,6 +18,7 @@ export default function JobSinglePage() {
       {/* Wrap dynamic parts in Suspense */}
       <Suspense fallback={<div className="text-center py-5">Loading job details...</div>}>
         <TabSection1 />
+        
         <JobDetail1 />
       </Suspense>
 
