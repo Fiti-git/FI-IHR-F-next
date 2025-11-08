@@ -215,6 +215,14 @@ export default function JobDetail1() {
     return text.split(/\n/).map((line, i) => line.trim() ? <p key={i} className="mb-2">• {line.trim()}</p> : null);
   };
 
+  // Use `job_status` to determine if job is closed. If job_status is 'open' (case-insensitive)
+  // the job is considered open; otherwise it's considered closed.
+  const isClosed = (() => {
+    if (!job) return false;
+    const status = job.job_status ?? job.status ?? '';
+    return String(status).toLowerCase() !== 'open';
+  })();
+
   if (loading) return <div className="text-center py-5"><div className="spinner-border" /></div>;
   if (error) return <div className="alert alert-danger text-center">{error}</div>;
   if (!job) return <div className="alert alert-warning text-center">Job not found</div>;
@@ -300,8 +308,10 @@ export default function JobDetail1() {
 
                   <hr className="opacity-100 mb60 mt60" />
 
+
                   {/* Apply Section */}
-                  {!isJobProvider && !applied && (
+                  {/* Show apply button only when not a job provider, not applied yet, and job_status is 'open' */}
+                  {!isJobProvider && !applied && !isClosed && (
                     <div className="bsp_reveiw_wrt mt25">
                       <h4>Apply for This Job</h4>
                       <button
@@ -323,6 +333,15 @@ export default function JobDetail1() {
                       >
                         Apply Now <i className="fal fa-arrow-right-long ms-2" />
                       </button>
+                    </div>
+                  )}
+
+                  {/* If the job is closed (based on job_status), show a closed message */}
+                  {isClosed && !applied && (
+                    <div className="alert alert-danger mt-4">
+                      <i className="fal fa-times-circle me-2" />
+                      <strong>Job is Closed</strong>
+                      <div className="mt-1">Applications are no longer being accepted for this position.</div>
                     </div>
                   )}
 
