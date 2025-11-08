@@ -6,7 +6,7 @@ import DashboardNavigation from "@/components/dashboard/header/DashboardNavigati
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import MobileNavigation2 from "@/components/header/MobileNavigation2";
 import Jobform from "@/components/dashboard/section/JobFormInformation";
-import UploadAttachment from "@/components/dashboard/section/UploadAttachment";
+// import UploadAttachment from "@/components/dashboard/section/UploadAttachment";
 
 export default function EditJobPage() {
   const params = useParams();
@@ -70,7 +70,7 @@ export default function EditJobPage() {
         <div className="row">
           <div className="col-xl-12">
             <Jobform initialData={initialData} mode="edit" jobId={jobId} />
-            <UploadAttachment />
+            {/* <UploadAttachment /> */}
           </div>
         </div>
       </div>

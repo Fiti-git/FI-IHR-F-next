@@ -11,7 +11,7 @@ const getFullResumeUrl = (resume) => {
   // if already absolute URL, return as-is
   if (resume.startsWith('http')) return resume;
   // otherwise prefix with local dev server host
-  const base = 'http://127.0.0.1:8000';
+  const base = 'http://206.189.134.117:8000';
   return base + (resume.startsWith('/') ? resume : '/' + resume);
 };
 
