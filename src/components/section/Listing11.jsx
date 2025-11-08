@@ -27,7 +27,7 @@ export default function Listing11({ searchFilters }) {
     const fetchJobProviders = async () => {
       try {
         setLoading(true);
-        const response = await fetch("http://127.0.0.1:8000/api/profile/job-providers/", {
+        const response = await fetch("http://206.189.134.117:8000/api/profile/job-providers/", {
           method: "GET",
           headers: {
             "Content-Type": "application/json",

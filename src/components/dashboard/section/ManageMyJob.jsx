@@ -90,7 +90,7 @@ export default function AppliedJobs() {
 
         // NOTE: Using the correct production-like URL from the second file for consistency and stability.
         // If the local URL is mandatory, change it back, but the structure is the key fix.
-        const res = await fetch("http://127.0.0.1:8000/api/profile/freelancer/", {
+        const res = await fetch("http://206.189.134.117:8000/api/profile/freelancer/", {
           method: "GET",
           headers: {
             "Content-Type": "application/json",
@@ -164,7 +164,7 @@ export default function AppliedJobs() {
         }
 
         // 🚀 FIX APPLIED HERE: Use the correct ID (freelancerUserId) and URL format (from FreelancerDashboard.js)
-        const res = await fetch(`http://127.0.0.1:8000/api/freelance/${freelancerUserId}/`, {
+        const res = await fetch(`http://206.189.134.117:8000/api/freelance/${freelancerUserId}/`, {
           method: "GET",
           headers: {
             "Content-Type": "application/json",

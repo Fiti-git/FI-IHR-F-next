@@ -18,7 +18,7 @@ export default function DashboardSidebar() {
       const fetchRole = async () => {
         try {
           // Make an API call to fetch roles
-          const response = await fetch(`http://127.0.0.1:8000/api/user/${userId}/roles/`);
+          const response = await fetch(`http://206.189.134.117:8000/api/user/${userId}/roles/`);
           const data = await response.json();
           
           if (response.ok) {

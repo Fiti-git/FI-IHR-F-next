@@ -21,7 +21,7 @@ export default function AppliedJobDetailPage() {
   const [isJobOpen, setIsJobOpen] = useState(true);
   
   // Base URL for API calls
-  const API_BASE_URL = "http://127.0.0.1:8000/api";
+  const API_BASE_URL = "http://206.189.134.117:8000/api";
 
   // --- Helpers ---
   function safeParseInt(value) {

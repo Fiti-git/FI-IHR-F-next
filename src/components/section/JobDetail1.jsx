@@ -30,7 +30,7 @@ export default function JobDetail1() {
         const headers = { 'Content-Type': 'application/json' };
         if (accessToken) headers.Authorization = `Bearer ${accessToken}`;
 
-        const res = await fetch(`http://127.0.0.1:8000/api/job-posting/${id}/`, { headers });
+        const res = await fetch(`http://206.189.134.117:8000/api/job-posting/${id}/`, { headers });
         if (!res.ok) throw new Error(`Failed to fetch job (${res.status})`);
         const data = await res.json();
         setJob(data);
@@ -78,7 +78,7 @@ export default function JobDetail1() {
     let cancelled = false;
     const checkAuth = async () => {
       try {
-        const res = await fetch('http://127.0.0.1:8000/api/profile/check-auth/', {
+        const res = await fetch('http://206.189.134.117:8000/api/profile/check-auth/', {
           method: 'GET',
           headers: {
             'Accept': 'application/json',
@@ -114,7 +114,7 @@ export default function JobDetail1() {
         let freelancerProfileId = null;
         try {
           if (token) {
-            const pfRes = await fetch('http://127.0.0.1:8000/api/profile/freelancer/', {
+            const pfRes = await fetch('http://206.189.134.117:8000/api/profile/freelancer/', {
               method: 'GET',
               headers: {
                 'Content-Type': 'application/json',
@@ -142,7 +142,7 @@ export default function JobDetail1() {
         const headers = { 'Content-Type': 'application/json', 'Accept': 'application/json' };
         if (token) headers.Authorization = `Bearer ${token}`;
 
-        const res = await fetch('http://127.0.0.1:8000/api/job-application/', { method: 'GET', headers });
+        const res = await fetch('http://206.189.134.117:8000/api/job-application/', { method: 'GET', headers });
         if (!res.ok) return;
         const apps = await res.json().catch(() => null);
         const appsArray = Array.isArray(apps) ? apps : (apps && apps.results) ? apps.results : [];
@@ -217,7 +217,7 @@ export default function JobDetail1() {
       let freelancerProfileId = null;
       try {
         if (token) {
-          const pfRes = await fetch('http://127.0.0.1:8000/api/profile/freelancer/', {
+          const pfRes = await fetch('http://206.189.134.117:8000/api/profile/freelancer/', {
             method: 'GET',
             headers: {
               'Content-Type': 'application/json',
@@ -261,7 +261,7 @@ export default function JobDetail1() {
         'Authorization': `Bearer ${token}`,
       };
 
-      const res = await fetch('http://127.0.0.1:8000/api/job-application/', {
+      const res = await fetch('http://206.189.134.117:8000/api/job-application/', {
         method: 'POST',
         headers,
         body: fd,
