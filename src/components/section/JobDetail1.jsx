@@ -260,7 +260,7 @@ export default function JobDetail1() {
                     </div>
                     <div className="col-md-3 col-6 mb-3">
                       <div className="iconbox-style1 contact-style d-flex align-items-start">
-                        <div className="icon flex-shrink-0"><span className="flaticon-place text-thm2 fz40" /></div>
+                        <div className="icon flex-shrink-0"><span className="flaticon-location text-thm2 fz40" /></div>
                         <div className="details">
                           <h5 className="title">Location</h5>
                           <p className="mb-0 text">{job.work_location || 'Remote'}</p>
@@ -306,7 +306,13 @@ export default function JobDetail1() {
                       <h4>Apply for This Job</h4>
                       <button
                         className="ud-btn btn-thm mt-3"
-                        onClick={() => setShowApplyModal(true)}
+                        onClick={() => {
+                          setSubmitError(null);
+                          setSubmitSuccess(false);
+                          setResumeFile(null);
+                          setCoverLetter("");
+                          setShowApplyModal(true);
+                        }}
                       >
                         Apply Now <i className="fal fa-arrow-right-long ms-2" />
                       </button>
@@ -361,36 +367,103 @@ export default function JobDetail1() {
       {/* Apply Modal */}
       {showApplyModal && (
         <>
-          <div className="modal-overlay" style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1050 }} onClick={() => setShowApplyModal(false)} />
-          <div className="modal-dialog" style={{ position: 'fixed', left: '50%', top: '50%', transform: 'translate(-50%,-50%)', zIndex: 1051, width: '90%', maxWidth: 600, background: '#fff', borderRadius: 12, padding: 24 }}>
+          <div
+            className="modal-overlay"
+            style={{
+              position: "fixed",
+              inset: 0,
+              background: "rgba(0,0,0,0.5)",
+              zIndex: 2000,
+              // ensure the overlay captures clicks but doesn't block the dialog
+              pointerEvents: "auto",
+            }}
+            // Only close when clicking directly on the overlay (not when clicks bubble from inside the modal)
+            onClick={(e) => {
+              if (e.target === e.currentTarget) setShowApplyModal(false);
+            }}
+          />
+          <div
+            className="modal-dialog"
+            // Prevent clicks inside the modal from bubbling to the overlay
+            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            style={{
+              position: "fixed",
+              left: "50%",
+              top: "50%",
+              transform: "translate(-50%,-50%)",
+              zIndex: 2001,
+              pointerEvents: "auto",
+              width: "90%",
+              maxWidth: 600,
+              background: "#fff",
+              borderRadius: 12,
+              padding: 24,
+            }}
+          >
             <h4 className="mb-4">Apply for {job.job_title}</h4>
 
             {submitSuccess && (
-              <div className="alert alert-success">
-                <i className="fal fa-check" /> Application submitted successfully!
+              <div className="alert alert-success d-flex align-items-center">
+                <i className="fal fa-check-circle me-2"></i>
+                <span>Application submitted successfully!</span>
               </div>
             )}
 
             <form onSubmit={handleApply}>
               <div className="mb-3">
-                <label className="form-label">Resume (PDF, DOC, DOCX) <span className="text-danger">*</span></label>
-                <input type="file" accept=".pdf,.doc,.docx" className="form-control" onChange={(e) => setResumeFile(e.target.files[0])} required />
+                <label className="form-label">
+                  Resume (PDF, DOC, DOCX) <span className="text-danger">*</span>
+                </label>
+                <input
+                  type="file"
+                  accept=".pdf,.doc,.docx"
+                  className="form-control"
+                  onChange={(e) => {
+                    setResumeFile(e.target.files?.[0] || null);
+                    setSubmitError(null);
+                  }}
+                  required
+                />
               </div>
               <div className="mb-3">
-                <label className="form-label">Cover Letter <span className="text-danger">*</span></label>
+                <label className="form-label">
+                  Cover Letter <span className="text-danger">*</span>
+                </label>
                 <textarea
                   className="form-control"
                   rows={6}
                   value={coverLetter}
-                  onChange={(e) => setCoverLetter(e.target.value)}
+                  onChange={(e) => {
+                    setCoverLetter(e.target.value);
+                    setSubmitError(null);
+                  }}
                   placeholder="Explain why you're a great fit..."
                   required
                 />
               </div>
-              {submitError && <div className="alert alert-danger">{submitError}</div>}
+
+              {submitError && (
+                <div className="alert alert-danger d-flex align-items-center">
+                  <i className="fal fa-exclamation-circle me-2"></i>
+                  <span>{submitError}</span>
+                </div>
+              )}
+
               <div className="d-flex justify-content-end gap-2">
-                <button type="button" className="btn btn-secondary" onClick={() => setShowApplyModal(false)}>Cancel</button>
-                <button type="submit" className="btn btn-thm" disabled={submitting}>
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={() => setShowApplyModal(false)}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="btn btn-thm"
+                  disabled={submitting}
+                >
                   {submitting ? "Submitting..." : "Submit Application"}
                 </button>
               </div>
@@ -398,6 +471,7 @@ export default function JobDetail1() {
           </div>
         </>
       )}
+
     </>
   );
 }
