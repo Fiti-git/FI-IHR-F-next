@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 
-export default function JobPostForm({ initialData = null, mode = "create", jobId = null }) {
+export default function JobPostForm({ initialData = null, mode = "create", jobId = null, onSuccess = null }) {
   const [formData, setFormData] = useState(() => ({
     job_title: "",
     department: "",
@@ -211,7 +211,17 @@ export default function JobPostForm({ initialData = null, mode = "create", jobId
       }
 
       console.log('Success Response:', responseData);
-  alert(mode === 'edit' ? 'Job posting updated successfully!' : 'Job posting created successfully!');
+      alert(mode === 'edit' ? 'Job posting updated successfully!' : 'Job posting created successfully!');
+
+      // Notify parent (e.g. page) that the operation succeeded so it can redirect or update UI.
+      try {
+        if (typeof onSuccess === 'function') {
+          const returnedId = responseData?.id || responseData?.pk || jobId || null;
+          onSuccess(returnedId);
+        }
+      } catch (e) {
+        console.error('onSuccess callback threw:', e);
+      }
       
       // If creating, reset form; if editing, keep values
       if (mode !== 'edit') {

@@ -12912,3 +12912,30 @@ hr {
 .rc-slider .rc-slider-tracks {
   background-color: var(--primary-color);
 }
+
+/* Disable hover 'sliding' highlight for buttons inside modal dialogs
+   The main stylesheet uses a skewed :before pseudo-element that expands
+   on :hover and can create an unwanted highlight when the cursor is near
+   modal buttons. Suppress that pseudo-element for modal buttons only. */
+.modal-dialog .ud-btn:before,
+.modal-dialog .btn-thm:before,
+.modal-dialog .ud-btn2:before,
+.modal-dialog .btn-white:before,
+.modal-dialog .btn-white2:before,
+.modal-dialog .btn-transparent:before,
+.modal-dialog .btn-transparent2:before {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+.modal-dialog .ud-btn:hover:before,
+.modal-dialog .btn-thm:hover:before {
+  width: 0 !important;
+}
+.modal-dialog .ud-btn:hover,
+.modal-dialog .btn-thm:hover,
+.modal-dialog .ud-btn:focus,
+.modal-dialog .btn-thm:focus {
+  box-shadow: none !important;
+  outline: none !important;
+}
