@@ -1,309 +1,154 @@
-import Image from "next/image";
+"use client";
+import { useEffect, useState, useRef } from "react";
+import { API_BASE_URL } from "../section/MessageInfo";
 
-export default function MessageBox() {
+export default function MessageBox({ conversationId, currentUserId }) {
+  const [messages, setMessages] = useState([]);
+  const [messageText, setMessageText] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const messagesEndRef = useRef(null);
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  // This useEffect scrolls to the bottom whenever the messages array is updated.
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
+
+  // This useEffect fetches messages when the component loads or the conversationId changes.
+  useEffect(() => {
+    const fetchMessages = async () => {
+      setError(null);
+      const accessToken = localStorage.getItem("accessToken");
+
+      if (!accessToken) {
+        setError("Authentication required");
+        setLoading(false);
+        return;
+      }
+
+      try {
+        const res = await fetch(`${API_BASE_URL}/api/chat/messages/${conversationId}/`, {
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${accessToken}`,
+          },
+        });
+
+        if (!res.ok) throw new Error("Failed to fetch messages");
+        
+        const data = await res.json();
+        
+        // Correctly access the "results" array from the API response object.
+        if (data && Array.isArray(data.results)) {
+            // Reverse the array to display the oldest messages first (chronological order).
+            setMessages(data.results.reverse());
+        } else {
+            console.warn("API response did not contain a 'results' array:", data);
+            setMessages([]); 
+        }
+
+      } catch (err) {
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (conversationId) {
+      fetchMessages(); // Fetch on initial load.
+
+      // Set up an interval to poll for new messages every 5 seconds.
+      const interval = setInterval(fetchMessages, 5000);
+      
+      // Clean up the interval when the component unmounts or conversationId changes.
+      return () => clearInterval(interval);
+    }
+  }, [conversationId]);
+
+  const handleSend = async (e) => {
+    e.preventDefault();
+    const accessToken = localStorage.getItem("accessToken");
+    if (!messageText.trim()) return;
+
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/chat/send/`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({
+          conversation_id: conversationId,
+          text: messageText,
+        }),
+      });
+
+      if (!res.ok) throw new Error("Failed to send message");
+      
+      const newMessage = await res.json();
+      
+      // Optimistically update the UI with the new message for a better UX.
+      setMessages(prevMessages => [...prevMessages, newMessage]);
+      setMessageText("");
+    } catch (err) {
+      console.error("Error sending message:", err);
+    }
+  };
+
   return (
-    <>
-      <div className="message_container mt30-md">
-        <div className="user_heading px-0 mx30">
-          <div className="wrap">
-            <Image
-              height={50}
-              width={50}
-              className="img-fluid mr10"
-              src="/images/inbox/ms3.png"
-              alt="ms3.png"
-            />
-            <div className="meta d-sm-flex justify-content-sm-between align-items-center">
-              <div className="authors">
-                <h6 className="name mb-0">Arlene McCoy</h6>
-                <p className="preview">Active</p>
-              </div>
-              <div>
-                <a className="text-decoration-underline fz14 fw500 text-red ff-heading">
-                  Delete Conversation
-                </a>
+    <div className="message_container d-flex flex-column">
+      <div
+        className="messages_area flex-grow-1 p-3 border rounded"
+        style={{ overflowY: "auto", height: "400px" }}
+      >
+        {loading ? (
+          <p>Loading messages...</p>
+        ) : error ? (
+          <p className="text-danger">{error}</p>
+        ) : messages.length === 0 ? (
+          <p>No messages yet. Start the conversation!</p>
+        ) : (
+          messages.map((msg) => (
+            <div
+              key={msg.id}
+              className={`d-flex mb-2 ${
+                // The sender ID from the API is likely an integer.
+                // Comparing with .toString() is a safe way to avoid type issues.
+                msg.sender.toString() === currentUserId ? "justify-content-end" : "justify-content-start"
+              }`}
+            >
+              <div
+                className={`p-2 rounded ${
+                  msg.sender.toString() === currentUserId
+                    ? "bg-primary text-white"
+                    : "bg-light text-dark"
+                }`}
+                style={{ maxWidth: "75%" }}
+              >
+                {msg.text}
               </div>
             </div>
-          </div>
-        </div>
-        <div className="inbox_chatting_box">
-          <ul className="chatting_content">
-            <li className="sent float-start">
-              <div className="d-flex align-items-center mb15">
-                <Image
-                  height={50}
-                  width={50}
-                  className="img-fluid rounded-circle align-self-start mr10"
-                  src="/images/inbox/ms4.png"
-                  alt="ms4.png"
-                />
-                <div className="title fz15">
-                  Albert Flores <small className="ml10">35 mins</small>
-                </div>
-              </div>
-              <p>
-                How likely are you to recommend our company to your friends and
-                family?
-              </p>
-            </li>
-            <li className="reply float-end">
-              <div className="d-flex align-items-center justify-content-end mb15">
-                <div className="title fz15">
-                  <small className="mr10">35 mins</small> You
-                </div>
-                <Image
-                  height={50}
-                  width={50}
-                  className="img-fluid rounded-circle align-self-end ml10"
-                  src="/images/inbox/ms5.png"
-                  alt="ms5.png"
-                />
-              </div>
-              <p>
-                Hey there, we’re just writing to let you know that you’ve been
-                subscribed to a repository on GitHub.
-              </p>
-            </li>
-            <li className="sent float-start">
-              <div className="d-flex align-items-center mb15">
-                <Image
-                  height={50}
-                  width={50}
-                  className="img-fluid rounded-circle align-self-start mr10"
-                  src="/images/inbox/ms5.png"
-                  alt="ms5.png"
-                />
-                <div className="title fz15">
-                  Albert Flores <small className="ml10">35 mins</small>
-                </div>
-              </div>
-              <p>Ok, Understood!</p>
-            </li>
-            <li className="reply float-end">
-              <div className="d-flex align-items-center justify-content-end mb15">
-                <div className="title fz15">
-                  <small className="mr10">35 mins</small> You
-                </div>
-                <Image
-                  height={50}
-                  width={50}
-                  className="img-fluid rounded-circle align-self-end ml10"
-                  src="/images/inbox/ms5.png"
-                  alt="ms5.png"
-                />
-              </div>
-              <p>The project finally complete! Let's go to!.</p>
-            </li>
-            <li className="sent float-start">
-              <div className="d-flex align-items-center mb15">
-                <Image
-                  height={50}
-                  width={50}
-                  className="img-fluid rounded-circle align-self-start mr10"
-                  src="/images/inbox/ms2.png"
-                  alt="ms2.png"
-                />
-                <div className="title fz15">
-                  Albert Flores <small className="ml10">35 mins</small>
-                </div>
-              </div>
-              <p>Let's go!</p>
-            </li>
-            <li className="sent float-start">
-              <div className="d-flex align-items-center mb15">
-                <Image
-                  height={50}
-                  width={50}
-                  className="img-fluid rounded-circle align-self-start mr10"
-                  src="/images/inbox/ms2.png"
-                  alt="ms2.png"
-                />
-                <div className="title fz15">
-                  Albert Flores <small className="ml10">35 mins</small>
-                </div>
-              </div>
-              <p>
-                simply dummy text of the printing and typesetting industry.
-                Lorem Ipsum has been the industry's
-              </p>
-            </li>
-            <li className="sent float-start">
-              <div className="d-flex align-items-center mb15">
-                <Image
-                  height={50}
-                  width={50}
-                  className="img-fluid rounded-circle align-self-start mr10"
-                  src="/images/inbox/ms2.png"
-                  alt="ms2.png"
-                />
-                <div className="title fz15">
-                  Albert Flores <small className="ml10">35 mins</small>
-                </div>
-              </div>
-              <p>Hello, John!</p>
-            </li>
-            <li className="reply float-end">
-              <div className="d-flex align-items-center justify-content-end mb15">
-                <div className="title fz15">
-                  <small className="mr10">35 mins</small> You
-                </div>
-                <Image
-                  height={50}
-                  width={50}
-                  className="img-fluid rounded-circle align-self-end ml10"
-                  src="/images/inbox/ms3.png"
-                  alt="ms3.png"
-                />
-              </div>
-              <p>
-                simply dummy text of the printing and typesetting industry.
-                Lorem Ipsum has been the industry's
-              </p>
-            </li>
-            <li className="reply float-end">
-              <div className="d-flex align-items-center justify-content-end mb15">
-                <div className="title fz15">
-                  <small className="mr10">35 mins</small> You
-                </div>
-                <Image
-                  height={50}
-                  width={50}
-                  className="img-fluid rounded-circle align-self-end ml10"
-                  src="/images/inbox/ms3.png"
-                  alt="ms3.png"
-                />
-              </div>
-              <p>Are we meeting today?</p>
-            </li>
-            <li className="reply float-end">
-              <div className="d-flex align-items-center justify-content-end mb15">
-                <div className="title fz15">
-                  <small className="mr10">35 mins</small> You
-                </div>
-                <Image
-                  height={50}
-                  width={50}
-                  className="img-fluid rounded-circle align-self-end ml10"
-                  src="/images/inbox/ms3.png"
-                  alt="ms3.png"
-                />
-              </div>
-              <p>The project finally complete! Let's go to!</p>
-            </li>
-            <li className="sent float-start">
-              <div className="d-flex align-items-center mb15">
-                <Image
-                  height={50}
-                  width={50}
-                  className="img-fluid rounded-circle align-self-start mr10"
-                  src="/images/inbox/ms2.png"
-                  alt="ms2.png"
-                />
-                <div className="title fz15">
-                  Albert Flores <small className="ml10">35 mins</small>
-                </div>
-              </div>
-              <p>Let's go!</p>
-            </li>
-            <li className="sent float-start">
-              <div className="d-flex align-items-center mb15">
-                <Image
-                  height={50}
-                  width={50}
-                  className="img-fluid rounded-circle align-self-start mr10"
-                  src="/images/inbox/ms2.png"
-                  alt="ms2.png"
-                />
-                <div className="title fz15">
-                  Albert Flores <small className="ml10">35 mins</small>
-                </div>
-              </div>
-              <p>
-                simply dummy text of the printing and typesetting industry.
-                Lorem Ipsum has been the industry's
-              </p>
-            </li>
-            <li className="reply float-end">
-              <div className="d-flex align-items-center justify-content-end mb15">
-                <div className="title fz15">
-                  <small className="mr10">35 mins</small> You
-                </div>
-                <Image
-                  height={50}
-                  width={50}
-                  className="img-fluid rounded-circle align-self-end ml10"
-                  src="/images/inbox/ms3.png"
-                  alt="ms3.png"
-                />
-              </div>
-              <p>Are we meeting today?</p>
-            </li>
-            <li className="reply float-end">
-              <div className="d-flex align-items-center justify-content-end mb15">
-                <div className="title fz15">
-                  <small className="mr10">35 mins</small> You
-                </div>
-                <Image
-                  height={50}
-                  width={50}
-                  className="img-fluid rounded-circle align-self-end ml10"
-                  src="/images/inbox/ms3.png"
-                  alt="ms3.png"
-                />
-              </div>
-              <p>The project finally complete! Let's go to!</p>
-            </li>
-            <li className="sent float-start">
-              <div className="d-flex align-items-center mb15">
-                <Image
-                  height={50}
-                  width={50}
-                  className="img-fluid rounded-circle align-self-start mr10"
-                  src="/images/inbox/ms2.png"
-                  alt="ms2.png"
-                />
-                <div className="title fz15">
-                  Albert Flores <small className="ml10">35 mins</small>
-                </div>
-              </div>
-              <p>Let's go!</p>
-            </li>
-            <li className="sent float-start">
-              <div className="d-flex align-items-center mb15">
-                <Image
-                  height={50}
-                  width={50}
-                  className="img-fluid rounded-circle align-self-start mr10"
-                  src="/images/inbox/ms2.png"
-                  alt="ms2.png"
-                />
-                <div className="title fz15">
-                  Albert Flores <small className="ml10">35 mins</small>
-                </div>
-              </div>
-              <p>
-                simply dummy text of the printing and typesetting industry.
-                Lorem Ipsum has been the industry's
-              </p>
-            </li>
-          </ul>
-        </div>
-        <div className="mi_text">
-          <div className="message_input">
-            <form className="d-flex align-items-center">
-              <input
-                className="form-control"
-                type="search"
-                placeholder="Type a Message"
-              />
-              <button type="button" className="btn ud-btn btn-thm">
-                Send Message
-                <i className="fal fa-arrow-right-long" />
-              </button>
-            </form>
-          </div>
-        </div>
+          ))
+        )}
+        <div ref={messagesEndRef} />
       </div>
-    </>
+
+      <form onSubmit={handleSend} className="d-flex mt-3">
+        <input
+          type="text"
+          className="form-control me-2"
+          placeholder="Type a message..."
+          value={messageText}
+          onChange={(e) => setMessageText(e.target.value)}
+        />
+        <button className="btn btn-primary" type="submit">
+          Send
+        </button>
+      </form>
+    </div>
   );
 }
