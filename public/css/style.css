@@ -279,6 +279,7 @@ li {
 }
 .footer-style1.at-home18 {
   background-color: transparent;
+  background-image: url(../images/background/home18-footer-bg.png);
   background-size: cover;
   background-position: top;
   background-repeat: no-repeat;
@@ -2589,7 +2590,7 @@ li {
 /*	Home 2 Banner  */
 /*	Home 3 Banner */
 .home3-hero {
-  
+  background-image: url(../images/background/home3-bg.png);
   align-items: center;
   display: flex;
   height: 670px;
@@ -2737,6 +2738,7 @@ li {
 
 /*	Home 2 Banner */
 .hero-home2 {
+  background-image: url(../images/background/home2-hero-bg.jpg);
   background-position: center bottom;
   background-size: cover;
   align-items: flex-end;
@@ -2927,6 +2929,7 @@ li {
 }
 
 .home6-newslatter {
+  background-image: url(../images/background/home6-newslatter-bg.jpg);
   background-size: cover;
   background-repeat: no-repeat;
 }
