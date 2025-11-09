@@ -188,7 +188,8 @@ export default function AppliedJobs() {
           ? data.jobs.map((j) => ({
               id: j.job_id,
               title: j.job_title,
-              category: j.job_category,
+              // Capitalize first letter for display in the Category column
+              category: capitalizeFirst(j.job_category),
               date: j.date_posted,
               // Ensure job_status matches the expected case for the badge component
               status: capitalizeFirst(j.job_status), 
@@ -237,7 +238,7 @@ export default function AppliedJobs() {
           </div>
           <div className="col-lg-3">
             <div className="text-lg-end">
-              <Link href="/jobs" className="ud-btn btn-dark default-box-shadow2">
+              <Link href="/job-1" className="ud-btn btn-dark default-box-shadow2">
                 Browse Jobs <i className="fal fa-arrow-right-long" />
               </Link>
             </div>
