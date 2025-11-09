@@ -106,7 +106,7 @@ export default function ManageProjectInfo() {
   const [deleteProjectId, setDeleteProjectId] = useState(null);
 
   // API URL
-  const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://206.189.134.117:8000/api/project/projects/";
+  const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000/api/project/projects/";
 
   // Check authentication on component mount
   useEffect(() => {

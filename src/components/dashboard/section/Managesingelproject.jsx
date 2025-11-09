@@ -41,7 +41,7 @@ export default function ManageSingleProject() {
   const [selectedCoverLetter, setSelectedCoverLetter] = useState(null);
 
   // API URLs
-  const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://206.189.134.117:8000/api/project";
+  const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000/api/project";
 
   // -------------------------------------------------------------------
 // POST /api/chat/start/
@@ -53,7 +53,7 @@ const startChat = async (userId) => {
     }
     if (!accessToken) throw new Error('No access token');
 
-    const res = await fetch('http://206.189.134.117:8000/api/chat/start/', {
+    const res = await fetch('http://127.0.0.1:8000/api/chat/start/', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',

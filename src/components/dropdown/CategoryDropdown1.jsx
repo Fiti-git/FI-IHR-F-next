@@ -4,7 +4,7 @@ import listingStore from "@/store/listingStore";
 import { useEffect, useState } from "react";
 
 // Fetch unique job_category values from API and present them as category filter options
-const BASE_API_URL = "http://206.189.134.117:8000";
+const BASE_API_URL = "http://127.0.0.1:8000";
 
 export default function CategoryDropdown1() {
   const [getCategory, setCategory] = useState([]);

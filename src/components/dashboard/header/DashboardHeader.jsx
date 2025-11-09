@@ -32,7 +32,7 @@ export default function DashboardHeader() {
     const fetchUserRoleAndProfile = async () => {
       try {
         // 1️⃣ Get user role
-        const roleRes = await fetch(`http://206.189.134.117:8000/api/user/${storedUserId}/roles/`, {
+        const roleRes = await fetch(`http://127.0.0.1:8000/api/user/${storedUserId}/roles/`, {
           headers: { Authorization: `Bearer ${accessToken}` },
         });
 
@@ -44,9 +44,9 @@ export default function DashboardHeader() {
         // 2️⃣ Get profile based on role
         let profileUrl = "";
         if (userRole === "Employee") {
-          profileUrl = "http://206.189.134.117:8000/api/profile/freelancer/";
+          profileUrl = "http://127.0.0.1:8000/api/profile/freelancer/";
         } else if (userRole === "Employer") {
-          profileUrl = "http://206.189.134.117:8000/api/profile/job-provider/";
+          profileUrl = "http://127.0.0.1:8000/api/profile/job-provider/";
         }
 
         if (profileUrl) {
@@ -59,7 +59,7 @@ export default function DashboardHeader() {
             if (profileData.profile_image) {
               const fullImageUrl = profileData.profile_image.startsWith("http")
                 ? profileData.profile_image
-                : `http://206.189.134.117:8000${profileData.profile_image}`;
+                : `http://127.0.0.1:8000${profileData.profile_image}`;
               setProfileImage(fullImageUrl);
             }
           }

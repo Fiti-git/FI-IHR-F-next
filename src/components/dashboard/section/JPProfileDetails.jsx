@@ -112,7 +112,7 @@ export default function JobProviderProfile() {
       }
 
       try {
-        const response = await fetch("http://206.189.134.117:8000/api/profile/job-provider/", {
+        const response = await fetch("http://127.0.0.1:8000/api/profile/job-provider/", {
           method: "GET",
           headers: {
             "Authorization": `Bearer ${accessToken}`,
@@ -128,7 +128,7 @@ export default function JobProviderProfile() {
             if (data.profile_image) {
               const fullImageUrl = data.profile_image.startsWith("http")
                 ? data.profile_image
-                : `http://206.189.134.117:8000${data.profile_image}`;
+                : `http://127.0.0.1:8000${data.profile_image}`;
               setSelectedImage(fullImageUrl);
             }
           } else {
@@ -196,7 +196,7 @@ const handleResumeChange = (event) => {
     }
 
     try {
-      const res = await fetch("http://206.189.134.117:8000/api/profile/job-provider/", {
+      const res = await fetch("http://127.0.0.1:8000/api/profile/job-provider/", {
         method: method,
         headers: {
           "Authorization": `Bearer ${accessToken}`,

@@ -38,7 +38,7 @@ export default function Listing9() {
     const fetchJobs = async () => {
       try {
         const response = await fetch(
-          "http://206.189.134.117:8000/api/job-posting/",
+          "http://127.0.0.1:8000/api/job-posting/",
           {
             method: "GET",
             headers: {

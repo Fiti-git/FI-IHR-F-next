@@ -56,7 +56,7 @@ export default function JobDetail1() {
   const [submitError, setSubmitError] = useState(null);
   const [submitSuccess, setSubmitSuccess] = useState(false);
 
-  const BASE_API_URL = "http://206.189.134.117:8000";
+  const BASE_API_URL = "http://127.0.0.1:8000";
 
   // Fetch Job
   useEffect(() => {

@@ -18,28 +18,76 @@ const capitalizeFirst = (value) => {
   return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
 };
 
-const ApplicantStatusBadge = ({ status }) => {
-  let colorClass;
-  switch (status) {
-    case "closed":
-      colorClass = "badge bg-danger";
-      break;
-    case "open":
-      colorClass = "badge bg-success";
-      break;
-    case "Interview":
-      colorClass = "badge bg-warning text-dark";
-      break;
-    case "Rejected":
-      colorClass = "badge bg-danger";
-      break;
-    case "Hired":
-      colorClass = "badge bg-success";
-      break;
-    default:
-      colorClass = "badge bg-secondary";
+// Normalize status strings the same way as ManageappliedJobInfo.jsx
+const normalizeStatus = (s) => {
+  if (!s) return "";
+  const v = String(s).trim().toLowerCase();
+  if (v.includes("reject")) return "Rejected";
+  if (v.includes("accept") || v.includes("hire")) return "Accepted";
+  if (v.includes("schedule") || v.includes("interview")) return "Scheduled";
+  if (v.includes("pending")) return "Pending";
+  if (v.includes("open")) return "Open";
+  if (v.includes("close")) return "Closed";
+  return v.charAt(0).toUpperCase() + v.slice(1);
+};
+
+// Helpers copied from ManageappliedJobInfo.jsx to determine current freelancer id
+const safeParseInt = (v) => {
+  const n = parseInt(v, 10);
+  return Number.isFinite(n) ? n : null;
+};
+
+const decodeJwt = (token) => {
+  try {
+    const base64Url = token.split(".")[1];
+    if (!base64Url) return null;
+    const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
+    const json = decodeURIComponent(
+      atob(base64)
+        .split("")
+        .map((c) => "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2))
+        .join("")
+    );
+    return JSON.parse(json);
+  } catch {
+    return null;
   }
-  return <span className={colorClass}>{capitalizeFirst(status)}</span>;
+};
+
+const getCurrentFreelancerId = () => {
+  const keys = ["freelancerId", "freelance_id", "freelancer_id", "userId", "user_id"];
+  for (const k of keys) {
+    const v = typeof window !== "undefined" ? localStorage.getItem(k) : null;
+    const n = safeParseInt(v);
+    if (n) return n;
+  }
+  const token = typeof window !== "undefined" ? localStorage.getItem("accessToken") : null;
+  if (token) {
+    const payload = decodeJwt(token) || {};
+    const idKeys = ["freelancer_id", "freelance_id", "user_id", "id"];
+    for (const k of idKeys) {
+      const n = safeParseInt(payload[k]);
+      if (n) return n;
+    }
+  }
+  return null;
+};
+
+const API_BASE_URL = "http://127.0.0.1:8000/api";
+
+const ApplicantStatusBadge = ({ status }) => {
+  const n = normalizeStatus(status);
+  const cls =
+    {
+      Rejected: "badge bg-danger",
+      Accepted: "badge bg-success",
+      Scheduled: "badge bg-info text-white",
+      Open: "badge bg-primary",
+      Closed: "badge bg-dark",
+      Pending: "badge bg-warning text-dark",
+    }[n] || "badge bg-secondary";
+
+  return <span className={cls}>{n || capitalizeFirst(status)}</span>;
 };
 
 // Row component for Applied Jobs
@@ -52,7 +100,7 @@ function AppliedJobsRow({ job }) {
       <td>{job.category}</td>
       <td>{job.date}</td>
       <td>
-        <ApplicantStatusBadge status={job.status} />
+        <ApplicantStatusBadge status={job.displayStatus || job.status} />
       </td>
       <td>
         <Link href={jobLink} className="btn btn-sm btn-outline-primary me-2">
@@ -90,7 +138,7 @@ export default function AppliedJobs() {
 
         // NOTE: Using the correct production-like URL from the second file for consistency and stability.
         // If the local URL is mandatory, change it back, but the structure is the key fix.
-        const res = await fetch("http://206.189.134.117:8000/api/profile/freelancer/", {
+        const res = await fetch("http://127.0.0.1:8000/api/profile/freelancer/", {
           method: "GET",
           headers: {
             "Content-Type": "application/json",
@@ -164,7 +212,7 @@ export default function AppliedJobs() {
         }
 
         // 🚀 FIX APPLIED HERE: Use the correct ID (freelancerUserId) and URL format (from FreelancerDashboard.js)
-        const res = await fetch(`http://206.189.134.117:8000/api/freelance/${freelancerUserId}/`, {
+        const res = await fetch(`http://127.0.0.1:8000/api/freelance/${freelancerUserId}/`, {
           method: "GET",
           headers: {
             "Content-Type": "application/json",
@@ -191,8 +239,10 @@ export default function AppliedJobs() {
               // Capitalize first letter for display in the Category column
               category: capitalizeFirst(j.job_category),
               date: j.date_posted,
-              // Ensure job_status matches the expected case for the badge component
-              status: capitalizeFirst(j.job_status), 
+              // store original normalized job status
+              status: normalizeStatus(j.job_status),
+              // displayStatus will be computed (may be overridden by application/interview status)
+              displayStatus: normalizeStatus(j.job_status),
             }))
           : [];
 
@@ -209,10 +259,102 @@ export default function AppliedJobs() {
     fetchFreelancerJobs();
   }, [freelancerUserId]); // 💡 DEPENDENCY: Use the new state variable
 
+
+  // Enrich each job with application/interview state for the current freelancer
+  useEffect(() => {
+    const enrichJobs = async () => {
+      if (!freelancerUserId || !jobs.length) return;
+      let token = getAuthToken();
+      if (!token && typeof window !== "undefined") {
+        token = localStorage.getItem("accessToken") || localStorage.getItem("token");
+      }
+      if (!token) return;
+
+      const updated = await Promise.all(
+        jobs.map(async (job) => {
+          try {
+            // Fetch applications for this job
+            const res = await fetch(`${API_BASE_URL}/job-application/job/${job.id}`, {
+              method: "GET",
+              headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+            });
+            if (!res.ok) return job; // leave as-is
+
+            const data = await res.json();
+            const apps = Array.isArray(data) ? data : Array.isArray(data?.applications) ? data.applications : [];
+
+            // find application for current freelancer
+            const myId = getCurrentFreelancerId() || freelancerUserId;
+            const mine = apps.find((a) => {
+              const ids = [a.freelancer_id, a.freelance_id, a.freelancer_user_id, a.user_id, a.userId];
+              return ids.some((id) => safeParseInt(id) === myId);
+            });
+
+            // default display is job.status
+            let display = job.status;
+
+            if (mine) {
+              const appStatus = normalizeStatus(mine.status || mine.application_status || mine.status);
+              // If application explicitly Rejected or Accepted, show that
+              if (appStatus === "Rejected" || appStatus === "Accepted") {
+                display = appStatus;
+              } else {
+                // try to fetch interview for this application id to see if scheduled
+                const appId = safeParseInt(mine.application_id || mine.applicationId || mine.id);
+                if (appId) {
+                  try {
+                    const ires = await fetch(`${API_BASE_URL}/job-interview/application/${appId}`, {
+                      method: "GET",
+                      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+                    });
+                    if (ires.ok) {
+                      const idata = await ires.json();
+                      const interviews = Array.isArray(idata) ? idata : idata?.application_id ? [idata] : [];
+                      if (interviews.length) {
+                        // find any interview that appears scheduled
+                        const latest = interviews[0];
+                        const istatus = normalizeStatus(latest.status || latest.interview_status || "Scheduled");
+                        if (istatus === "Scheduled") {
+                          display = "Scheduled";
+                        }
+                      }
+                    }
+                  } catch (e) {
+                    // ignore interview fetch failure and fall back
+                  }
+                }
+
+                // If still not changed and job is Open and application is Pending -> show Pending
+                if (display === job.status && job.status === "Open") {
+                  const maybeAppStatus = normalizeStatus(mine.status || mine.application_status || mine.status);
+                  if (maybeAppStatus === "Pending") display = "Pending";
+                }
+              }
+            } else {
+              // no application found for this user; keep job status
+              display = job.status;
+            }
+
+            return { ...job, displayStatus: display };
+          } catch (e) {
+            return job;
+          }
+        })
+      );
+
+      setJobs(updated);
+    };
+
+    enrichJobs();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [jobs.length, freelancerUserId]);
+
   
 
   const filteredJobs =
-    filter === "All" ? jobs : jobs.filter((job) => job.status === filter);
+    filter === "All"
+      ? jobs
+      : jobs.filter((job) => (job.displayStatus || job.status) === filter);
 
   // --- JSX REMAINS LARGELY THE SAME ---
 
@@ -258,8 +400,10 @@ export default function AppliedJobs() {
                 >
                   <option value="All">All</option>
                   <option value="Rejected">Rejected</option>
-                  <option value="Hired">Hired</option>
-                  <option value="Interview">Interview</option>
+                  <option value="Accepted">Accepted</option>
+                  <option value="Scheduled">Scheduled</option>
+                  <option value="Open">Open</option>
+                  <option value="Closed">Closed</option>
                 </select>
               </div>
 

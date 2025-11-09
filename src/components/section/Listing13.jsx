@@ -32,7 +32,7 @@ export default function Listing13({ searchFilters }) {
     const fetchFreelancers = async () => {
       try {
         setLoading(true);
-        const response = await fetch("http://206.189.134.117:8000/api/profile/freelancers/", {
+        const response = await fetch("http://127.0.0.1:8000/api/profile/freelancers/", {
           method: "GET",
           headers: {
             "Content-Type": "application/json",
@@ -69,7 +69,7 @@ export default function Listing13({ searchFilters }) {
       || (freelancer.profile_image 
           ? (freelancer.profile_image.startsWith('http') 
               ? freelancer.profile_image 
-              : `http://206.189.134.117:8000${freelancer.profile_image}`)
+              : `http://127.0.0.1:8000${freelancer.profile_image}`)
           : "/images/team/fl-1.png");
 
     // Extract user data from nested user object

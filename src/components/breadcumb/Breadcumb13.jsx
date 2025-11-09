@@ -20,7 +20,7 @@ export default function Breadcumb13() {
         const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
         if (token) headers.Authorization = `Bearer ${token}`;
 
-        const res = await fetch(`http://206.189.134.117:8000/api/job-posting/${id}/`, { headers });
+        const res = await fetch(`http://127.0.0.1:8000/api/job-posting/${id}/`, { headers });
         if (res.status === 401) {
           // Unauthorized - token missing or invalid
           console.warn('Unauthorized when fetching job details');

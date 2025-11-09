@@ -114,7 +114,7 @@ export default function ProfileDetails() {
       }
 
       try {
-        const response = await fetch("http://206.189.134.117:8000/api/profile/freelancer/", {
+        const response = await fetch("http://127.0.0.1:8000/api/profile/freelancer/", {
           headers: { "Authorization": `Bearer ${accessToken}` },
         });
 
@@ -131,14 +131,14 @@ export default function ProfileDetails() {
             if (data.profile_image) {
               const fullImageUrl = data.profile_image.startsWith("http")
                 ? data.profile_image
-                : `http://206.189.134.117:8000${data.profile_image}`;
+                : `http://127.0.0.1:8000${data.profile_image}`;
               setSelectedImage(fullImageUrl);
             }
 
             if (data.resume) {
               const fullResumeUrl = data.resume.startsWith("http")
                 ? data.resume
-                : `http://206.189.134.117:8000${data.resume}`;
+                : `http://127.0.0.1:8000${data.resume}`;
               setSelectedResumeName(fullResumeUrl.split('/').pop());
               // Store full URL so we can link it later
               setProfileData((prev) => ({ ...prev, resume: fullResumeUrl }));
@@ -242,7 +242,7 @@ export default function ProfileDetails() {
     }
 
     try {
-      const res = await fetch("http://206.189.134.117:8000/api/profile/freelancer/", {
+      const res = await fetch("http://127.0.0.1:8000/api/profile/freelancer/", {
         method: method,
         headers: { "Authorization": `Bearer ${accessToken}` },
         body: dataToSend,
@@ -418,7 +418,7 @@ export default function ProfileDetails() {
       href={
         typeof profileData.resume === "string" && profileData.resume.startsWith("http")
           ? profileData.resume
-          : `http://206.189.134.117:8000${profileData.resume}`
+          : `http://127.0.0.1:8000${profileData.resume}`
       }
       target="_blank"
       rel="noopener noreferrer"

@@ -22,7 +22,7 @@ export default function Header20() {
             }
 
             try {
-                const response = await fetch("http://206.189.134.117:8000/api/profile/check-auth/", {
+                const response = await fetch("http://127.0.0.1:8000/api/profile/check-auth/", {
                     method: "GET",
                     headers: {
                         "Authorization": `Bearer ${accessToken}`,

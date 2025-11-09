@@ -23,7 +23,7 @@ export default function EmployeeDetail1() {
       try {
         setLoading(true);
         // Fetch all job providers and find the one with matching user ID
-        const response = await fetch("http://206.189.134.117:8000/api/profile/job-providers/", {
+        const response = await fetch("http://127.0.0.1:8000/api/profile/job-providers/", {
           method: "GET",
           headers: {
             "Content-Type": "application/json",
