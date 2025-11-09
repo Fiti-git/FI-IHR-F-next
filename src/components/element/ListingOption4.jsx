@@ -76,7 +76,7 @@ export default function ListingOption4() {
                     <JobTypeDropdown1 />
                   </div>
                 </li>
-                <li className="list-inline-item position-relative d-none d-xl-inline-block">
+                {/* <li className="list-inline-item position-relative d-none d-xl-inline-block">
                   <button
                     className="open-btn mb10 dropdown-toggle"
                     type="button"
@@ -89,7 +89,7 @@ export default function ListingOption4() {
                   <div className="dropdown-menu">
                     <LevelDropdown1 />
                   </div>
-                </li>
+                </li> */}
                 <li className="list-inline-item position-relative d-none d-xl-inline-block">
                   <ClearButton />
                 </li>
@@ -99,7 +99,7 @@ export default function ListingOption4() {
         </div>
         <div className="col-sm-6 col-lg-3">
           <div className="page_control_shorting mb10 d-flex align-items-center justify-content-center justify-content-sm-end">
-            <SortOption1 />
+            {/* <SortOption1 /> */}
           </div>
         </div>
       </div>

@@ -3,22 +3,22 @@ import Image from "next/image";
 import HeroSearch1 from "../element/HeroSearch1";
 import { useState } from "react";
 
-const role = [
-  "Graphics & Design",
-  "Digital Marketing",
-  "Writing & Translation",
-  "Video & Animation",
-  "Music & Audio",
-  "Programming & Tech",
-];
+// const role = [
+//   "Graphics & Design",
+//   "Digital Marketing",
+//   "Writing & Translation",
+//   "Video & Animation",
+//   "Music & Audio",
+//   "Programming & Tech",
+// ];
 
 export default function Breadcumb12() {
-  const [getSelectedRole, setSelectedRole] = useState(null);
+  // const [getSelectedRole, setSelectedRole] = useState(null);
 
-  // role handler
-  const roleHandler = (select) => {
-    setSelectedRole(select);
-  };
+  // // role handler
+  // const roleHandler = (select) => {
+  //   setSelectedRole(select);
+  // };
 
   return (
     <>
@@ -38,13 +38,13 @@ export default function Breadcumb12() {
             src="/images/vector-img/right-bottom.png"
             alt="right-bottom"
           />
-          <Image
+          {/* <Image
             height={300}
             width={532}
             className="service-v1-vector bounce-y d-none d-xl-block"
             src="/images/vector-img/vector-service-v1.png"
             alt="vector-service"
-          />
+          /> */}
           <div className="container">
             <div className="row wow fadeInUp">
               <div className="col-xl-7">
@@ -57,12 +57,13 @@ export default function Breadcumb12() {
                 </div>
                 <div className="advance-search-tab bgc-white p10 bdrs4 mt30">
                   <div className="row">
-                    <div className="col-md-5 col-lg-6 col-xl-6">
+                    {/* <div className="col-md-5 col-lg-6 col-xl-6"> */}
+                    <div className="col-md-8 col-lg-8 col-xl-9">
                       <div className="advance-search-field bdrr1 bdrn-sm">
                         <HeroSearch1 />
                       </div>
                     </div>
-                    <div className="col-md-4 col-lg-4 col-xl-3">
+                    {/* <div className="col-md-4 col-lg-4 col-xl-3">
                       <div className="bselect-style1">
                         <div className="dropdown bootstrap-select">
                           <button
@@ -104,7 +105,7 @@ export default function Breadcumb12() {
                           </div>
                         </div>
                       </div>
-                    </div>
+                    </div> */}
                     <div className="col-md-3 col-lg-2 col-xl-3">
                       <div className="text-center text-xl-start">
                         <a className="ud-btn btn-thm2 w-100 vam">Search</a>
