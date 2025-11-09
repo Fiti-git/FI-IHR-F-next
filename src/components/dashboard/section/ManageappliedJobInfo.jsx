@@ -13,6 +13,7 @@ export default function AppliedJobDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [applicationStatus, setApplicationStatus] = useState("");
+  const [applicationId, setApplicationId] = useState(null);
   const [interviewDetails, setInterviewDetails] = useState(null);
   const [isJobOpen, setIsJobOpen] = useState(true);
   const [activeTab, setActiveTab] = useState("overview"); // ← Moved UP
@@ -198,6 +199,11 @@ export default function AppliedJobDetailPage() {
         });
 
         if (mine) setApplicationStatus(normalizeStatus(mine.status));
+        // Store the application id so we can fetch interview by application
+        if (mine) {
+          const appId = safeParseInt(mine.application_id || mine.applicationId || mine.id);
+          if (appId) setApplicationId(appId);
+        }
       } catch (e) {
         console.error(e);
       }
@@ -208,13 +214,14 @@ export default function AppliedJobDetailPage() {
   // -----------------------------------------------------------------
   // Fetch Interview Details
   // -----------------------------------------------------------------
+  // Fetch interview details by application id (new endpoint)
   useEffect(() => {
     async function fetchInterview() {
       try {
         const token = localStorage.getItem("accessToken");
         if (!token) return;
 
-        const res = await fetch(`${API_BASE_URL}/job-interview/${jobId}/`, {
+        const res = await fetch(`${API_BASE_URL}/job-interview/application/${applicationId}`, {
           method: "GET",
           headers: {
             "Content-Type": "application/json",
@@ -224,34 +231,36 @@ export default function AppliedJobDetailPage() {
         if (!res.ok) return;
 
         const data = await res.json();
-        const interviews = Array.isArray(data) ? data : data?.interview_id ? [data] : [];
-
+        // Support either single object or array responses
+        const interviews = Array.isArray(data) ? data : data?.application_id ? [data] : [];
         if (!interviews.length) return;
 
+        // Prefer entries with interview_date or date_time, sort newest first
         const latest = interviews
-          .filter((i) => i?.date_time)
-          .sort((a, b) => new Date(b.date_time) - new Date(a.date_time))[0];
+          .filter((i) => i?.interview_date || i?.date_time)
+          .sort((a, b) => new Date(b.interview_date || b.date_time) - new Date(a.interview_date || a.date_time))[0] || interviews[0];
 
         if (!latest) return;
 
-        const d = new Date(latest.date_time);
-        const date = isNaN(d) ? latest.date_time : d.toLocaleDateString();
+        const rawDate = latest.interview_date || latest.date_time || latest.interview_date_time;
+        const d = new Date(rawDate);
+        const date = isNaN(d) ? rawDate : d.toLocaleDateString();
         const time = isNaN(d) ? "N/A" : d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 
         setInterviewDetails({
           date,
           time,
           link: latest.interview_link || "",
-          mode: latest.interview_mode || "",
+          mode: latest.interview_mode || latest.interviewMode || "",
           status: normalizeStatus(latest.status || "Scheduled"),
-          notes: latest.interview_notes || "",
+          notes: latest.interview_notes || latest.interviewNotes || "",
         });
       } catch (e) {
         console.error(e);
       }
     }
-    if (jobId) fetchInterview();
-  }, [jobId]);
+    if (applicationId) fetchInterview();
+  }, [applicationId]);
 
   // -----------------------------------------------------------------
   // EARLY RETURNS (AFTER ALL HOOKS)
