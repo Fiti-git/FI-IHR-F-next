@@ -14,23 +14,31 @@ export default function DashboardHeader() {
   const [role, setRole] = useState(null);
   const [profileImage, setProfileImage] = useState("/images/resource/user.png");
   const [loading, setLoading] = useState(true);
-  const userId = localStorage.getItem("user_id");
+  const [userId, setUserId] = useState(null);
 
-  // Fetch user role and profile
   useEffect(() => {
+    // ✅ Ensure code runs only in the browser
+    if (typeof window === "undefined") return;
+
+    const storedUserId = localStorage.getItem("user_id");
+    const accessToken = localStorage.getItem("accessToken");
+    setUserId(storedUserId);
+
+    if (!storedUserId || !accessToken) {
+      setLoading(false);
+      return;
+    }
+
     const fetchUserRoleAndProfile = async () => {
       try {
-        const accessToken = localStorage.getItem("accessToken");
-        if (!accessToken) return;
-
         // 1️⃣ Get user role
-        const roleRes = await fetch(`http://206.189.134.117:8000/api/user/${userId}/roles/`, {
+        const roleRes = await fetch(`http://206.189.134.117:8000/api/user/${storedUserId}/roles/`, {
           headers: { Authorization: `Bearer ${accessToken}` },
         });
 
         if (!roleRes.ok) throw new Error("Failed to fetch user role");
         const roleData = await roleRes.json();
-        const userRole = roleData.roles?.[0]; // "Employee" or "Employer"
+        const userRole = roleData.roles?.[0];
         setRole(userRole);
 
         // 2️⃣ Get profile based on role
@@ -79,6 +87,7 @@ export default function DashboardHeader() {
       <nav className="posr">
         <div className="container-fluid pr30 pr15-xs pl30 posr menu_bdrt1">
           <div className="row align-items-center justify-content-between">
+            {/* Logo and sidebar toggle */}
             <div className="col-6 col-lg-auto">
               <div className="text-center text-lg-start d-flex align-items-center">
                 <div className="dashboard_header_logo position-relative me-2 me-xl-5">
@@ -92,10 +101,7 @@ export default function DashboardHeader() {
                   </Link>
                 </div>
                 <div className="fz20 ml90">
-                  <a
-                    onClick={toggle}
-                    className="dashboard_sidebar_toggle_icon vam"
-                  >
+                  <a onClick={toggle} className="dashboard_sidebar_toggle_icon vam">
                     <Image
                       height={18}
                       width={20}
@@ -104,28 +110,10 @@ export default function DashboardHeader() {
                     />
                   </a>
                 </div>
-                <a
-                  className="login-info d-block d-xl-none ml40 vam"
-                  data-bs-toggle="modal"
-                  href="#exampleModalToggle"
-                >
-                  <span className="flaticon-loupe" />
-                </a>
-                <div className="ml40 d-none d-xl-block">
-                  <div className="search_area dashboard-style">
-                    <input
-                      type="text"
-                      className="form-control border-0"
-                      placeholder="What service are you looking for today?"
-                    />
-                    <label>
-                      <span className="flaticon-loupe" />
-                    </label>
-                  </div>
-                </div>
               </div>
             </div>
 
+            {/* User menu */}
             <div className="col-6 col-lg-auto">
               <div className="text-center text-lg-end header_right_widgets">
                 <ul className="dashboard_dd_menu_list d-flex align-items-center justify-content-center justify-content-sm-end mb-0 p-0">
@@ -150,9 +138,7 @@ export default function DashboardHeader() {
                             return (
                               <Link
                                 key={i}
-                                className={`dropdown-item ${
-                                  path === href ? "active" : ""
-                                }`}
+                                className={`dropdown-item ${path === href ? "active" : ""}`}
                                 href={href}
                               >
                                 <i className={`${item.icon} mr10`} />

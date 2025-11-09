@@ -4,11 +4,12 @@ import { useParams } from "next/navigation";
 import Link from "next/link";
 import { useState, useEffect } from "react";
 import DashboardNavigation from "../header/DashboardNavigation";
+import { useRouter } from "next/navigation";
 
 export default function ManageSingleProject() {
   const params = useParams();
   const projectId = params.id;
-  
+  const router = useRouter();
   // State management
   const [project, setProject] = useState(null);
   const [proposals, setProposals] = useState([]);
@@ -42,6 +43,39 @@ export default function ManageSingleProject() {
   // API URLs
   const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://206.189.134.117:8000/api/project";
 
+  // -------------------------------------------------------------------
+// POST /api/chat/start/
+// -------------------------------------------------------------------
+const startChat = async (userId) => {
+    let accessToken;
+    if (typeof window !== 'undefined') {
+        accessToken = localStorage.getItem('accessToken');
+    }
+    if (!accessToken) throw new Error('No access token');
+
+    const res = await fetch('http://206.189.134.117:8000/api/chat/start/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            Accept: 'application/json',
+            Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({ user_id: userId }),
+    });
+
+    if (!res.ok) {
+        let txt = '';
+        try { txt = await res.text(); } catch { }
+        throw new Error(`Failed to start chat: ${res.status} ${txt}`);
+    }
+
+    return await res.json();
+};
+
+  const [showChatModal, setShowChatModal] = useState(false);
+  const [currentChatApplicant, setCurrentChatApplicant] = useState(null);
+  const [conversationId, setConversationId] = useState(null);
+
   // Check authentication
   useEffect(() => {
     const token = localStorage.getItem('accessToken');
@@ -57,6 +91,51 @@ export default function ManageSingleProject() {
       setError("Please log in to view project details");
     }
   }, [projectId]);
+
+const handleStartChat = async (proposal) => {
+  if (loading) return;
+  setLoading(true);
+  try {
+    const userId = proposal.chat_users?.[0];
+    if (!userId) throw new Error("No user ID found for this proposal.");
+    const conversation = await startChat(userId);
+
+    if (conversation?.id) {
+      router.push(`/message?conversation_id=${conversation.id}`);
+    } else {
+      throw new Error("Conversation ID missing from server response.");
+    }
+  } catch (error) {
+    console.error("Failed to start chat:", error);
+    alert("Could not start chat: " + error.message);
+  } finally {
+    setLoading(false);
+  }
+};
+
+// const handleStartChat = async (proposal) => {
+//   try {
+//     // The `chat_users` array directly provides the freelancer's user ID as the first element.
+//     const userId = proposal.chat_users?.[0];
+
+//     // Check if the user ID was found
+//     if (!userId) {
+//       throw new Error("Freelancer user ID is missing from the proposal data.");
+//     }
+
+//     const conversation = await startChat(userId);
+
+//     if (conversation && conversation.id) {
+//       // On success, redirect to the message page with the new conversation ID
+//       router.push(`/message?conversation_id=${conversation.id}`);
+//     } else {
+//       throw new Error("Failed to get a conversation ID from the API response.");
+//     }
+//   } catch (error) {
+//     console.error("Failed to start chat:", error);
+//     alert(`Could not start chat: ${error.message}`);
+//   }
+// };
 
   // Fetch project details
   const fetchProjectDetails = async () => {
@@ -562,7 +641,9 @@ export default function ManageSingleProject() {
           <div className="col-lg-12">
             <div className="dashboard_title_area d-flex justify-content-between align-items-center flex-wrap gap-3">
               <div>
-                <h2>{project.title}</h2>
+                {/* <h2>{project.title}</h2> */}
+                <h2>{project?.title}</h2>
+
                 <p className="text">Manage project details, proposals, and milestones</p>
               </div>
               <div className="d-flex gap-2">
@@ -585,82 +666,51 @@ export default function ManageSingleProject() {
         </div>
 
         {/* Project Details Box */}
+{project ? (
+  <>
+    <h5 className="fw500 mb-3">Project Details</h5>
+    
+    <div className="row">
+      <div className="col-md-6 mb-3">
+        <p className="mb-2"><strong>Description:</strong></p>
+        <p className="text-muted">{project.description}</p>
+      </div>
+      <div className="col-md-6">
         <div className="row">
-          <div className="col-xl-12">
-            <div className="ps-widget bgc-white bdrs4 p30 mb30 overflow-hidden position-relative">
-              <h5 className="fw500 mb-3">Project Details</h5>
-              
-              <div className="row">
-                <div className="col-md-6 mb-3">
-                  <p className="mb-2"><strong>Description:</strong></p>
-                  <p className="text-muted">{project.description}</p>
-                </div>
-                <div className="col-md-6">
-                  <div className="row">
-                    <div className="col-sm-6 mb-3">
-                      <p className="mb-1"><strong>Posted Date:</strong></p>
-                      <p className="text-muted">{formatDate(project.created_at)}</p>
-                    </div>
-                    <div className="col-sm-6 mb-3">
-                      <p className="mb-1"><strong>Status:</strong></p>
-                      <span className={getStatusClass(project.status)}>
-                        {project.status?.replace('_', ' ').toUpperCase()}
-                      </span>
-                    </div>
-                    <div className="col-sm-6 mb-3">
-                      <p className="mb-1"><strong>Category:</strong></p>
-                      <p className="text-muted">{project.category}</p>
-                    </div>
-                    <div className="col-sm-6 mb-3">
-                      <p className="mb-1"><strong>Budget:</strong></p>
-                      <p className="text-muted fw-bold">${formatBudget(project.budget)}</p>
-                    </div>
-                    <div className="col-sm-6 mb-3">
-                      <p className="mb-1"><strong>Project Type:</strong></p>
-                      <p className="text-muted text-capitalize">{project.project_type?.replace('_', ' ')}</p>
-                    </div>
-                    <div className="col-sm-6 mb-3">
-                      <p className="mb-1"><strong>Deadline:</strong></p>
-                      <p className="text-muted">{formatDate(project.deadline)}</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Project Statistics */}
-              <div className="row mt-4 pt-3 border-top">
-                <div className="col-md-3 col-6 mb-3">
-                  <div className="text-center">
-                    <h4 className="mb-0 text-primary">{proposals.length}</h4>
-                    <small className="text-muted">Total Proposals</small>
-                  </div>
-                </div>
-                <div className="col-md-3 col-6 mb-3">
-                  <div className="text-center">
-                    <h4 className="mb-0 text-success">
-                      {proposals.filter(p => p.status === 'accepted').length}
-                    </h4>
-                    <small className="text-muted">Accepted</small>
-                  </div>
-                </div>
-                <div className="col-md-3 col-6 mb-3">
-                  <div className="text-center">
-                    <h4 className="mb-0 text-info">{milestones.length}</h4>
-                    <small className="text-muted">Milestones</small>
-                  </div>
-                </div>
-                <div className="col-md-3 col-6 mb-3">
-                  <div className="text-center">
-                    <h4 className="mb-0 text-warning">
-                      ${formatBudget(payments.filter(p => p.payment_status === 'released').reduce((sum, p) => sum + parseFloat(p.payment_amount || 0), 0))}
-                    </h4>
-                    <small className="text-muted">Paid Out</small>
-                  </div>
-                </div>
-              </div>
-            </div>
+          <div className="col-sm-6 mb-3">
+            <p className="mb-1"><strong>Posted Date:</strong></p>
+            <p className="text-muted">{formatDate(project.created_at)}</p>
+          </div>
+          <div className="col-sm-6 mb-3">
+            <p className="mb-1"><strong>Status:</strong></p>
+            <span className={getStatusClass(project.status)}>
+              {project.status?.replace('_', ' ').toUpperCase()}
+            </span>
+          </div>
+          <div className="col-sm-6 mb-3">
+            <p className="mb-1"><strong>Category:</strong></p>
+            <p className="text-muted">{project.category}</p>
+          </div>
+          <div className="col-sm-6 mb-3">
+            <p className="mb-1"><strong>Budget:</strong></p>
+            <p className="text-muted fw-bold">${formatBudget(project.budget)}</p>
+          </div>
+          <div className="col-sm-6 mb-3">
+            <p className="mb-1"><strong>Project Type:</strong></p>
+            <p className="text-muted text-capitalize">{project.project_type?.replace('_', ' ')}</p>
+          </div>
+          <div className="col-sm-6 mb-3">
+            <p className="mb-1"><strong>Deadline:</strong></p>
+            <p className="text-muted">{formatDate(project.deadline)}</p>
           </div>
         </div>
+      </div>
+    </div>
+  </>
+) : (
+  <div>Loading project details...</div>
+)}
+
 
         {/* Proposal List (if project is OPEN or has proposals) */}
         {proposals.length > 0 && (
@@ -778,10 +828,7 @@ export default function ManageSingleProject() {
                                   )}
                                   <button
                                     className="btn btn-sm btn-info"
-                                    onClick={() => handleChat(
-                                      proposal.freelancer?.id,
-                                      proposal.freelancer?.first_name || proposal.freelancer?.username
-                                    )}
+                                    onClick={() => handleStartChat(proposal)}
                                     title="Chat with Freelancer"
                                   >
                                     <i className="fal fa-comment me-1"></i>

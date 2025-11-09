@@ -63,7 +63,7 @@ export default function Listing8({ searchFilters }) {
             || (project.image 
                 ? (project.image.startsWith('http') 
                     ? project.image 
-                    : `http://127.0.0.1:8000${project.image}`)
+                    : `http://206.189.134.117:8000${project.image}`)
                 : null);
 
           // Handle user profile image
@@ -71,7 +71,7 @@ export default function Listing8({ searchFilters }) {
             || (project.user?.profile_image
                 ? (project.user.profile_image.startsWith('http')
                     ? project.user.profile_image
-                    : `http://127.0.0.1:8000${project.user.profile_image}`)
+                    : `http://206.189.134.117:8000${project.user.profile_image}`)
                 : "/images/team/default-avatar.png");
 
           return {
