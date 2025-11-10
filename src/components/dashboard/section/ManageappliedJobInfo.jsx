@@ -151,83 +151,83 @@ export default function AppliedJobDetailPage() {
     fetchJob();
   }, [jobId]);
 
-  // --- Fetch Interview Info (FIXED) ---
-  useEffect(() => {
-    async function fetchInterviews() {
-      try {
-        const token = localStorage.getItem("access_token");
-        if (!token) {
-          return;
-        }
+  // // --- Fetch Interview Info (FIXED) ---
+  // useEffect(() => {
+  //   async function fetchInterviews() {
+  //     try {
+  //       const token = localStorage.getItem("access_token");
+  //       if (!token) {
+  //         return;
+  //       }
 
-        const res = await api.get(`/api/job-interview/${jobId}/`);
-        const data = res.data;
+  //       const res = await api.get(`/api/job-interview/${jobId}/`);
+  //       const data = res.data;
 
-        // Handle both single object and array responses
-        let interviews = [];
-        if (Array.isArray(data)) {
-          interviews = data;
-        } else if (data && typeof data === 'object' && data.interview_id) {
-          interviews = [data];
-        }
+  //       // Handle both single object and array responses
+  //       let interviews = [];
+  //       if (Array.isArray(data)) {
+  //         interviews = data;
+  //       } else if (data && typeof data === 'object' && data.interview_id) {
+  //         interviews = [data];
+  //       }
 
-        if (interviews.length === 0) {
-          return;
-        }
+  //       if (interviews.length === 0) {
+  //         return;
+  //       }
 
-        // Filter and sort by 'date_time'
-        const latest = interviews
-          .filter(iv => iv && iv.date_time)
-          .sort((a, b) => new Date(b.date_time) - new Date(a.date_time))[0] || interviews[0];
+  //       // Filter and sort by 'date_time'
+  //       const latest = interviews
+  //         .filter(iv => iv && iv.date_time)
+  //         .sort((a, b) => new Date(b.date_time) - new Date(a.date_time))[0] || interviews[0];
 
-        if (!latest) return;
+  //       if (!latest) return;
 
-        // Use 'date_time' from the API response
-        const d = new Date(latest.date_time);
+  //       // Use 'date_time' from the API response
+  //       const d = new Date(latest.date_time);
 
-        // Use "Scheduled" as a default status if the 'status' field is missing in the interview object
-        // const rawInterviewStatus = latest.status || "Scheduled";
-        const rawInterviewStatus = "Scheduled";
-        const status = normalizeStatus(rawInterviewStatus);
+  //       // Use "Scheduled" as a default status if the 'status' field is missing in the interview object
+  //       // const rawInterviewStatus = latest.status || "Scheduled";
+  //       const rawInterviewStatus = "Scheduled";
+  //       const status = normalizeStatus(rawInterviewStatus);
 
-        if (!isNaN(d)) {
-          const date = d.toLocaleDateString();
-          const time = d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-          setInterviewDetails({
-            date,
-            time,
-            link: latest.interview_link || "",
-            mode: latest.interview_mode || "",
-            status: status,
-            notes: latest.interview_notes || "",
-          });
-        } else {
-          setInterviewDetails({
-            date: latest.date_time,
-            time: "Time N/A",
-            link: latest.interview_link || "",
-            mode: latest.interview_mode || "",
-            status: status,
-            notes: latest.interview_notes || "",
-          });
-        }
+  //       if (!isNaN(d)) {
+  //         const date = d.toLocaleDateString();
+  //         const time = d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  //         setInterviewDetails({
+  //           date,
+  //           time,
+  //           link: latest.interview_link || "",
+  //           mode: latest.interview_mode || "",
+  //           status: status,
+  //           notes: latest.interview_notes || "",
+  //         });
+  //       } else {
+  //         setInterviewDetails({
+  //           date: latest.date_time,
+  //           time: "Time N/A",
+  //           link: latest.interview_link || "",
+  //           mode: latest.interview_mode || "",
+  //           status: status,
+  //           notes: latest.interview_notes || "",
+  //         });
+  //       }
 
-        // Update the main application status based on the latest interview status (normalized)
-        setApplicationStatus(status);
-      } catch (err) {
-        console.error("Error fetching interviews:", err);
-        if (err.response?.status !== 404) {
-          console.warn(`Failed to fetch interviews. Continuing.`);
-        }
-        setUserApplicationStatus("");
-        setInterviewDetails(null);
-      }
-    }
+  //       // Update the main application status based on the latest interview status (normalized)
+  //       setApplicationStatus(status);
+  //     } catch (err) {
+  //       console.error("Error fetching interviews:", err);
+  //       if (err.response?.status !== 404) {
+  //         console.warn(`Failed to fetch interviews. Continuing.`);
+  //       }
+  //       // setUserApplicationStatus("");
+  //       setInterviewDetails(null);
+  //     }
+  //   }
 
-    if (jobId && !isNaN(jobId)) {
-      fetchInterviews();
-    }
-  }, [jobId]);
+  //   if (jobId && !isNaN(jobId)) {
+  //     fetchInterviews();
+  //   }
+  // }, [jobId]);
 
   // -----------------------------------------------------------------
   // Fetch Application Status
@@ -286,10 +286,11 @@ export default function AppliedJobDetailPage() {
   useEffect(() => {
     async function fetchInterview() {
       try {
-        const token = localStorage.getItem("accessToken");
-        if (!token) return;
+          // use the same storage key used elsewhere in the app
+          const token = localStorage.getItem("access_token");
+          if (!token) return;
 
-        const res = await fetch(`${API_BASE_URL}/job-interview/application/${applicationId}`, {
+          const res = await fetch(`${API_BASE_URL}/job-interview/application/${applicationId}/`, {
           method: "GET",
           headers: {
             "Content-Type": "application/json",
