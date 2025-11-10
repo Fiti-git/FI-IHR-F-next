@@ -27,6 +27,23 @@ export default function AppliedJobDetailPage() {
     return Number.isFinite(n) ? n : null;
   }
 
+  // Normalize status strings from API into canonical display values
+  function normalizeStatus(s) {
+    if (s === null || s === undefined) return "";
+    const v = String(s).trim().toLowerCase();
+    if (!v) return "";
+    if (v.includes("reject")) return "Rejected";
+    if (v.includes("accept") || v.includes("accepted") || v.includes("hired")) return "Accepted";
+    if (v.includes("hire") && !v.includes("hired")) return "Hired";
+    if (v.includes("schedule") || v.includes("scheduled")) return "Scheduled";
+    if (v.includes("interview")) return "Interview";
+    if (v.includes("pending")) return "Pending";
+    if (v.includes("open")) return "Open";
+    if (v.includes("close")) return "Closed";
+    // Fallback: capitalize first letter
+    return v.charAt(0).toUpperCase() + v.slice(1);
+  }
+
   function decodeJwt(token) {
     try {
       const base64Url = token.split(".")[1];
@@ -139,8 +156,12 @@ export default function AppliedJobDetailPage() {
 
         if (!latest) return;
 
+        // Use 'date_time' from the API response
         const d = new Date(latest.date_time);
-        const status = (latest.status || "Scheduled").trim();
+
+        // Use "Scheduled" as a default status if the 'status' field is missing in the interview object
+        const rawInterviewStatus = latest.status || "Scheduled";
+        const status = normalizeStatus(rawInterviewStatus);
 
         if (!isNaN(d)) {
           const date = d.toLocaleDateString();
@@ -164,6 +185,7 @@ export default function AppliedJobDetailPage() {
           });
         }
 
+        // Update the main application status based on the latest interview status (normalized)
         setUserApplicationStatus(status);
       } catch (err) {
         console.error("Error fetching interviews:", err);
@@ -203,9 +225,27 @@ export default function AppliedJobDetailPage() {
           return;
         }
 
-        const mine = apps.find(a => safeParseInt(a?.freelance_id) === myFreelancerId);
-        const status = (mine?.status || "").trim();
-        setApplicationStatus(status);
+        // Match any of the common freelancer id keys returned by the API
+        const mine = apps.find(a => {
+          const idCandidates = [a?.freelancer_id, a?.freelance_id, a?.freelancer_user_id, a?.freelanceruser_id];
+          for (const c of idCandidates) {
+            if (safeParseInt(c) === myFreelancerId) return true;
+          }
+          return false;
+        });
+
+        if (!mine) {
+          // No application by this freelancer found
+          setApplicationStatus("");
+          return;
+        }
+
+        // Normalize status (e.g., "Pending" -> "Pending", "Rejected" -> "Rejected", etc.)
+        const rawAppStatus = (mine?.status || "").trim();
+        const normalized = normalizeStatus(rawAppStatus);
+
+        // If the API uses 'Pending' or similar, leave it as Pending; Accepted/Rejected will be normalized
+        setApplicationStatus(normalized);
       } catch (err) {
         console.error("Error fetching applications:", err);
         if (err.response?.status !== 404) {

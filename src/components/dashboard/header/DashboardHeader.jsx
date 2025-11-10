@@ -51,9 +51,9 @@ export default function DashboardHeader() {
           const profileData = profileRes.data;
 
           if (profileData.profile_image) {
-            const fullImageUrl = data.profile_image.startsWith("http")
-              ? data.profile_image
-              : `${API_BASE_URL}${data.profile_image}`;
+            const fullImageUrl = profileData.profile_image.startsWith("http")
+              ? profileData.profile_image
+              : `${API_BASE_URL}${profileData.profile_image}`;
             setProfileImage(fullImageUrl);
           }
         }

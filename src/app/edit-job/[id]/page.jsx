@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { useParams } from "next/navigation";
 import DashboardNavigation from "@/components/dashboard/header/DashboardNavigation";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
@@ -36,6 +37,8 @@ export default function EditJobPage() {
   if (error) return <div className="container mt-5"><div className="alert alert-danger">{error}</div></div>;
   if (!initialData) return <div className="container mt-5"><div className="alert alert-info">Job not found</div></div>;
 
+  const router = useRouter();
+
   return (
     <>
       <MobileNavigation2 />
@@ -62,7 +65,7 @@ export default function EditJobPage() {
           </div>
           <div className="row">
             <div className="col-xl-12">
-              <Jobform initialData={initialData} mode="edit" jobId={jobId} />
+              <Jobform initialData={initialData} mode="edit" jobId={jobId} onSuccess={(id) => router.push(`/jobs/${id || jobId}`)} />
               {/* <UploadAttachment /> */}
             </div>
           </div>

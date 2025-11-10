@@ -40,6 +40,7 @@ export default function Breadcumb13() {
     : null;
   const deadlineText = job?.application_deadline ? new Date(job.application_deadline).toLocaleDateString() : null;
   const statusText = job?.job_status || job?.job_category || null;
+  const statusDisplay = statusText ? String(statusText).replace(/_/g, ' ').toUpperCase() : 'N/A';
   const modeText = job?.work_mode || (typeof job?.remote_work === 'boolean' ? (job.remote_work ? 'Remote' : 'Onsite') : null);
 
   return (
@@ -62,9 +63,9 @@ export default function Breadcumb13() {
           />
           <div className="container">
             <div className="row wow fadeInUp">
-              <div className="col-xl-8 mx-auto">
+              <div className="col-xl-7">
                 <div className="position-relative">
-                  <div className="list-meta d-lg-flex align-items-end justify-content-between">
+                  <div className="d-flex align-items-center">
                     <div className="wrapper d-sm-flex align-items-center mb20-md">
                       <a className="position-relative freelancer-single-style">
                         {/* <Image
@@ -76,20 +77,28 @@ export default function Breadcumb13() {
                         /> */}
                       </a>
                       <div className="ml20 ml0-xs mt15-sm">
-                        <h4 className="title">{titleText}</h4>
-
-                        <h6 className="list-inline-item mb-0">
-                          {salaryText || "$125k-$135k Hourly"}
-                        </h6>
-                        <h6 className="list-inline-item mb-0 bdrl-eunry pl15">
-                          {deadlineText || 'Deadline N/A'}
-                        </h6>
-                        <h6 className="list-inline-item mb-0 bdrl-eunry pl15">
-                          {statusText || 'Status N/A'}
-                        </h6>
-                        <h6 className="list-inline-item mb-0 bdrl-eunry pl15">
-                          {modeText || 'Mode N/A'}
-                        </h6>
+                        <h2 className="text-black">{titleText}</h2>
+                        <div className="mt-3 d-flex flex-wrap gap-3"></div>
+                          <span className="badge bg-white text-dark px-3 py-2">
+                            <i className="flaticon-folder me-2"></i>
+                            {salaryText ?? "$125k-$135k Hourly"}
+                          </span>
+                          <span className="badge bg-white text-dark px-3 py-2">
+                            <i className="flaticon-folder me-2"></i>
+                            {deadlineText ?? "Deadline N/A"}
+                          </span>
+                          <span className={`badge px-3 py-2 ${
+                            statusText === 'open' ? 'bg-success' : 
+                            statusText === 'in_progress' ? 'bg-warning' : 
+                            statusText === 'completed' ? 'bg-info' : 'bg-secondary'
+                          }`}>
+                            <i className="flaticon-tick me-2"></i>
+                            {statusDisplay}
+                          </span>
+                          <span className="badge bg-white text-dark px-3 py-2">
+                              <i className="flaticon-folder me-2"></i>
+                              {modeText ?? "Mode N/A"}
+                            </span>
                       </div>
                     </div>
 
