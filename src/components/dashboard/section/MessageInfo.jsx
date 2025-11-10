@@ -5,7 +5,7 @@ import DashboardNavigation from "../header/DashboardNavigation";
 import UserChatList1 from "../card/UserChatList1";
 import MessageBox from "../element/MessageBox";
 
-export const API_BASE_URL = "http://127.0.0.1:8000";
+export const API_BASE_URL = "http://206.189.134.117:8000";
 
 export default function MessageInfo() {
   const [conversations, setConversations] = useState([]);
