@@ -6,6 +6,8 @@ import ListingOption6 from "../element/ListingOption6";
 import Pagination1 from "./Pagination1";
 import priceStore from "@/store/priceStore";
 import ListingSidebarModal5 from "../modal/ListingSidebarModal5";
+import api from '@/lib/axios';
+import { API_BASE_URL } from '@/lib/config';
 
 export default function Listing13({ searchFilters }) {
   const [freelancers, setFreelancers] = useState([]);
@@ -32,28 +34,20 @@ export default function Listing13({ searchFilters }) {
     const fetchFreelancers = async () => {
       try {
         setLoading(true);
-        const response = await fetch("http://206.189.134.117:8000/api/profile/freelancers/", {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-          },
-        });
+        const response = await api.get("/api/profile/freelancers/");
+        console.log("Fetched freelancers:", response.data);
+        setFreelancers(response.data);
+        setError(null);
+      } catch (err) {
+        console.error("Error fetching freelancers:", err);
 
-        if (response.ok) {
-          const data = await response.json();
-          console.log("Fetched freelancers:", data);
-          setFreelancers(data);
-          setError(null);
-        } else if (response.status === 404) {
+        if (err.response?.status === 404) {
           setFreelancers([]);
           setError("No freelancer profiles found");
         } else {
-          throw new Error(`HTTP error! status: ${response.status}`);
+          setError(err.response?.data?.message || err.message);
+          setFreelancers([]);
         }
-      } catch (err) {
-        console.error("Error fetching freelancers:", err);
-        setError(err.message);
-        setFreelancers([]);
       } finally {
         setLoading(false);
       }
@@ -65,25 +59,25 @@ export default function Listing13({ searchFilters }) {
   // Transform API data to match the format expected by FreelancerCard1
   const transformFreelancer = (freelancer) => {
     // Handle profile_image_url first (from serializer), fallback to profile_image, then default
-    const imageUrl = freelancer.profile_image_url 
-      || (freelancer.profile_image 
-          ? (freelancer.profile_image.startsWith('http') 
-              ? freelancer.profile_image 
-              : `http://206.189.134.117:8000${freelancer.profile_image}`)
-          : "/images/team/fl-1.png");
+    const imageUrl = freelancer.profile_image_url
+      || (freelancer.profile_image
+        ? (freelancer.profile_image.startsWith('http')
+          ? freelancer.profile_image
+          : `${API_BASE_URL}${freelancer.profile_image}`)
+        : "/images/team/fl-1.png");
 
     // Extract user data from nested user object
     const user = freelancer.user || {};
     const userId = user.id;
-    
+
     // Create display name from available user data
     const displayName = freelancer.full_name ||
-      (user.first_name && user.last_name 
+      (user.first_name && user.last_name
         ? `${user.first_name} ${user.last_name}`.trim()
         : user.first_name || user.last_name || user.username || "Freelancer");
 
     // Parse hourly rate (remove $ and /hr)
-    const hourlyRateValue = freelancer.hourly_rate 
+    const hourlyRateValue = freelancer.hourly_rate
       ? parseInt(freelancer.hourly_rate)
       : 0;
 
@@ -93,10 +87,10 @@ export default function Listing13({ searchFilters }) {
       : freelancer.city || freelancer.country || "Location";
 
     // Parse skills from skills_list (serializer method) or skills field
-    const skillsArray = freelancer.skills_list 
-      || (freelancer.skills 
-          ? freelancer.skills.split(',').map(s => s.trim())
-          : []);
+    const skillsArray = freelancer.skills_list
+      || (freelancer.skills
+        ? freelancer.skills.split(',').map(s => s.trim())
+        : []);
 
     // Format specialization for display
     const specializationDisplay = {
@@ -127,7 +121,7 @@ export default function Listing13({ searchFilters }) {
       level: freelancer.experience_level || "mid",
       levelDisplay: experienceLevelDisplay,
       language: freelancer.language || "english",
-      
+
       // Additional fields for reference and search
       freelancerId: freelancer.id,
       userId: userId,
@@ -156,7 +150,7 @@ export default function Listing13({ searchFilters }) {
     }
 
     const keyword = searchFilters.keyword.toLowerCase().trim();
-    
+
     // Search in these fields
     const searchableFields = [
       item.name,
@@ -178,7 +172,7 @@ export default function Listing13({ searchFilters }) {
       ...item.skills
     ];
 
-    return searchableFields.some(field => 
+    return searchableFields.some(field =>
       field && field.toString().toLowerCase().includes(keyword)
     );
   };
@@ -201,8 +195,8 @@ export default function Listing13({ searchFilters }) {
   const searchFilter = (item) =>
     getSearch !== ""
       ? item.location.toLowerCase().includes(getSearch.toLowerCase()) ||
-        item.name.toLowerCase().includes(getSearch.toLowerCase()) ||
-        item.profession.toLowerCase().includes(getSearch.toLowerCase())
+      item.name.toLowerCase().includes(getSearch.toLowerCase()) ||
+      item.profession.toLowerCase().includes(getSearch.toLowerCase())
       : true;
 
   // Level filter
@@ -328,7 +322,7 @@ export default function Listing13({ searchFilters }) {
                 <div className="alert alert-warning">
                   <h5>No Results Found</h5>
                   <p>
-                    {isSearchActive 
+                    {isSearchActive
                       ? `No freelancers found for "${searchFilters.keyword}". Try different keywords or adjust your filters.`
                       : "No freelancers match your current filters."}
                   </p>

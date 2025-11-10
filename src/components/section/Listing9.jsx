@@ -11,6 +11,8 @@ export default function Listing9() {
   const [jobs, setJobs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 12; // 12 items per page (3 rows x 4 columns)
 
   const getCategory = listingStore((state) => state.getCategory);
   const priceRange = priceStore((state) => state.priceRange);
@@ -21,38 +23,19 @@ export default function Listing9() {
   useEffect(() => {
     const fetchJobs = async () => {
       try {
-        let accessToken;
-        if (typeof window !== 'undefined') {
-          accessToken = localStorage.getItem("accessToken");
-        }
+        const response = await api.get("/api/job-posting/");
+        console.log('API Response:', response.data);
 
-        const response = await fetch("http://206.189.134.117:8000/api/job-posting/", {
-          method: "GET",
-          headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json',
-          }
-        });
+        const jobsArray = Array.isArray(response.data) ? response.data :
+          response.data.results ? response.data.results :
+            response.data.jobs ? response.data.jobs :
+              response.data.data ? response.data.data : [];
 
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
+        console.log('Jobs Array:', jobsArray);
 
-        const data = await response.json();
-        console.log('API Response:', data); // Debug the API response
-
-        // Check if data is an array or if it's nested in a property
-        const jobsArray = Array.isArray(data) ? data : 
-                         data.results ? data.results : 
-                         data.jobs ? data.jobs : 
-                         data.data ? data.data : [];
-        
-        console.log('Jobs Array:', jobsArray); // Debug the jobs array
-
-        // Transform API data to match the expected format
         const transformedJobs = jobsArray.map(job => ({
           id: job.job_id || job.id,
-          img: "/images/team/client-2.png", // default image
+          img: "/images/team/client-2.png",
           title: job.job_title || job.title,
           server:
             typeof job.job_category === "string" && job.job_category.length > 0
@@ -67,16 +50,16 @@ export default function Listing9() {
           category: job.category || "General",
           salary: parseInt(job.salary_from) || 0,
           jobType: job.job_type || job.jobType || "Full Time",
-          level: "new", // Default level
+          level: "new",
           sort: "new-arrivals"
         }));
 
-        console.log('Transformed Jobs:', transformedJobs); // Debug the transformed data
+        console.log('Transformed Jobs:', transformedJobs);
         setJobs(transformedJobs);
         setLoading(false);
       } catch (error) {
         console.error('Error fetching jobs:', error);
-        setError(error.message);
+        setError(error.response?.data?.message || error.message);
         setLoading(false);
       }
     };
@@ -84,25 +67,46 @@ export default function Listing9() {
     fetchJobs();
   }, []);
 
-  // category filter
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [getCategory, priceRange, getJobType, getLevel, getBestSeller]);
+
+  // Filter functions
   const categoryFilter = (item) =>
     getCategory?.length !== 0 ? getCategory.includes(item.category) : item;
 
-  // salary filter
   const salaryFilter = (item) =>
     priceRange.min <= item.salary && priceRange.max >= item.salary;
 
-  // job type filter
   const jobTypeFilter = (item) =>
     getJobType?.length !== 0 ? getJobType.includes(item.jobType) : item;
 
-  // level filter
   const levelFilter = (item) =>
     getLevel?.length !== 0 ? getLevel.includes(item.level) : item;
 
-  // sort by filter
   const sortByFilter = (item) =>
     getBestSeller === "best-seller" ? item : item.sort === getBestSeller;
+
+  // Apply all filters
+  const filteredJobs = jobs
+    .filter(categoryFilter)
+    .filter(salaryFilter)
+    .filter(jobTypeFilter)
+    .filter(levelFilter)
+    .filter(sortByFilter);
+
+  // Calculate pagination
+  const totalItems = filteredJobs.length;
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedJobs = filteredJobs.slice(startIndex, endIndex);
+
+  const handlePageChange = (page) => {
+    setCurrentPage(page);
+    // Scroll to top of listing section
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
   if (loading) {
     return (
@@ -132,21 +136,31 @@ export default function Listing9() {
         <div className="container">
           <ListingOption4 />
           <div className="row">
-            {jobs
-              .filter(categoryFilter)
-              .filter(salaryFilter)
-              .filter(jobTypeFilter)
-              .filter(levelFilter)
-              .filter(sortByFilter)
-              .map((item, i) => (
+            {paginatedJobs.length > 0 ? (
+              paginatedJobs.map((item, i) => (
                 <div key={i} className="col-sm-6 col-lg-4 col-xl-3">
                   <JobCard4 data={item} />
                 </div>
-              ))}
+              ))
+            ) : (
+              <div className="col-12">
+                <div className="text-center p-5">
+                  <p>No jobs found matching your criteria.</p>
+                </div>
+              </div>
+            )}
           </div>
-          <div className="mt30">
-            <Pagination1 />
-          </div>
+          {filteredJobs.length > 0 && (
+            <div className="mt30">
+              <Pagination1
+                currentPage={currentPage}
+                totalItems={totalItems}
+                itemsPerPage={itemsPerPage}
+                onPageChange={handlePageChange}
+                maxVisiblePages={5}
+              />
+            </div>
+          )}
         </div>
       </section>
       <ListingSidebarModal3 />

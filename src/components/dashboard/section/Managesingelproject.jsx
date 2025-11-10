@@ -1,15 +1,16 @@
 "use client";
 
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { useState, useEffect } from "react";
 import DashboardNavigation from "../header/DashboardNavigation";
-import { useRouter } from "next/navigation";
+import api from '@/lib/axios'; // Import the centralized Axios instance
 
 export default function ManageSingleProject() {
   const params = useParams();
   const projectId = params.id;
   const router = useRouter();
+
   // State management
   const [project, setProject] = useState(null);
   const [proposals, setProposals] = useState([]);
@@ -18,165 +19,94 @@ export default function ManageSingleProject() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  
+
   // Collapsible sections
   const [showProposals, setShowProposals] = useState(true);
   const [showSelectedFreelancer, setShowSelectedFreelancer] = useState(true);
   const [showMilestones, setShowMilestones] = useState(true);
   const [showPayments, setShowPayments] = useState(true);
-  
+
   // Action states
   const [processingProposal, setProcessingProposal] = useState(null);
   const [processingMilestone, setProcessingMilestone] = useState(null);
   const [processingPayment, setProcessingPayment] = useState(null);
-  
-  // Revision modal state
+
+  // Modal states
   const [showRevisionModal, setShowRevisionModal] = useState(false);
   const [selectedMilestone, setSelectedMilestone] = useState(null);
   const [revisionNote, setRevisionNote] = useState("");
-  
-  // Cover letter modal state
   const [showCoverLetterModal, setShowCoverLetterModal] = useState(false);
   const [selectedCoverLetter, setSelectedCoverLetter] = useState(null);
 
-  // API URLs
-  const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://206.189.134.117:8000/api/project";
-
   // -------------------------------------------------------------------
-// POST /api/chat/start/
-// -------------------------------------------------------------------
-const startChat = async (userId) => {
-    let accessToken;
-    if (typeof window !== 'undefined') {
-        accessToken = localStorage.getItem('accessToken');
+  // POST /api/chat/start/ - Using Axios instance
+  // -------------------------------------------------------------------
+  const startChat = async (userId) => {
+    try {
+      const res = await api.post('/api/chat/start/', { user_id: userId });
+      return res.data;
+    } catch (error) {
+      const errorMsg = error.response?.data?.detail || error.message || `Failed to start chat: ${error.response?.status}`;
+      throw new Error(errorMsg);
     }
-    if (!accessToken) throw new Error('No access token');
+  };
 
-    const res = await fetch('http://206.189.134.117:8000/api/chat/start/', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            Accept: 'application/json',
-            Authorization: `Bearer ${accessToken}`,
-        },
-        body: JSON.stringify({ user_id: userId }),
-    });
-
-    if (!res.ok) {
-        let txt = '';
-        try { txt = await res.text(); } catch { }
-        throw new Error(`Failed to start chat: ${res.status} ${txt}`);
-    }
-
-    return await res.json();
-};
-
-  const [showChatModal, setShowChatModal] = useState(false);
-  const [currentChatApplicant, setCurrentChatApplicant] = useState(null);
-  const [conversationId, setConversationId] = useState(null);
-
-  // Check authentication
   useEffect(() => {
-    const token = localStorage.getItem('accessToken');
-    setIsAuthenticated(!!token);
-    
+    const token = typeof window !== 'undefined' ? localStorage.getItem('access_token') : null;
     if (token && projectId) {
-      fetchProjectDetails();
-      fetchProposals();
-      fetchMilestones();
-      fetchPayments();
+      // Fetch all data in parallel for faster loading
+      Promise.all([
+        fetchProjectDetails(),
+        fetchProposals(),
+        fetchMilestones(),
+        fetchPayments(),
+      ]).finally(() => {
+        setLoading(false);
+      });
     } else {
       setLoading(false);
       setError("Please log in to view project details");
     }
   }, [projectId]);
 
-const handleStartChat = async (proposal) => {
-  if (loading) return;
-  setLoading(true);
-  try {
-    const userId = proposal.chat_users?.[0];
-    if (!userId) throw new Error("No user ID found for this proposal.");
-    const conversation = await startChat(userId);
+  const handleStartChat = async (proposal) => {
+    if (loading) return;
+    setLoading(true);
+    try {
+      const userId = proposal.chat_users?.[0];
+      if (!userId) throw new Error("No user ID found for this proposal.");
+      const conversation = await startChat(userId);
 
-    if (conversation?.id) {
-      router.push(`/message?conversation_id=${conversation.id}`);
-    } else {
-      throw new Error("Conversation ID missing from server response.");
+      if (conversation?.id) {
+        router.push(`/message?conversation_id=${conversation.id}`);
+      } else {
+        throw new Error("Conversation ID missing from server response.");
+      }
+    } catch (error) {
+      console.error("Failed to start chat:", error);
+      alert("Could not start chat: " + error.message);
+    } finally {
+      setLoading(false);
     }
-  } catch (error) {
-    console.error("Failed to start chat:", error);
-    alert("Could not start chat: " + error.message);
-  } finally {
-    setLoading(false);
-  }
-};
-
-// const handleStartChat = async (proposal) => {
-//   try {
-//     // The `chat_users` array directly provides the freelancer's user ID as the first element.
-//     const userId = proposal.chat_users?.[0];
-
-//     // Check if the user ID was found
-//     if (!userId) {
-//       throw new Error("Freelancer user ID is missing from the proposal data.");
-//     }
-
-//     const conversation = await startChat(userId);
-
-//     if (conversation && conversation.id) {
-//       // On success, redirect to the message page with the new conversation ID
-//       router.push(`/message?conversation_id=${conversation.id}`);
-//     } else {
-//       throw new Error("Failed to get a conversation ID from the API response.");
-//     }
-//   } catch (error) {
-//     console.error("Failed to start chat:", error);
-//     alert(`Could not start chat: ${error.message}`);
-//   }
-// };
+  };
 
   // Fetch project details
   const fetchProjectDetails = async () => {
     try {
-      const token = localStorage.getItem('accessToken');
-      const response = await fetch(`${API_URL}/projects/${projectId}/`, {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const data = await response.json();
-      setProject(data);
+      const response = await api.get(`/api/project/projects/${projectId}/`);
+      setProject(response.data);
     } catch (err) {
       console.error("Error fetching project:", err);
-      setError(err.message);
+      setError(err.response?.data?.detail || err.message);
     }
   };
 
   // Fetch proposals for this project
   const fetchProposals = async () => {
     try {
-      const token = localStorage.getItem('accessToken');
-      const response = await fetch(`${API_URL}/proposals/?project_id=${projectId}`, {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`
-        },
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setProposals(Array.isArray(data) ? data : data.results || []);
-      }
+      const response = await api.get(`/api/project/proposals/?project_id=${projectId}`);
+      const data = response.data;
+      setProposals(Array.isArray(data) ? data : data.results || []);
     } catch (err) {
       console.error("Error fetching proposals:", err);
     }
@@ -185,42 +115,20 @@ const handleStartChat = async (proposal) => {
   // Fetch milestones for this project
   const fetchMilestones = async () => {
     try {
-      const token = localStorage.getItem('accessToken');
-      const response = await fetch(`${API_URL}/milestones/?project_id=${projectId}`, {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`
-        },
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setMilestones(Array.isArray(data) ? data : data.results || []);
-      }
+      const response = await api.get(`/api/project/milestones/?project_id=${projectId}`);
+      const data = response.data;
+      setMilestones(Array.isArray(data) ? data : data.results || []);
     } catch (err) {
       console.error("Error fetching milestones:", err);
-    } finally {
-      setLoading(false);
     }
   };
 
   // Fetch payments for this project
   const fetchPayments = async () => {
     try {
-      const token = localStorage.getItem('accessToken');
-      const response = await fetch(`${API_URL}/payments/?project_id=${projectId}`, {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`
-        },
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setPayments(Array.isArray(data) ? data : data.results || []);
-      }
+      const response = await api.get(`/api/project/payments/?project_id=${projectId}`);
+      const data = response.data;
+      setPayments(Array.isArray(data) ? data : data.results || []);
     } catch (err) {
       console.error("Error fetching payments:", err);
     }
@@ -228,45 +136,25 @@ const handleStartChat = async (proposal) => {
 
   // Handle accept proposal
   const handleAcceptProposal = async (proposalId, freelancerName) => {
-    if (!confirm(`Are you sure you want to accept the proposal from ${freelancerName}?`)) {
-      return;
-    }
+    if (!confirm(`Are you sure you want to accept the proposal from ${freelancerName}?`)) return;
 
+    setProcessingProposal(proposalId);
     try {
-      setProcessingProposal(proposalId);
-      const token = localStorage.getItem('accessToken');
-      const response = await fetch(`${API_URL}/proposals/${proposalId}/accept/`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to accept proposal");
-      }
-
+      // Accept the proposal
+      await api.patch(`/api/project/proposals/${proposalId}/accept/`);
       setSuccess(`Proposal from ${freelancerName} accepted successfully!`);
-      setTimeout(() => setSuccess(null), 3000);
-      
-      // Refresh data
-      await fetchProposals();
-      await fetchProjectDetails();
-      
+
       // Update project status to in_progress
-      await fetch(`${API_URL}/projects/${projectId}/`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`
-        },
-        body: JSON.stringify({ status: 'in_progress' })
-      });
-      
+      await api.patch(`/api/project/projects/${projectId}/`, { status: 'in_progress' });
+
+      // Refresh data
+      await Promise.all([fetchProposals(), fetchProjectDetails()]);
+
+      setTimeout(() => setSuccess(null), 3000);
     } catch (err) {
+      const errorMsg = err.response?.data?.detail || err.message || "Failed to accept proposal";
       console.error("Error accepting proposal:", err);
-      setError(err.message || "Failed to accept proposal");
+      setError(errorMsg);
       setTimeout(() => setError(null), 3000);
     } finally {
       setProcessingProposal(null);
@@ -275,65 +163,38 @@ const handleStartChat = async (proposal) => {
 
   // Handle reject proposal
   const handleRejectProposal = async (proposalId, freelancerName) => {
-    if (!confirm(`Are you sure you want to reject the proposal from ${freelancerName}?`)) {
-      return;
-    }
+    if (!confirm(`Are you sure you want to reject the proposal from ${freelancerName}?`)) return;
 
+    setProcessingProposal(proposalId);
     try {
-      setProcessingProposal(proposalId);
-      const token = localStorage.getItem('accessToken');
-      const response = await fetch(`${API_URL}/proposals/${proposalId}/reject/`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to reject proposal");
-      }
-
+      await api.patch(`/api/project/proposals/${proposalId}/reject/`);
       setSuccess(`Proposal from ${freelancerName} rejected.`);
       setTimeout(() => setSuccess(null), 3000);
       await fetchProposals();
     } catch (err) {
+      const errorMsg = err.response?.data?.detail || err.message || "Failed to reject proposal";
       console.error("Error rejecting proposal:", err);
-      setError(err.message || "Failed to reject proposal");
+      setError(errorMsg);
       setTimeout(() => setError(null), 3000);
     } finally {
       setProcessingProposal(null);
     }
   };
 
-  // Handle approve milestone (Client approves milestone setup)
+  // Handle approve milestone
   const handleApproveMilestone = async (milestoneId, milestoneName) => {
-    if (!confirm(`Are you sure you want to approve the milestone: "${milestoneName}"?`)) {
-      return;
-    }
+    if (!confirm(`Are you sure you want to approve the milestone: "${milestoneName}"?`)) return;
 
+    setProcessingMilestone(milestoneId);
     try {
-      setProcessingMilestone(milestoneId);
-      const token = localStorage.getItem('accessToken');
-      const response = await fetch(`${API_URL}/milestones/${milestoneId}/approve/`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`
-        },
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "Failed to approve milestone");
-      }
-
+      await api.patch(`/api/project/milestones/${milestoneId}/approve/`);
       setSuccess(`Milestone "${milestoneName}" approved successfully!`);
       setTimeout(() => setSuccess(null), 3000);
       await fetchMilestones();
     } catch (err) {
+      const errorMsg = err.response?.data?.error || err.message || "Failed to approve milestone";
       console.error("Error approving milestone:", err);
-      setError(err.message || "Failed to approve milestone");
+      setError(errorMsg);
       setTimeout(() => setError(null), 3000);
     } finally {
       setProcessingMilestone(null);
@@ -347,27 +208,12 @@ const handleStartChat = async (proposal) => {
       return;
     }
 
+    setProcessingMilestone(milestoneId);
     try {
-      setProcessingMilestone(milestoneId);
-      const token = localStorage.getItem('accessToken');
-      
-      // Update milestone status to 'revision_requested'
-      const response = await fetch(`${API_URL}/milestones/${milestoneId}/`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          status: 'revision_requested',
-          revision_notes: revisionNote
-        })
+      await api.patch(`/api/project/milestones/${milestoneId}/`, {
+        status: 'revision_requested',
+        revision_notes: revisionNote,
       });
-
-      if (!response.ok) {
-        throw new Error("Failed to request revision");
-      }
-
       setSuccess("Revision requested successfully!");
       setTimeout(() => setSuccess(null), 3000);
       setShowRevisionModal(false);
@@ -375,11 +221,61 @@ const handleStartChat = async (proposal) => {
       setSelectedMilestone(null);
       await fetchMilestones();
     } catch (err) {
+      const errorMsg = err.response?.data?.detail || err.message || "Failed to request revision";
       console.error("Error requesting revision:", err);
-      setError(err.message || "Failed to request revision");
+      setError(errorMsg);
       setTimeout(() => setError(null), 3000);
     } finally {
       setProcessingMilestone(null);
+    }
+  };
+
+  // Handle create payment for completed milestone
+  const handleCreatePayment = async (milestoneId, milestoneName, budget) => {
+    if (!confirm(`Create payment of $${formatBudget(budget)} for milestone "${milestoneName}"?`)) return;
+
+    setProcessingMilestone(milestoneId);
+    try {
+      const milestone = milestones.find(m => m.id === milestoneId);
+      await api.post('/api/project/payments/', {
+        project: parseInt(projectId),
+        milestone: milestoneId,
+        freelancer: milestone?.freelancer,
+        payment_amount: budget,
+        payment_status: 'pending',
+        payment_method: 'platform_wallet',
+      });
+      setSuccess("Payment created successfully! You can now release it.");
+      setTimeout(() => setSuccess(null), 3000);
+      await fetchPayments();
+    } catch (err) {
+      const errorMsg = err.response?.data?.detail || err.message || "Failed to create payment";
+      console.error("Error creating payment:", err);
+      setError(errorMsg);
+      setTimeout(() => setError(null), 3000);
+    } finally {
+      setProcessingMilestone(null);
+    }
+  };
+
+  // Handle payout (release payment)
+  const handlePayout = async (paymentId, amount) => {
+    if (!confirm(`Are you sure you want to release payment of $${formatBudget(amount)}?`)) return;
+
+    setProcessingPayment(paymentId);
+    try {
+      await api.patch(`/api/project/payments/${paymentId}/release_payment/`);
+      setSuccess("Payment released successfully!");
+      setTimeout(() => setSuccess(null), 3000);
+      await fetchPayments();
+      await fetchMilestones(); // Refresh milestones to update status
+    } catch (err) {
+      const errorMsg = err.response?.data?.error || err.message || "Failed to release payment";
+      console.error("Error releasing payment:", err);
+      setError(errorMsg);
+      setTimeout(() => setError(null), 3000);
+    } finally {
+      setProcessingPayment(null);
     }
   };
 
@@ -402,99 +298,11 @@ const handleStartChat = async (proposal) => {
     setShowCoverLetterModal(true);
   };
 
-  // Handle create payment for completed milestone
-  const handleCreatePayment = async (milestoneId, milestoneName, budget) => {
-    if (!confirm(`Create payment of $${formatBudget(budget)} for milestone "${milestoneName}"?`)) {
-      return;
-    }
-
-    try {
-      setProcessingMilestone(milestoneId);
-      const token = localStorage.getItem('accessToken');
-      
-      // Create payment record
-      const response = await fetch(`${API_URL}/payments/`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          project: parseInt(projectId),
-          milestone: milestoneId,
-          freelancer: milestones.find(m => m.id === milestoneId)?.freelancer,
-          payment_amount: budget,
-          payment_status: 'pending',
-          payment_method: 'platform_wallet'
-        })
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.detail || "Failed to create payment");
-      }
-
-      setSuccess("Payment created successfully! You can now release it.");
-      setTimeout(() => setSuccess(null), 3000);
-      await fetchPayments();
-    } catch (err) {
-      console.error("Error creating payment:", err);
-      setError(err.message || "Failed to create payment");
-      setTimeout(() => setError(null), 3000);
-    } finally {
-      setProcessingMilestone(null);
-    }
-  };
-
-  // Handle payout (release payment)
-  const handlePayout = async (paymentId, amount) => {
-    if (!confirm(`Are you sure you want to release payment of $${formatBudget(amount)}?`)) {
-      return;
-    }
-
-    try {
-      setProcessingPayment(paymentId);
-      const token = localStorage.getItem('accessToken');
-      const response = await fetch(`${API_URL}/payments/${paymentId}/release_payment/`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`
-        },
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "Failed to release payment");
-      }
-
-      setSuccess("Payment released successfully!");
-      setTimeout(() => setSuccess(null), 3000);
-      await fetchPayments();
-      await fetchMilestones(); // Refresh milestones to update status
-    } catch (err) {
-      console.error("Error releasing payment:", err);
-      setError(err.message || "Failed to release payment");
-      setTimeout(() => setError(null), 3000);
-    } finally {
-      setProcessingPayment(null);
-    }
-  };
-
-  // Handle chat with freelancer
-  const handleChat = (freelancerId, freelancerName) => {
-    // Redirect to chat page with freelancer
-    window.location.href = `/dashboard/chat?user=${freelancerId}&name=${encodeURIComponent(freelancerName)}`;
-  };
-
   // Format date
   const formatDate = (dateString) => {
     if (!dateString) return "N/A";
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric'
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric', month: 'short', day: 'numeric'
     });
   };
 
@@ -502,37 +310,24 @@ const handleStartChat = async (proposal) => {
   const formatBudget = (budget) => {
     if (!budget) return "0.00";
     return parseFloat(budget).toLocaleString('en-US', {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
+      minimumFractionDigits: 2, maximumFractionDigits: 2
     });
   };
 
   // Get status badge class
   const getStatusClass = (status) => {
     switch (status?.toLowerCase()) {
-      case "open":
-        return "badge bg-success";
-      case "in_progress":
-        return "badge bg-primary";
-      case "completed":
-        return "badge bg-info";
-      case "accepted":
-        return "badge bg-success";
-      case "rejected":
-        return "badge bg-danger";
-      case "submitted":
-        return "badge bg-warning";
-      case "paid":
-      case "released":
-        return "badge bg-success";
-      case "pending":
-        return "badge bg-warning";
-      case "approved":
-        return "badge bg-success";
-      case "revision_requested":
-        return "badge bg-danger";
-      default:
-        return "badge bg-secondary";
+      case "open": return "badge bg-success";
+      case "in_progress": return "badge bg-primary";
+      case "completed": return "badge bg-info";
+      case "accepted": return "badge bg-success";
+      case "rejected": return "badge bg-danger";
+      case "submitted": return "badge bg-warning";
+      case "paid": case "released": return "badge bg-success";
+      case "pending": return "badge bg-warning";
+      case "approved": return "badge bg-success";
+      case "revision_requested": return "badge bg-danger";
+      default: return "badge bg-secondary";
     }
   };
 
@@ -558,28 +353,17 @@ const handleStartChat = async (proposal) => {
     );
   };
 
-  // Get accepted proposal
   const acceptedProposal = proposals.find(p => p.status === 'accepted');
-
-  // Check if milestone has pending payment
-  const getMilestonePayment = (milestoneId) => {
-    return payments.find(p => p.milestone === milestoneId);
-  };
+  const getMilestonePayment = (milestoneId) => payments.find(p => p.milestone === milestoneId);
 
   // Loading state
   if (loading) {
     return (
       <div className="dashboard__content hover-bgc-color">
-        <div className="row pb40">
-          <div className="col-lg-12">
-            <DashboardNavigation />
-          </div>
-        </div>
+        <div className="row pb40"><div className="col-lg-12"><DashboardNavigation /></div></div>
         <div className="container mt-5">
           <div className="text-center py-5">
-            <div className="spinner-border text-primary" role="status">
-              <span className="visually-hidden">Loading...</span>
-            </div>
+            <div className="spinner-border text-primary" role="status"><span className="visually-hidden">Loading...</span></div>
             <p className="mt-3">Loading project details...</p>
           </div>
         </div>
@@ -591,19 +375,13 @@ const handleStartChat = async (proposal) => {
   if (error && !project) {
     return (
       <div className="dashboard__content hover-bgc-color">
-        <div className="row pb40">
-          <div className="col-lg-12">
-            <DashboardNavigation />
-          </div>
-        </div>
+        <div className="row pb40"><div className="col-lg-12"><DashboardNavigation /></div></div>
         <div className="container mt-5">
           <div className="alert alert-danger" role="alert">
             <h4 className="alert-heading">Error</h4>
             <p>{error || "Project not found"}</p>
             <hr />
-            <Link href="/manage-projects" className="btn btn-primary">
-              Back to My Projects
-            </Link>
+            <Link href="/manage-projects" className="btn btn-primary">Back to My Projects</Link>
           </div>
         </div>
       </div>
@@ -666,50 +444,50 @@ const handleStartChat = async (proposal) => {
         </div>
 
         {/* Project Details Box */}
-{project ? (
-  <>
-    <h5 className="fw500 mb-3">Project Details</h5>
-    
-    <div className="row">
-      <div className="col-md-6 mb-3">
-        <p className="mb-2"><strong>Description:</strong></p>
-        <p className="text-muted">{project.description}</p>
-      </div>
-      <div className="col-md-6">
-        <div className="row">
-          <div className="col-sm-6 mb-3">
-            <p className="mb-1"><strong>Posted Date:</strong></p>
-            <p className="text-muted">{formatDate(project.created_at)}</p>
-          </div>
-          <div className="col-sm-6 mb-3">
-            <p className="mb-1"><strong>Status:</strong></p>
-            <span className={getStatusClass(project.status)}>
-              {project.status?.replace('_', ' ').toUpperCase()}
-            </span>
-          </div>
-          <div className="col-sm-6 mb-3">
-            <p className="mb-1"><strong>Category:</strong></p>
-            <p className="text-muted">{project.category}</p>
-          </div>
-          <div className="col-sm-6 mb-3">
-            <p className="mb-1"><strong>Budget:</strong></p>
-            <p className="text-muted fw-bold">${formatBudget(project.budget)}</p>
-          </div>
-          <div className="col-sm-6 mb-3">
-            <p className="mb-1"><strong>Project Type:</strong></p>
-            <p className="text-muted text-capitalize">{project.project_type?.replace('_', ' ')}</p>
-          </div>
-          <div className="col-sm-6 mb-3">
-            <p className="mb-1"><strong>Deadline:</strong></p>
-            <p className="text-muted">{formatDate(project.deadline)}</p>
-          </div>
-        </div>
-      </div>
-    </div>
-  </>
-) : (
-  <div>Loading project details...</div>
-)}
+        {project ? (
+          <>
+            <h5 className="fw500 mb-3">Project Details</h5>
+
+            <div className="row">
+              <div className="col-md-6 mb-3">
+                <p className="mb-2"><strong>Description:</strong></p>
+                <p className="text-muted">{project.description}</p>
+              </div>
+              <div className="col-md-6">
+                <div className="row">
+                  <div className="col-sm-6 mb-3">
+                    <p className="mb-1"><strong>Posted Date:</strong></p>
+                    <p className="text-muted">{formatDate(project.created_at)}</p>
+                  </div>
+                  <div className="col-sm-6 mb-3">
+                    <p className="mb-1"><strong>Status:</strong></p>
+                    <span className={getStatusClass(project.status)}>
+                      {project.status?.replace('_', ' ').toUpperCase()}
+                    </span>
+                  </div>
+                  <div className="col-sm-6 mb-3">
+                    <p className="mb-1"><strong>Category:</strong></p>
+                    <p className="text-muted">{project.category}</p>
+                  </div>
+                  <div className="col-sm-6 mb-3">
+                    <p className="mb-1"><strong>Budget:</strong></p>
+                    <p className="text-muted fw-bold">${formatBudget(project.budget)}</p>
+                  </div>
+                  <div className="col-sm-6 mb-3">
+                    <p className="mb-1"><strong>Project Type:</strong></p>
+                    <p className="text-muted text-capitalize">{project.project_type?.replace('_', ' ')}</p>
+                  </div>
+                  <div className="col-sm-6 mb-3">
+                    <p className="mb-1"><strong>Deadline:</strong></p>
+                    <p className="text-muted">{formatDate(project.deadline)}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </>
+        ) : (
+          <div>Loading project details...</div>
+        )}
 
 
         {/* Proposal List (if project is OPEN or has proposals) */}
@@ -968,7 +746,7 @@ const handleStartChat = async (proposal) => {
                         <tbody className="t-body">
                           {milestones.map((milestone) => {
                             const milestonePayment = getMilestonePayment(milestone.id);
-                            
+
                             return (
                               <tr key={milestone.id}>
                                 <td>
@@ -1411,8 +1189,8 @@ const handleStartChat = async (proposal) => {
                     </div>
                   </div>
                 </div>
-                <div className="cover-letter-content" style={{ 
-                  maxHeight: '400px', 
+                <div className="cover-letter-content" style={{
+                  maxHeight: '400px',
                   overflowY: 'auto',
                   padding: '15px',
                   backgroundColor: '#f8f9fa',

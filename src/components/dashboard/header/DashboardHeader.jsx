@@ -6,6 +6,8 @@ import toggleStore from "@/store/toggleStore";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import api from '@/lib/axios';
+import { API_BASE_URL } from '@/lib/config';
 
 export default function DashboardHeader() {
   const toggle = toggleStore((state) => state.dashboardSlidebarToggleHandler);
@@ -21,10 +23,10 @@ export default function DashboardHeader() {
     if (typeof window === "undefined") return;
 
     const storedUserId = localStorage.getItem("user_id");
-    const accessToken = localStorage.getItem("accessToken");
+    const access_token = localStorage.getItem("access_token");
     setUserId(storedUserId);
 
-    if (!storedUserId || !accessToken) {
+    if (!storedUserId || !access_token) {
       setLoading(false);
       return;
     }
@@ -32,36 +34,27 @@ export default function DashboardHeader() {
     const fetchUserRoleAndProfile = async () => {
       try {
         // 1️⃣ Get user role
-        const roleRes = await fetch(`http://206.189.134.117:8000/api/user/${storedUserId}/roles/`, {
-          headers: { Authorization: `Bearer ${accessToken}` },
-        });
-
-        if (!roleRes.ok) throw new Error("Failed to fetch user role");
-        const roleData = await roleRes.json();
-        const userRole = roleData.roles?.[0];
+        const roleRes = await api.get(`/api/user/${storedUserId}/roles/`);
+        const userRole = roleRes.data.roles?.[0];
         setRole(userRole);
 
         // 2️⃣ Get profile based on role
         let profileUrl = "";
-        if (userRole === "Employee") {
-          profileUrl = "http://206.189.134.117:8000/api/profile/freelancer/";
-        } else if (userRole === "Employer") {
-          profileUrl = "http://206.189.134.117:8000/api/profile/job-provider/";
+        if (userRole === "Freelancer") {
+          profileUrl = "/api/profile/freelancer/";
+        } else if (userRole === "Job Provider") {
+          profileUrl = "/api/profile/job-provider/";
         }
 
         if (profileUrl) {
-          const profileRes = await fetch(profileUrl, {
-            headers: { Authorization: `Bearer ${accessToken}` },
-          });
+          const profileRes = await api.get(profileUrl);
+          const profileData = profileRes.data;
 
-          if (profileRes.ok) {
-            const profileData = await profileRes.json();
-            if (profileData.profile_image) {
-              const fullImageUrl = profileData.profile_image.startsWith("http")
-                ? profileData.profile_image
-                : `http://206.189.134.117:8000${profileData.profile_image}`;
-              setProfileImage(fullImageUrl);
-            }
+          if (profileData.profile_image) {
+            const fullImageUrl = data.profile_image.startsWith("http")
+              ? data.profile_image
+              : `${API_BASE_URL}${data.profile_image}`;
+            setProfileImage(fullImageUrl);
           }
         }
       } catch (error) {
@@ -76,7 +69,7 @@ export default function DashboardHeader() {
 
   // 3️⃣ Filter dashboard navigation items based on role
   const normalizedRole =
-    role === "Employee" ? "freelancer" : role === "Employer" ? "job-provider" : null;
+    role === "Freelancer" ? "freelancer" : role === "Job Provider" ? "job-provider" : null;
 
   const filteredNav = dasboardNavigation.filter((item) =>
     item.roles?.includes(normalizedRole)

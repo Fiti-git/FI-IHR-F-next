@@ -37,7 +37,7 @@ export default function Breadcumb14({ onSearch }) {
             <div className="row wow fadeInUp">
               <div className="col-xl-7">
                 <div className="position-relative">
-                  <h2>Employer List</h2>
+                  <h2>Job Provider List</h2>
                   <p className="text">
                     Search and discover employers from various industries.
                   </p>
@@ -90,9 +90,8 @@ export default function Breadcumb14({ onSearch }) {
                                     className="selected active"
                                   >
                                     <a
-                                      className={`dropdown-item selected ${
-                                        selectedLocation === item ? "active" : ""
-                                      }`}
+                                      className={`dropdown-item selected ${selectedLocation === item ? "active" : ""
+                                        }`}
                                     >
                                       <span className="text">{item}</span>
                                     </a>
@@ -106,7 +105,7 @@ export default function Breadcumb14({ onSearch }) {
                     </div>
                     <div className="col-md-3 col-lg-2 col-xl-3">
                       <div className="text-center text-xl-start">
-                        <button 
+                        <button
                           className="ud-btn btn-thm2 w-100 vam"
                           onClick={handleSearch}
                           type="button"

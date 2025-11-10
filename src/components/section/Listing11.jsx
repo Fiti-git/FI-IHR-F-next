@@ -5,6 +5,9 @@ import ListingOption5 from "../element/ListingOption5";
 import Pagination1 from "./Pagination1";
 import ListingSidebarModal4 from "../modal/ListingSidebarModal4";
 import listingStore from "@/store/listingStore";
+import api from '@/lib/axios';
+import { API_BASE_URL } from '@/lib/config';
+
 
 export default function Listing11({ searchFilters }) {
   const [jobProviders, setJobProviders] = useState([]);
@@ -27,28 +30,20 @@ export default function Listing11({ searchFilters }) {
     const fetchJobProviders = async () => {
       try {
         setLoading(true);
-        const response = await fetch("http://206.189.134.117:8000/api/profile/job-providers/", {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-          },
-        });
+        const response = await api.get("/api/profile/job-providers/");
+        console.log("Fetched job providers:", response.data);
+        setJobProviders(response.data);
+        setError(null);
+      } catch (err) {
+        console.error("Error fetching job providers:", err);
 
-        if (response.ok) {
-          const data = await response.json();
-          console.log("Fetched job providers:", data);
-          setJobProviders(data);
-          setError(null);
-        } else if (response.status === 404) {
+        if (err.response?.status === 404) {
           setJobProviders([]);
           setError("No job provider profiles found");
         } else {
-          throw new Error(`HTTP error! status: ${response.status}`);
+          setError(err.response?.data?.message || err.message);
+          setJobProviders([]);
         }
-      } catch (err) {
-        console.error("Error fetching job providers:", err);
-        setError(err.message);
-        setJobProviders([]);
       } finally {
         setLoading(false);
       }
@@ -60,19 +55,19 @@ export default function Listing11({ searchFilters }) {
   // Transform API data to match the format expected by EmployeeCard1
   const transformJobProvider = (provider) => {
     // Handle profile_image_url first (from serializer), fallback to profile_image, then default
-    const imageUrl = provider.profile_image_url 
-      || (provider.profile_image 
-          ? (provider.profile_image.startsWith('http') 
-              ? provider.profile_image 
-              : `http://206.189.134.117:8000${provider.profile_image}`)
-          : "/images/team/client-1.png");
+    const imageUrl = provider.profile_image_url
+      || (provider.profile_image
+        ? (provider.profile_image.startsWith('http')
+          ? provider.profile_image
+          : `${API_BASE_URL}${provider.profile_image}`)
+        : "/images/team/client-1.png");
 
     // Extract user data from nested user object
     const user = provider.user || {};
     const userId = user.id;
-    
+
     // Create display name from available user data
-    const displayName = user.first_name && user.last_name 
+    const displayName = user.first_name && user.last_name
       ? `${user.first_name} ${user.last_name}`.trim()
       : user.first_name || user.last_name || user.username || provider.company_name || "User";
 
@@ -106,7 +101,7 @@ export default function Listing11({ searchFilters }) {
       rating: "5.0",
       review: "0",
       location: countryDisplay,
-      
+
       // Additional fields for reference and search
       providerId: provider.id,
       userId: userId,
@@ -133,7 +128,7 @@ export default function Listing11({ searchFilters }) {
     }
 
     const keyword = searchFilters.keyword.toLowerCase().trim();
-    
+
     // Search in these fields
     const searchableFields = [
       item.companyName,
@@ -148,7 +143,7 @@ export default function Listing11({ searchFilters }) {
       item.email
     ];
 
-    return searchableFields.some(field => 
+    return searchableFields.some(field =>
       field && field.toLowerCase().includes(keyword)
     );
   };
@@ -162,7 +157,7 @@ export default function Listing11({ searchFilters }) {
     const searchLocation = searchFilters.location.toLowerCase();
     const itemCountry = (item.countryRaw || '').toLowerCase();
     const itemLocation = (item.location || '').toLowerCase();
-    
+
     // Match against country code or display name
     return itemCountry.includes(searchLocation) || itemLocation.includes(searchLocation);
   };
@@ -263,7 +258,7 @@ export default function Listing11({ searchFilters }) {
       <section className="pt30 pb90">
         <div className="container">
           <ListingOption5 />
-          
+
           {/* Search Results Info */}
           {isSearchActive && (
             <div className="row mb-3">
@@ -287,8 +282,8 @@ export default function Listing11({ searchFilters }) {
                 <div className="alert alert-warning">
                   <h5>No Results Found</h5>
                   <p>
-                    {isSearchActive 
-                      ? "Try adjusting your search criteria or clearing filters." 
+                    {isSearchActive
+                      ? "Try adjusting your search criteria or clearing filters."
                       : "No job providers match your current filters."}
                   </p>
                 </div>

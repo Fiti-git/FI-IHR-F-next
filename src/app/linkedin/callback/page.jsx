@@ -1,6 +1,7 @@
 "use client";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import api from '@/lib/axios';
 
 export default function LinkedInCallback() {
   const router = useRouter();
@@ -17,35 +18,33 @@ export default function LinkedInCallback() {
     }
 
     if (code) {
-      fetch(`http://206.189.134.117:8000/myapi/linkedin-oauth-callback/?code=${code}`)
-        .then(async (res) => {
-          const data = await res.json();
+      try {
+        const res = api.get(`/myapi/linkedin-oauth-callback/?code=${code}`);
+        const data = res.data;
 
-          if (!res.ok) {
-            // Backend returned an error response
-            setMessage(`LinkedIn login failed: ${data.error || "Unknown error"}`);
-            return;
-          }
+        // Store tokens
+        if (data.tokens?.access) {
+          localStorage.setItem("access_token", data.tokens.access);
+        }
+        if (data.tokens?.refresh) {
+          localStorage.setItem("refresh_token", data.tokens.refresh);
+        }
+        if (data.user) {
+          localStorage.setItem("user", JSON.stringify(data.user));
+        }
+        document.cookie = `token=${data.tokens.access}; path=/; max-age=${15 * 60}; SameSite=Lax`;
 
-          if (data.tokens?.access) {
-            localStorage.setItem("accessToken", data.tokens.access);
-          }
-          if (data.tokens?.refresh) {
-            localStorage.setItem("refreshToken", data.tokens.refresh);
-          }
-          if (data.user) {
-            localStorage.setItem("user", JSON.stringify(data.user));
-          }
+        setMessage("LinkedIn login successful! Redirecting...");
 
-          setMessage("LinkedIn login successful! Redirecting...");
+        setTimeout(() => {
+          router.replace("/dashboard");
+        }, 800);
 
-          setTimeout(() => {
-            router.replace("/dashboard");
-          }, 800);
-        })
-        .catch(() => {
-          setMessage("Failed to complete LinkedIn login");
-        });
+      } catch (error) {
+        console.error('LinkedIn OAuth error:', error);
+        const errorMessage = error.response?.data?.error || "Failed to complete LinkedIn login";
+        setMessage(`LinkedIn login failed: ${errorMessage}`);
+      }
     }
   }, [router]);
 

@@ -3,40 +3,30 @@
 import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
+import api from '@/lib/axios';
 
 export default function Breadcumb10({ path }) {
   const { id } = useParams();
   const [shareToggle, setShareToggle] = useState(false);
   const [project, setProject] = useState(null);
 
-  const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://206.189.134.117:8000/api/project/projects/";
-
   useEffect(() => {
     const fetchProject = async () => {
       if (!id) return;
 
       try {
-        const response = await fetch(`${API_URL}${id}/`, {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-          },
-        });
-
-        if (response.ok) {
-          const data = await response.json();
-          setProject(data);
-        }
+        const response = await api.get(`/api/project/projects/${id}/`);
+        setProject(response.data);
       } catch (err) {
         console.error("Error fetching project:", err);
       }
     };
 
     fetchProject();
-  }, [id, API_URL]);
+  }, [id]);
 
   // Build dynamic breadcrumb path
-  const dynamicPath = project 
+  const dynamicPath = project
     ? ["Home", "Projects", project.category, project.title]
     : path || ["Home", "Projects"];
 
@@ -46,10 +36,10 @@ export default function Breadcumb10({ path }) {
   const handleShare = (platform) => {
     const encodedUrl = encodeURIComponent(shareUrl);
     const encodedTitle = encodeURIComponent(project?.title || 'Check out this project');
-    
+
     let shareLink = '';
-    
-    switch(platform) {
+
+    switch (platform) {
       case 'facebook':
         shareLink = `https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}`;
         break;
@@ -65,7 +55,7 @@ export default function Breadcumb10({ path }) {
       default:
         return;
     }
-    
+
     window.open(shareLink, '_blank', 'width=600,height=400');
   };
 
@@ -117,9 +107,8 @@ export default function Breadcumb10({ path }) {
                     style={{ cursor: 'pointer' }}
                   >
                     <div
-                      className={`share-save-widget d-flex align-items-center ${
-                        shareToggle ? "active" : ""
-                      }`}
+                      className={`share-save-widget d-flex align-items-center ${shareToggle ? "active" : ""
+                        }`}
                     >
                       <span className="icon flaticon-share dark-color fz12 mr10" />
                       <div className="h6 mb-0">Share</div>
@@ -127,7 +116,7 @@ export default function Breadcumb10({ path }) {
                   </button>
                   {shareToggle && (
                     <div className="ui-social-media">
-                      <button 
+                      <button
                         onClick={() => handleShare('facebook')}
                         className="border-0 bg-transparent"
                         style={{ cursor: 'pointer' }}
@@ -135,7 +124,7 @@ export default function Breadcumb10({ path }) {
                       >
                         <i className="fa-brands fa-facebook-f"></i>
                       </button>
-                      <button 
+                      <button
                         onClick={() => handleShare('twitter')}
                         className="border-0 bg-transparent"
                         style={{ cursor: 'pointer' }}
@@ -143,7 +132,7 @@ export default function Breadcumb10({ path }) {
                       >
                         <i className="fa-brands fa-twitter"></i>
                       </button>
-                      <button 
+                      <button
                         onClick={() => handleShare('linkedin')}
                         className="border-0 bg-transparent"
                         style={{ cursor: 'pointer' }}
@@ -151,7 +140,7 @@ export default function Breadcumb10({ path }) {
                       >
                         <i className="fa-brands fa-linkedin-in"></i>
                       </button>
-                      <button 
+                      <button
                         onClick={handleCopyLink}
                         className="border-0 bg-transparent"
                         style={{ cursor: 'pointer' }}

@@ -3,12 +3,13 @@
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import api from '@/lib/axios';
 
 export default function AppliedJobDetailPage() {
   const params = useParams();
   // Ensure jobId is an integer
-  const jobId = parseInt(params.id, 10); 
-  
+  const jobId = parseInt(params.id, 10);
+
   const [job, setJob] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -19,9 +20,6 @@ export default function AppliedJobDetailPage() {
   const [applicationStatus, setApplicationStatus] = useState("");
   // Whether the job is open or closed (derived)
   const [isJobOpen, setIsJobOpen] = useState(true);
-  
-  // Base URL for API calls
-  const API_BASE_URL = "http://206.189.134.117:8000/api";
 
   // --- Helpers ---
   function safeParseInt(value) {
@@ -63,10 +61,10 @@ export default function AppliedJobDetailPage() {
       if (parsed) return parsed;
     }
     // Fallback: try to decode from JWT
-    const token = localStorage.getItem("accessToken");
+    const token = localStorage.getItem("access_token");
     if (token) {
       const payload = decodeJwt(token) || {};
-      const possibleKeys = ["freelancer_id", "freelance_id", "user_id", "id"]; 
+      const possibleKeys = ["freelancer_id", "freelance_id", "user_id", "id"];
       for (const k of possibleKeys) {
         const parsed = safeParseInt(payload?.[k]);
         if (parsed) return parsed;
@@ -79,31 +77,19 @@ export default function AppliedJobDetailPage() {
   useEffect(() => {
     async function fetchJob() {
       try {
-        // Get token from localStorage (or cookie)
-        const token = localStorage.getItem("accessToken");
+        const token = localStorage.getItem("access_token");
 
         if (!token) {
           throw new Error("Access token not found. Please log in again.");
         }
 
-        const res = await fetch(`${API_BASE_URL}/job-posting/${jobId}/`, {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`, // Send token here
-          },
-        });
+        const res = await api.get(`/api/job-posting/${jobId}/`);
+        setJob(res.data);
 
-        if (!res.ok) {
-          throw new Error(`Failed to fetch job data (Status: ${res.status})`);
-        }
-
-        const data = await res.json();
-        setJob(data);
         // Derive Open/Closed from application_deadline when available
         try {
-          if (data?.application_deadline) {
-            const deadline = new Date(data.application_deadline);
+          if (res.data?.application_deadline) {
+            const deadline = new Date(res.data.application_deadline);
             setIsJobOpen(!isNaN(deadline) ? Date.now() <= deadline.getTime() : true);
           } else {
             setIsJobOpen(true);
@@ -113,7 +99,7 @@ export default function AppliedJobDetailPage() {
         }
       } catch (err) {
         console.error("Error fetching job:", err);
-        setError(err.message);
+        setError(err.response?.data?.message || err.message);
       } finally {
         setLoading(false);
       }
@@ -126,55 +112,35 @@ export default function AppliedJobDetailPage() {
   useEffect(() => {
     async function fetchInterviews() {
       try {
-        const token = localStorage.getItem("accessToken");
+        const token = localStorage.getItem("access_token");
         if (!token) {
           return;
         }
 
-        const res = await fetch(`${API_BASE_URL}/job-interview/${jobId}/`, {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-        });
+        const res = await api.get(`/api/job-interview/${jobId}/`);
+        const data = res.data;
 
-        if (!res.ok) {
-          console.warn(`Failed to fetch interviews (Status: ${res.status}). Continuing.`);
-          setUserApplicationStatus(""); 
-          setInterviewDetails(null);
-          return;
-        }
-
-        const data = await res.json();
-        
-        // 🚀 FIX: Handle both single object and array responses
+        // Handle both single object and array responses
         let interviews = [];
         if (Array.isArray(data)) {
-            // Case 1: API returns an array of interviews
-            interviews = data;
+          interviews = data;
         } else if (data && typeof data === 'object' && data.interview_id) {
-            // Case 2: API returns a single interview object (based on your example)
-            interviews = [data]; 
+          interviews = [data];
         }
 
         if (interviews.length === 0) {
-            // If no interview data, assume default status or leave blank
-            return;
+          return;
         }
 
-        // Filter and sort by 'date_time' (which is present in your API example)
+        // Filter and sort by 'date_time'
         const latest = interviews
           .filter(iv => iv && iv.date_time)
           .sort((a, b) => new Date(b.date_time) - new Date(a.date_time))[0] || interviews[0];
 
         if (!latest) return;
 
-        // Use 'date_time' from the API response
-        const d = new Date(latest.date_time); 
-        
-        // Use "Scheduled" as a default status if the 'status' field is missing in the interview object
-        const status = (latest.status || "Scheduled").trim(); 
+        const d = new Date(latest.date_time);
+        const status = (latest.status || "Scheduled").trim();
 
         if (!isNaN(d)) {
           const date = d.toLocaleDateString();
@@ -184,11 +150,10 @@ export default function AppliedJobDetailPage() {
             time,
             link: latest.interview_link || "",
             mode: latest.interview_mode || "",
-            status: status, 
+            status: status,
             notes: latest.interview_notes || "",
           });
         } else {
-          // Fallback for invalid date
           setInterviewDetails({
             date: latest.date_time,
             time: "Time N/A",
@@ -199,16 +164,19 @@ export default function AppliedJobDetailPage() {
           });
         }
 
-        // Update the main application status based on the latest interview status
         setUserApplicationStatus(status);
       } catch (err) {
         console.error("Error fetching interviews:", err);
+        if (err.response?.status !== 404) {
+          console.warn(`Failed to fetch interviews. Continuing.`);
+        }
+        setUserApplicationStatus("");
+        setInterviewDetails(null);
       }
     }
 
-    // Only run if a valid jobId is present
     if (jobId && !isNaN(jobId)) {
-        fetchInterviews();
+      fetchInterviews();
     }
   }, [jobId]);
 
@@ -216,23 +184,12 @@ export default function AppliedJobDetailPage() {
   useEffect(() => {
     async function fetchApplications() {
       try {
-        const token = localStorage.getItem("accessToken");
+        const token = localStorage.getItem("access_token");
         if (!token) return;
-        const res = await fetch(`${API_BASE_URL}/job-application/job/${jobId}`, {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-        });
 
-        if (!res.ok) {
-          console.warn(`Failed to fetch applications (Status: ${res.status}).`);
-          setApplicationStatus("");
-          return;
-        }
+        const res = await api.get(`/api/job-application/job/${jobId}`);
+        const data = res.data;
 
-        const data = await res.json();
         const apps = Array.isArray(data) ? data : Array.isArray(data?.applications) ? data.applications : [];
         if (!apps.length) {
           setApplicationStatus("");
@@ -251,6 +208,9 @@ export default function AppliedJobDetailPage() {
         setApplicationStatus(status);
       } catch (err) {
         console.error("Error fetching applications:", err);
+        if (err.response?.status !== 404) {
+          console.warn(`Failed to fetch applications.`);
+        }
         setApplicationStatus("");
       }
     }

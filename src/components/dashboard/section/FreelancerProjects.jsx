@@ -5,6 +5,7 @@ import { useState, useEffect } from "react";
 import Pagination1 from "@/components/section/Pagination1";
 import ProposalModal1 from "../modal/ProposalModal1";
 import DeleteModal from "../modal/DeleteModal";
+import api from '@/lib/axios';
 
 // Status badge component for consistency
 const StatusBadge = ({ status }) => {
@@ -51,18 +52,18 @@ function ProjectRow({ proposal }) {
       <td><StatusBadge status={proposal.status} /></td>
       <td>
         <div className="d-flex gap-2 flex-wrap">
-          <Link 
-            href={`/project-single/${proposal.project}`} 
+          <Link
+            href={`/project-single/${proposal.project}`}
             className="btn btn-sm btn-outline-primary"
             title="View Project"
           >
             <i className="fal fa-eye me-1"></i>
             View
           </Link>
-          
+
           {/* Show Milestone button only for accepted proposals */}
           {proposal.status === "accepted" && (
-            <Link 
+            <Link
               href={`/project/${proposal.project}/create-milestone`}
               className="btn btn-sm btn-success"
               title="Create Milestone"
@@ -85,14 +86,11 @@ export default function FreelancerProjects() {
   const [filter, setFilter] = useState("All");
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
-  // API URL
-  const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://206.189.134.117:8000/api/project";
-
   // Check authentication on component mount
   useEffect(() => {
-    const token = localStorage.getItem('accessToken');
+    const token = localStorage.getItem('access_token');
     setIsAuthenticated(!!token);
-    
+
     if (token) {
       fetchMyProposals();
     } else {
@@ -107,55 +105,31 @@ export default function FreelancerProjects() {
       setLoading(true);
       setError(null);
 
-      const token = localStorage.getItem('accessToken');
+      const token = localStorage.getItem('access_token');
       if (!token) {
         throw new Error("No authentication token found");
       }
 
-      // Fetch proposals submitted by the authenticated freelancer
-      // FIXED: Added '/proposals/' before '/my_proposals/'
-      const response = await fetch(`${API_URL}/proposals/my_proposals/`, {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`
-        },
-      });
+      const response = await api.get('/api/project/proposals/my_proposals/');
+      console.log("Fetched freelancer proposals:", response.data);
 
-      if (!response.ok) {
-        if (response.status === 401) {
-          localStorage.removeItem('accessToken');
-          localStorage.removeItem('refreshToken');
-          setIsAuthenticated(false);
-          throw new Error("Session expired. Please log in again.");
-        }
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const data = await response.json();
-      console.log("Fetched freelancer proposals:", data);
-      
       // Handle both paginated and non-paginated responses
-      const proposalsArray = data.results ? data.results : data;
+      const proposalsArray = response.data.results ? response.data.results : response.data;
       setProposals(proposalsArray);
 
     } catch (err) {
       console.error("Error fetching proposals:", err);
-      setError(err.message || "Failed to fetch proposals");
-      
-      if (err.message.includes("Session expired")) {
-        setTimeout(() => {
-          window.location.href = '/login';
-        }, 2000);
-      }
+      setError(err.response?.data?.message || err.message || "Failed to fetch proposals");
+
+      // Axios interceptor will handle 401 redirect automatically
     } finally {
       setLoading(false);
     }
   };
 
   // Filter proposals by status
-  const filteredProposals = filter === "All" 
-    ? proposals 
+  const filteredProposals = filter === "All"
+    ? proposals
     : proposals.filter((p) => p.status.toLowerCase() === filter.toLowerCase());
 
   // Render loading state
@@ -244,9 +218,9 @@ export default function FreelancerProjects() {
               {error && (
                 <div className="alert alert-danger alert-dismissible fade show" role="alert">
                   <strong>Error:</strong> {error}
-                  <button 
-                    type="button" 
-                    className="btn-close" 
+                  <button
+                    type="button"
+                    className="btn-close"
                     onClick={() => setError(null)}
                   ></button>
                 </div>
@@ -278,7 +252,7 @@ export default function FreelancerProjects() {
                     <option value="accepted">Accepted</option>
                     <option value="rejected">Rejected</option>
                   </select>
-                  <button 
+                  <button
                     className="btn btn-sm btn-outline-primary"
                     onClick={fetchMyProposals}
                     title="Refresh"
@@ -310,13 +284,13 @@ export default function FreelancerProjects() {
                           <div className="text-muted">
                             <i className="fal fa-folder-open fa-3x mb-3 d-block"></i>
                             <p className="mb-0">
-                              {filter === "All" 
-                                ? "No proposals found. Start applying to projects!" 
+                              {filter === "All"
+                                ? "No proposals found. Start applying to projects!"
                                 : `No ${filter.toLowerCase()} proposals found.`}
                             </p>
                             {filter === "All" && (
-                              <Link 
-                                href="/project-1" 
+                              <Link
+                                href="/project-1"
                                 className="btn btn-primary mt-3"
                               >
                                 Browse Projects
@@ -334,7 +308,7 @@ export default function FreelancerProjects() {
               {proposals.filter(p => p.status === 'accepted').length > 0 && (
                 <div className="alert alert-info mt-3" role="alert">
                   <i className="fal fa-info-circle me-2"></i>
-                  <strong>Tip:</strong> You have {proposals.filter(p => p.status === 'accepted').length} accepted proposal(s). 
+                  <strong>Tip:</strong> You have {proposals.filter(p => p.status === 'accepted').length} accepted proposal(s).
                   Click the <strong>Milestone</strong> button to create project milestones and track your progress.
                 </div>
               )}
