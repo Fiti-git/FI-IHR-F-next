@@ -20,6 +20,7 @@ export default function AppliedJobDetailPage() {
   const [activeTab, setActiveTab] = useState("overview"); // ← Moved UP
   const [interviewOpen, setInterviewOpen] = useState(true);
 
+
   const API_BASE_URL = "http://206.189.134.117:8000/api";
 
   // -----------------------------------------------------------------
@@ -212,7 +213,7 @@ export default function AppliedJobDetailPage() {
         }
 
         // Update the main application status based on the latest interview status (normalized)
-        setUserApplicationStatus(status);
+        setApplicationStatus(status);
       } catch (err) {
         console.error("Error fetching interviews:", err);
         if (err.response?.status !== 404) {
