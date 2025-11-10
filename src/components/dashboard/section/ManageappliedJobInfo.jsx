@@ -17,6 +17,8 @@ export default function AppliedJobDetailPage() {
   const [applicationId, setApplicationId] = useState(null);
   const [interviewDetails, setInterviewDetails] = useState(null);
   const [isJobOpen, setIsJobOpen] = useState(true);
+  const [activeTab, setActiveTab] = useState("overview"); // ← Moved UP
+  const [interviewOpen, setInterviewOpen] = useState(true);
 
   const API_BASE_URL = "http://206.189.134.117:8000/api";
 
@@ -26,6 +28,40 @@ export default function AppliedJobDetailPage() {
   const safeParseInt = (v) => {
     const n = parseInt(v, 10);
     return Number.isFinite(n) ? n : null;
+  };
+
+  // Ensure value is an array for safe mapping/joining.
+  const safeArray = (v) => {
+    if (!v) return [];
+    if (Array.isArray(v)) return v;
+    if (typeof v === 'string') {
+      const s = v.trim();
+      // try JSON array
+      if (s.startsWith('[')) {
+        try {
+          const parsed = JSON.parse(s);
+          if (Array.isArray(parsed)) return parsed;
+        } catch (e) {
+          // fallthrough
+        }
+      }
+      // comma-separated
+      return s.split(',').map((x) => x.trim()).filter(Boolean);
+    }
+    if (typeof v === 'object') {
+      try {
+        return Object.values(v).filter((x) => x !== undefined && x !== null);
+      } catch (e) {
+        return [v];
+      }
+    }
+    return [v];
+  };
+
+  const formatNumber = (n) => {
+    if (n === undefined || n === null || n === '') return 'N/A';
+    const num = Number(n);
+    return Number.isFinite(num) ? num.toLocaleString() : String(n);
   };
 
   const normalizeStatus = (s) => {
@@ -149,7 +185,8 @@ export default function AppliedJobDetailPage() {
         const d = new Date(latest.date_time);
 
         // Use "Scheduled" as a default status if the 'status' field is missing in the interview object
-        const rawInterviewStatus = latest.status || "Scheduled";
+        // const rawInterviewStatus = latest.status || "Scheduled";
+        const rawInterviewStatus = "Scheduled";
         const status = normalizeStatus(rawInterviewStatus);
 
         if (!isNaN(d)) {
@@ -323,25 +360,25 @@ export default function AppliedJobDetailPage() {
       case "overview":
         return (
           <div className="text-muted mt-3">
-            <p><strong>Description:</strong> {job.description}</p>
-            <p><strong>Role Overview:</strong> {job.roleOverview}</p>
+            {/* <p><strong>Description:</strong> {job.description}</p> */}
+            <p><strong>Role Overview:</strong> {job.role_overview}</p>
             <p><strong>Department / Team:</strong> {job.department}</p>
-            <p><strong>Job Type:</strong> {job.jobType}</p>
-            <p><strong>Work Location:</strong> {job.workLocation}</p>
-            <p><strong>Work Mode:</strong> {job.workMode}</p>
-            <p><strong>Date Posted:</strong> {job.date}</p>
+            <p><strong>Job Type:</strong> {job.job_type}</p>
+            <p><strong>Work Location:</strong> {job.work_location}</p>
+            <p><strong>Work Mode:</strong> {job.work_mode}</p>
+            <p><strong>Date Posted:</strong> {job.date_posted}</p>
             <p>
               <strong>Status:</strong>{" "}
               <span
                 className={`badge ${
-                  job.status?.toLowerCase() === "open"
+                  job.job_status?.toLowerCase() === "open"
                     ? "bg-success"
-                    : job.status?.toLowerCase() === "closed"
+                    : job.job_status?.toLowerCase() === "closed"
                     ? "bg-danger"
                     : "bg-secondary"
                 }`}
               >
-                {job.status ? job.status.charAt(0).toUpperCase() + job.status.slice(1).toLowerCase() : "Unknown"}
+                {job.job_status ? job.job_status.charAt(0).toUpperCase() + job.job_status.slice(1).toLowerCase() : "Unknown"}
               </span>
             </p>
           </div>
@@ -350,8 +387,8 @@ export default function AppliedJobDetailPage() {
       case "responsibilities":
         return (
           <ul className="mt-3 text-muted">
-            {job.keyResponsibilities?.length ? (
-              job.keyResponsibilities.map((item, i) => <li key={i}>{item}</li>)
+            {safeArray(job.key_responsibilities).length ? (
+              safeArray(job.key_responsibilities).map((item, i) => <li key={i}>{item}</li>)
             ) : (
               <li>No responsibilities listed</li>
             )}
@@ -363,8 +400,8 @@ export default function AppliedJobDetailPage() {
           <div className="mt-3 text-muted">
             <p><strong>Required Qualifications:</strong></p>
             <ul>
-              {job.requiredQualifications?.length ? (
-                job.requiredQualifications.map((item, i) => <li key={i}>{item}</li>)
+              {safeArray(job.required_qualifications).length ? (
+                safeArray(job.required_qualifications).map((item, i) => <li key={i}>{item}</li>)
               ) : (
                 <li>No required qualifications listed</li>
               )}
@@ -372,8 +409,8 @@ export default function AppliedJobDetailPage() {
 
             <p><strong>Preferred Qualifications:</strong></p>
             <ul>
-              {job.preferredQualifications?.length ? (
-                job.preferredQualifications.map((item, i) => <li key={i}>{item}</li>)
+              {safeArray(job.preferred_qualifications).length ? (
+                safeArray(job.preferred_qualifications).map((item, i) => <li key={i}>{item}</li>)
               ) : (
                 <li>No preferred qualifications listed</li>
               )}
@@ -381,7 +418,7 @@ export default function AppliedJobDetailPage() {
 
             <p>
               <strong>Languages Required:</strong>{" "}
-              {job.languagesRequired?.length ? job.languagesRequired.join(", ") : "None specified"}
+              {safeArray(job.language_required).length ? safeArray(job.language_required).join(", ") : "None specified"}
             </p>
           </div>
         );
@@ -389,16 +426,16 @@ export default function AppliedJobDetailPage() {
       case "application":
         return (
           <div className="mt-3 text-muted">
-            <p><strong>Application Deadline:</strong> {job.applicationDeadline || "N/A"}</p>
-            <p><strong>Application Method:</strong> {job.applicationMethod || "N/A"}</p>
-            <p><strong>Interview Mode:</strong> {job.interviewMode || "N/A"}</p>
-            <p><strong>Hiring Manager:</strong> {job.hiringManager || "N/A"}</p>
-            <p><strong>Number of Openings:</strong> {job.numberOfOpenings || "N/A"}</p>
-            <p><strong>Expected Start Date:</strong> {job.expectedStartDate || "N/A"}</p>
+            <p><strong>Application Deadline:</strong> {job.application_deadline || "N/A"}</p>
+            {/* <p><strong>Application Method:</strong> {job.applicationMethod || "N/A"}</p> */}
+            <p><strong>Interview Mode:</strong> {job.interview_mode || "N/A"}</p>
+            <p><strong>Hiring Manager:</strong> {job.hiring_manager || "N/A"}</p>
+            <p><strong>Number of Openings:</strong> {job.number_of_openings || "N/A"}</p>
+            <p><strong>Expected Start Date:</strong> {job.expected_start_date || "N/A"}</p>
             <p><strong>Screening Questions:</strong></p>
             <ul>
-              {job.screeningQuestions?.length ? (
-                job.screeningQuestions.map((q, i) => <li key={i}>{q}</li>)
+              {safeArray(job.screening_questions).length ? (
+                safeArray(job.screening_questions).map((q, i) => <li key={i}>{q}</li>)
               ) : (
                 <li>No screening questions listed</li>
               )}
@@ -411,14 +448,14 @@ export default function AppliedJobDetailPage() {
           <div className="mt-3 text-muted">
             <p>
               <strong>Salary Range:</strong>{" "}
-              {job.salaryFrom?.toLocaleString()} - {job.salaryTo?.toLocaleString()} {job.currency}
+              {formatNumber(job.salary_from)} - {formatNumber(job.salary_to)} {job.currency || ''}
             </p>
             <p><strong>Benefits:</strong></p>
             <ul>
-              <li>Health Insurance: {job.benefits.healthInsurance ? "Yes" : "No"}</li>
-              <li>Remote Work: {job.benefits.remoteWork ? "Yes" : "No"}</li>
-              <li>Paid Leave: {job.benefits.paidLeave ? "Yes" : "No"}</li>
-              <li>Bonus: {job.benefits.bonus ? "Yes" : "No"}</li>
+              <li>Health Insurance: {job.health_insurance ? "Yes" : "No"}</li>
+              <li>Remote Work: {job.remote_work ? "Yes" : "No"}</li>
+              <li>Paid Leave: {job.paid_leave ? "Yes" : "No"}</li>
+              <li>Bonus: {job.bonus ? "Yes" : "No"}</li>
             </ul>
           </div>
         );
