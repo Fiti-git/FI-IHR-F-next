@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Footer from "@/components/footer/Footer";
 import Header20 from "@/components/header/Header20";
 import Link from "next/link";
+import api from '@/lib/axios';
 
 function LoginPageContent() {
   const router = useRouter();
@@ -20,9 +21,9 @@ function LoginPageContent() {
 
   // Redirect based on user role from backend
   const handleRedirect = (user) => {
-    if (user.role === "employer") {
+    if (user.role === "Job Provider") {
       router.push("/job-provider");
-    } else if (user.role === "employee") {
+    } else if (user.role === "Freelancer") {
       router.push("/freelancer");
     } else {
       router.push("/select-role");
@@ -46,20 +47,20 @@ function LoginPageContent() {
     setMessage("");
 
     try {
-      const res = await fetch("http://127.0.0.1:8000/myapi/login/", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
+      const res = await api.post('/myapi/login/', {
+        email,
+        password
       });
-      const data = await res.json();
+      const data = await res.data;
 
-      if (!res.ok) {
+      if (res.statusText != "OK") {
         setMessage(
           data.error || "Login failed. Please check your credentials."
         );
       } else {
-        localStorage.setItem("accessToken", data.tokens.access);
-        localStorage.setItem("refreshToken", data.tokens.refresh);
+        localStorage.setItem("access_token", data.tokens.access);
+        localStorage.setItem("refresh_token", data.tokens.refresh);
+        document.cookie = `token=${data.tokens.access}; path=/; max-age=${15 * 60}; SameSite=Lax`;
 
         const decodedUserId = decodeJwt(data.tokens.access);
         localStorage.setItem("user_id", decodedUserId);
@@ -77,18 +78,17 @@ function LoginPageContent() {
   const handleGoogleResponse = async (response) => {
     setLoading(true);
     try {
-      const res = await fetch("http://127.0.0.1:8000/myapi/google-login/", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ token: response.credential }),
+      const res = await api.post('/myapi/google-login/', {
+        token: response.credential
       });
-      const data = await res.json();
+      const data = await res.data;
 
-      if (!res.ok) {
+      if (res.statusText != "OK") {
         setMessage(data.error || "Google login failed.");
       } else {
-        localStorage.setItem("accessToken", data.tokens.access);
-        localStorage.setItem("refreshToken", data.tokens.refresh);
+        localStorage.setItem("access_token", data.tokens.access);
+        localStorage.setItem("refresh_token", data.tokens.refresh);
+        document.cookie = `token=${data.tokens.access}; path=/; max-age=${15 * 60}; SameSite=Lax`;
 
         const decodedUserId = decodeJwt(data.tokens.access);
         localStorage.setItem("user_id", decodedUserId);

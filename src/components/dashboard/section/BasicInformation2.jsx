@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import SelectInput from "../option/SelectInput";
 import Link from "next/link";
+import api from '@/lib/axios';
 
 export default function BasicInformation2() {
   // Form state
@@ -12,11 +13,11 @@ export default function BasicInformation2() {
   const [deadline, setDeadline] = useState("");
   const [projectType, setProjectType] = useState({ option: "Select", value: "select" });
   const [visibility, setVisibility] = useState({ option: "Public", value: "public" });
-  
+
   // Image state
   const [image, setImage] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
-  
+
   // Loading and error states
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -26,16 +27,10 @@ export default function BasicInformation2() {
   const [userRole, setUserRole] = useState(null); // 'freelancer' or 'job-provider'
   const [isCheckingRole, setIsCheckingRole] = useState(true);
 
-  // API URLs
-  const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000/api/project/projects/";
-  const FREELANCER_API_URL = process.env.NEXT_PUBLIC_FREELANCER_API_URL || "http://127.0.0.1:8000/api/profile/freelancer/";
-  const JOB_PROVIDER_API_URL = process.env.NEXT_PUBLIC_JOB_PROVIDER_API_URL || "http://127.0.0.1:8000/api/profile/job-provider/";
-
-  // Check authentication and user role on component mount
   useEffect(() => {
     const checkUserAccess = async () => {
-      const token = localStorage.getItem('accessToken');
-      
+      const token = localStorage.getItem('access_token');
+
       if (!token) {
         setIsAuthenticated(false);
         setIsCheckingRole(false);
@@ -43,83 +38,51 @@ export default function BasicInformation2() {
       }
 
       setIsAuthenticated(true);
-      
+
       try {
-        console.log("Checking user role with token:", token.substring(0, 20) + "...");
-        
+        console.log("Checking user role...");
+
         // First, try to fetch freelancer profile
-        const freelancerResponse = await fetch(FREELANCER_API_URL, {
-          method: "GET",
-          headers: {
-            "Authorization": `Bearer ${token}`,
-            "Content-Type": "application/json"
-          }
-        });
-
-        console.log("Freelancer API Response Status:", freelancerResponse.status);
-
-        if (freelancerResponse.ok) {
-          // User is a freelancer
-          const freelancerData = await freelancerResponse.json();
-          console.log("User is a FREELANCER:", freelancerData);
+        try {
+          const freelancerResponse = await api.get('/api/profile/freelancer/');
+          console.log("User is a FREELANCER:", freelancerResponse.data);
           setUserRole('freelancer');
           setError("Freelancers cannot create projects. Only job providers can create projects.");
           setIsCheckingRole(false);
           return;
-        }
+        } catch (freelancerError) {
+          // If 404, user is not a freelancer, continue to check job provider
+          if (freelancerError.response?.status === 404) {
+            console.log("Not a freelancer, checking job provider...");
 
-        // If 404, user is not a freelancer, try job provider
-        if (freelancerResponse.status === 404) {
-          console.log("Not a freelancer, checking job provider...");
-          
-          const jobProviderResponse = await fetch(JOB_PROVIDER_API_URL, {
-            method: "GET",
-            headers: {
-              "Authorization": `Bearer ${token}`,
-              "Content-Type": "application/json"
+            try {
+              const jobProviderResponse = await api.get('/api/profile/job-provider/');
+              console.log("User is a JOB PROVIDER:", jobProviderResponse.data);
+              setUserRole('job-provider');
+              setError(null);
+            } catch (jobProviderError) {
+              if (jobProviderError.response?.status === 404) {
+                // User has neither profile
+                console.log("User has no profile");
+                setUserRole(null);
+                setError("Profile not found. Please complete your profile setup.");
+              } else {
+                // Other error
+                console.log("Job Provider API Error:", jobProviderError.response?.data);
+                setError("Unable to determine user role. Please try again.");
+              }
             }
-          });
-
-          console.log("Job Provider API Response Status:", jobProviderResponse.status);
-
-          if (jobProviderResponse.ok) {
-            // User is a job provider
-            const jobProviderData = await jobProviderResponse.json();
-            console.log("User is a JOB PROVIDER:", jobProviderData);
-            setUserRole('job-provider');
-            setError(null);
-          } else if (jobProviderResponse.status === 404) {
-            // User has neither profile
-            console.log("User has no profile");
-            setUserRole(null);
-            setError("Profile not found. Please complete your profile setup.");
-          } else if (jobProviderResponse.status === 401) {
-            // Token expired or invalid
+          } else if (freelancerError.response?.status === 401) {
+            // Token expired - axios interceptor will handle redirect
             console.log("Token expired or invalid");
-            localStorage.removeItem('accessToken');
-            localStorage.removeItem('refreshToken');
             setIsAuthenticated(false);
             setUserRole(null);
             setError("Session expired. Please log in again.");
           } else {
-            // Other error
-            const errorData = await jobProviderResponse.json().catch(() => ({}));
-            console.log("Job Provider API Error:", errorData);
-            setError("Unable to determine user role. Please try again.");
+            // Other error from freelancer endpoint
+            console.log("Freelancer API Error:", freelancerError.response?.data);
+            setError("Unable to verify user permissions. Please try again.");
           }
-        } else if (freelancerResponse.status === 401) {
-          // Token expired or invalid
-          console.log("Token expired or invalid");
-          localStorage.removeItem('accessToken');
-          localStorage.removeItem('refreshToken');
-          setIsAuthenticated(false);
-          setUserRole(null);
-          setError("Session expired. Please log in again.");
-        } else {
-          // Other error from freelancer endpoint
-          const errorData = await freelancerResponse.json().catch(() => ({}));
-          console.log("Freelancer API Error:", errorData);
-          setError("Unable to verify user permissions. Please try again.");
         }
       } catch (err) {
         console.error("Error checking user role:", err);
@@ -150,14 +113,14 @@ export default function BasicInformation2() {
       }
 
       setImage(file);
-      
+
       // Create preview using FileReader
       const reader = new FileReader();
       reader.onloadend = () => {
         setImagePreview(reader.result);
       };
       reader.readAsDataURL(file);
-      
+
       setError(null);
       console.log("Image selected:", {
         name: file.name,
@@ -188,7 +151,7 @@ export default function BasicInformation2() {
     setCreatedProject(null);
 
     // Check if user is authenticated
-    const token = localStorage.getItem('accessToken');
+    const token = localStorage.getItem('access_token');
     if (!token) {
       setError("Please log in to create a project");
       setLoading(false);
@@ -261,13 +224,13 @@ export default function BasicInformation2() {
     // Validate deadline
     const deadlineDate = new Date(deadline);
     const now = new Date();
-    
+
     if (isNaN(deadlineDate.getTime())) {
       setError("Please enter a valid deadline");
       setLoading(false);
       return;
     }
-    
+
     if (deadlineDate <= now) {
       setError("Deadline must be in the future");
       setLoading(false);
@@ -281,13 +244,13 @@ export default function BasicInformation2() {
     formData.append('category', category.option);
     formData.append('budget', numericBudget.toString());
     formData.append('project_type', projectType.value === "fixed_price" ? "fixed_price" : "hourly");
-    
+
     // Format deadline to ISO string (Django expects datetime in ISO format)
     const formattedDeadline = new Date(deadline).toISOString();
     formData.append('deadline', formattedDeadline);
-    
+
     formData.append('visibility', visibility.value);
-    
+
     // Add image if selected (IMPORTANT: Must match the field name in Django model)
     if (image) {
       formData.append('image', image, image.name);
@@ -309,21 +272,10 @@ export default function BasicInformation2() {
     }
 
     try {
-      console.log("Sending project data to:", API_URL);
-      
-      const response = await fetch(API_URL, {
-        method: "POST",
-        headers: {
-          // IMPORTANT: Do NOT set Content-Type header when sending FormData
-          // Browser will automatically set it with the correct boundary
-          "Authorization": `Bearer ${token}`
-        },
-        body: formData,
-      });
 
-      console.log("Response status:", response.status);
+      const response = await api.post('/api/project/projects/', formData);
 
-      if (!response.ok) {
+      if (response.statusText != "OK") {
         let errorData;
         try {
           errorData = await response.json();
@@ -332,10 +284,10 @@ export default function BasicInformation2() {
           console.error("Error parsing response:", parseError);
           errorData = { message: "Failed to parse error response" };
         }
-        
+
         if (response.status === 401) {
-          localStorage.removeItem('accessToken');
-          localStorage.removeItem('refreshToken');
+          localStorage.removeItem('access_token');
+          localStorage.removeItem('refresh_token');
           setError("Session expired. Please log in again.");
           setIsAuthenticated(false);
           setTimeout(() => {
@@ -376,27 +328,27 @@ export default function BasicInformation2() {
           setError("Server error. Please try again later.");
           return;
         }
-        
+
         throw new Error(errorData.detail || errorData.message || "Failed to create project");
       }
 
-      const data = await response.json();
+      const data = await response.data;
       console.log("Project created successfully:", data);
-      
+
       // Log the image URL if available
       if (data.image_url) {
         console.log("Project image URL:", data.image_url);
       }
-      
+
       setSuccess(true);
       setCreatedProject(data); // Store the created project data
-      
+
       // Scroll to top to show success message
       window.scrollTo({ top: 0, behavior: 'smooth' });
-      
+
       // DON'T auto-redirect - let user decide what to do next
       // User can click "View Project" or "Create Another" buttons
-      
+
     } catch (err) {
       console.error("Error creating project:", err);
       if (err.name === 'TypeError' && err.message === 'Failed to fetch') {
@@ -423,7 +375,7 @@ export default function BasicInformation2() {
     setError(null);
     setSuccess(false);
     setCreatedProject(null);
-    
+
     const fileInput = document.getElementById('projectImage');
     if (fileInput) {
       fileInput.value = '';
@@ -469,7 +421,7 @@ export default function BasicInformation2() {
         <div className="bdrb1 pb15 mb25">
           <h5 className="list-title">Create New Project</h5>
         </div>
-        
+
         <div className="col-xl-10">
           <div className="alert alert-danger d-flex align-items-start" role="alert">
             <i className="fal fa-exclamation-triangle fa-3x me-3 mt-1"></i>
@@ -518,10 +470,10 @@ export default function BasicInformation2() {
               </div>
             </div>
           </div>
-          
+
           <div className="alert alert-info mt-3" role="alert">
             <i className="fal fa-info-circle me-2"></i>
-            <strong>Want to post projects?</strong> You need a job provider account to create and manage projects. 
+            <strong>Want to post projects?</strong> You need a job provider account to create and manage projects.
             Contact support if you'd like to upgrade your account.
           </div>
         </div>
@@ -536,11 +488,11 @@ export default function BasicInformation2() {
         <div className="bdrb1 pb15 mb25">
           <h5 className="list-title">Create New Project</h5>
         </div>
-        
+
         <div className="col-xl-8">
           <div className="alert alert-warning" role="alert">
             <i className="fal fa-exclamation-circle me-2"></i>
-            <strong>Profile Setup Required:</strong> Unable to determine your account type. 
+            <strong>Profile Setup Required:</strong> Unable to determine your account type.
             Please complete your profile setup before creating projects.
             <div className="mt-3">
               <Link href="/profile/setup" className="btn btn-warning">
@@ -559,13 +511,13 @@ export default function BasicInformation2() {
       <div className="bdrb1 pb15 mb25">
         <h5 className="list-title">Create New Project</h5>
       </div>
-      
+
       <div className="col-xl-8">
         {!isAuthenticated && (
           <div className="alert alert-warning mb20 d-flex align-items-center" role="alert">
             <i className="fal fa-exclamation-triangle me-2"></i>
             <div>
-              ⚠️ You need to be logged in to create a project. 
+              ⚠️ You need to be logged in to create a project.
               <Link href="/login" className="ms-2 text-decoration-underline fw-bold">
                 Login here
               </Link>
@@ -577,7 +529,7 @@ export default function BasicInformation2() {
           <div className="alert alert-success mb20 d-flex align-items-center" role="alert">
             <i className="fal fa-check-circle me-2"></i>
             <div>
-              You are logged in as a <strong>Job Provider</strong>. 
+              You are logged in as a <strong>Job Provider</strong>.
               You can create and manage projects to hire freelancers.
             </div>
           </div>
@@ -598,7 +550,7 @@ export default function BasicInformation2() {
                 <p className="mb-3">
                   <strong>"{createdProject.title}"</strong> has been created and is now live on the platform.
                 </p>
-                
+
                 {/* Project Details Preview */}
                 <div className="bg-light p-3 rounded mb-3">
                   <div className="row g-2">
@@ -619,12 +571,12 @@ export default function BasicInformation2() {
                       <span className="badge bg-success text-capitalize">{createdProject.status}</span>
                     </div>
                   </div>
-                  
+
                   {createdProject.image_url && (
                     <div className="mt-3">
                       <small className="text-muted d-block mb-2">Project Image</small>
-                      <img 
-                        src={createdProject.image_url} 
+                      <img
+                        src={createdProject.image_url}
                         alt={createdProject.title}
                         className="img-fluid rounded"
                         style={{ maxHeight: '150px', objectFit: 'cover' }}
@@ -634,25 +586,25 @@ export default function BasicInformation2() {
                 </div>
 
                 <hr className="my-3" />
-                
+
                 {/* Action Buttons */}
                 <div className="d-flex gap-2 flex-wrap">
-                  <Link 
-                    href={`/project/${createdProject.id}`} 
+                  <Link
+                    href={`/project/${createdProject.id}`}
                     className="btn btn-success"
                   >
                     <i className="fal fa-eye me-2"></i>
                     View Project
                   </Link>
-                  
-                  <Link 
-                    href="/my-projects" 
+
+                  <Link
+                    href="/my-projects"
                     className="btn btn-primary"
                   >
                     <i className="fal fa-briefcase me-2"></i>
                     My Projects
                   </Link>
-                  
+
                   <button
                     type="button"
                     className="btn btn-outline-success"
@@ -661,9 +613,9 @@ export default function BasicInformation2() {
                     <i className="fal fa-plus-circle me-2"></i>
                     Create Another Project
                   </button>
-                  
-                  <Link 
-                    href="/dashboard" 
+
+                  <Link
+                    href="/dashboard"
                     className="btn btn-outline-secondary"
                   >
                     <i className="fal fa-home me-2"></i>
@@ -674,7 +626,7 @@ export default function BasicInformation2() {
                 <div className="mt-3 p-2 bg-info bg-opacity-10 rounded">
                   <small className="text-info">
                     <i className="fal fa-info-circle me-1"></i>
-                    <strong>What's Next?</strong> Your project is now visible to freelancers. 
+                    <strong>What's Next?</strong> Your project is now visible to freelancers.
                     You'll receive proposals soon. Check your notifications and email for updates.
                   </small>
                 </div>
@@ -746,13 +698,13 @@ export default function BasicInformation2() {
                   <i className="fal fa-info-circle me-1"></i>
                   Recommended: 800x600px or 16:9 ratio, Max 5MB (JPG, PNG, GIF, WEBP)
                 </small>
-                
+
                 {imagePreview && (
                   <div className="mt-3 position-relative" style={{ maxWidth: '400px' }}>
                     <div className="border rounded overflow-hidden">
-                      <img 
-                        src={imagePreview} 
-                        alt="Project preview" 
+                      <img
+                        src={imagePreview}
+                        alt="Project preview"
                         className="img-fluid"
                         style={{ width: '100%', height: 'auto', objectFit: 'cover', maxHeight: '300px' }}
                       />
@@ -844,11 +796,11 @@ export default function BasicInformation2() {
                   />
                 </div>
                 <small className="text-muted">
-                  {projectType.value === "fixed_price" 
-                    ? "One-time payment for the entire project" 
+                  {projectType.value === "fixed_price"
+                    ? "One-time payment for the entire project"
                     : projectType.value === "hourly"
-                    ? "Pay based on hours worked"
-                    : "Select how you want to pay"}
+                      ? "Pay based on hours worked"
+                      : "Select how you want to pay"}
                 </small>
               </div>
 
@@ -865,8 +817,8 @@ export default function BasicInformation2() {
                   />
                 </div>
                 <small className="text-muted">
-                  {visibility.value === "public" 
-                    ? "Visible to all freelancers on the platform" 
+                  {visibility.value === "public"
+                    ? "Visible to all freelancers on the platform"
                     : "Only visible to invited freelancers"}
                 </small>
               </div>
@@ -900,7 +852,7 @@ export default function BasicInformation2() {
                       </>
                     )}
                   </button>
-                  
+
                   <button
                     type="button"
                     className="ud-btn btn-white"

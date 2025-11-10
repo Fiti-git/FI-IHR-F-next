@@ -4,114 +4,57 @@ import { useParams } from "next/navigation";
 import Link from "next/link";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import api from '@/lib/axios';
+import { API_BASE_URL } from '@/lib/config';
 
-  // Normalize resume URL similar to ProfileDetails.jsx
+
+// Normalize resume URL similar to ProfileDetails.jsx
 const getFullResumeUrl = (resume) => {
   if (!resume) return null;
   if (typeof resume !== 'string') return null;
   // if already absolute URL, return as-is
   if (resume.startsWith('http')) return resume;
   // otherwise prefix with local dev server host
-  const base = 'http://127.0.0.1:8000';
+  const base = API_BASE_URL;
   return base + (resume.startsWith('/') ? resume : '/' + resume);
 };
 // -------------------------------------------------------------------
 // POST /api/chat/start/
 // -------------------------------------------------------------------
 const startChat = async (userId) => {
-    let accessToken;
-    if (typeof window !== 'undefined') {
-        accessToken = localStorage.getItem('accessToken');
-    }
-    if (!accessToken) throw new Error('No access token');
-
-    const res = await fetch('http://127.0.0.1:8000/api/chat/start/', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            Accept: 'application/json',
-            Authorization: `Bearer ${accessToken}`,
-        },
-        body: JSON.stringify({ user_id: userId }),
-    });
-
-    if (!res.ok) {
-        let txt = '';
-        try { txt = await res.text(); } catch { }
-        throw new Error(`Failed to start chat: ${res.status} ${txt}`);
-    }
-
-    return await res.json();
+  try {
+    const res = await api.post('/api/chat/start/', { user_id: userId });
+    return res.data;
+  } catch (error) {
+    const errorMsg = error.response?.data?.detail || error.message || `Failed to start chat: ${error.response?.status}`;
+    throw new Error(errorMsg);
+  }
 };
 
 const fetchJobDetails = async (jobId) => {
   try {
-    let accessToken;
-    if (typeof window !== 'undefined') {
-      accessToken = localStorage.getItem("accessToken");
-    }
-    
-    if (!accessToken) {
-      console.error('No access token found');
-      return null;
-    }
-
-    const response = await fetch(`http://127.0.0.1:8000/api/job-posting/${jobId}/`, {
-      method: "GET",
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        "Authorization": `Bearer ${accessToken}`
-      }
-    });
-
-    if (!response.ok) {
-      console.error('API Error:', response.status);
-      return null;
-    }
-
-    const jobData = await response.json();
-    console.log('API Response:', jobData);
-    console.log('Key Responsibilities type:', typeof jobData.key_responsibilities);
-    console.log('Key Responsibilities value:', jobData.key_responsibilities);
-    return jobData;
+    const response = await api.get(`/api/job-posting/${jobId}/`);
+    console.log('API Response:', response.data);
+    console.log('Key Responsibilities type:', typeof response.data.key_responsibilities);
+    console.log('Key Responsibilities value:', response.data.key_responsibilities);
+    return response.data;
   } catch (error) {
-    console.error('Error fetching job:', error);
+    console.error('Error fetching job:', error.response?.data || error.message);
     return null;
   }
 };
 
 const fetchJobApplications = async (jobId) => {
   try {
-    let accessToken;
-    if (typeof window !== 'undefined') {
-      accessToken = localStorage.getItem('accessToken');
-    }
-    if (!accessToken) {
-      console.error('No access token for applications');
-      return { data: [], error: 'No access token' };
-    }
-    const res = await fetch(`http://127.0.0.1:8000/api/job-application/job/${jobId}/`, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        'Authorization': `Bearer ${accessToken}`,
-      }
-    });
-    if (!res.ok) {
-      const txt = await res.text().catch(()=>String(res.status));
-      const err = `Failed to fetch applicants: ${res.status} ${txt}`;
-      console.error(err);
-      return { data: [], error: err };
-    }
-    const data = await res.json();
+    const res = await api.get(`/api/job-application/job/${jobId}/`);
+    const data = res.data;
     // API may return { applications: [...] } or an array directly
     const arr = data && Array.isArray(data.applications) ? data.applications : data;
     return { data: Array.isArray(arr) ? arr : [], error: null };
   } catch (e) {
-    console.error('Error fetching applications', e);
-    return { data: [], error: String(e) };
+    const err = e.response?.data?.detail || e.message || String(e);
+    console.error('Error fetching applications', err);
+    return { data: [], error: err };
   }
 };
 
@@ -119,31 +62,11 @@ const fetchJobApplications = async (jobId) => {
 const fetchInterviewForApplication = async (applicationId) => {
   try {
     if (!applicationId) return null;
-    let accessToken;
-    if (typeof window !== 'undefined') {
-      accessToken = localStorage.getItem('accessToken');
-    }
-    if (!accessToken) {
-      console.error('No access token for interview fetch');
-      return null;
-    }
-    const res = await fetch(`http://127.0.0.1:8000/api/job-interview/application/${applicationId}/`, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        'Authorization': `Bearer ${accessToken}`,
-      }
-    });
-    if (!res.ok) {
-      // don't fail hard for interview fetches; return null
-      console.debug('No interview data for application', applicationId, res.status);
-      return null;
-    }
-    const data = await res.json().catch(() => null);
-    return data;
+    const res = await api.get(`/api/job-interview/application/${applicationId}/`);
+    return res.data;
   } catch (e) {
-    console.error('Error fetching interview for application', applicationId, e);
+    // don't fail hard for interview fetches; return null
+    console.debug('No interview data for application', applicationId, e.response?.status);
     return null;
   }
 };
@@ -183,12 +106,6 @@ const convertDatetimeLocalToIso = (localValue) => {
 // POST /api/job-offer/create
 // -------------------------------------------------------------------
 const createJobOffer = async (applicationId, offerData) => {
-  let accessToken;
-  if (typeof window !== 'undefined') {
-    accessToken = localStorage.getItem('accessToken');
-  }
-  if (!accessToken) throw new Error('No access token');
-
   const payload = {
     application_id: applicationId,
     offer_status: 'Pending',                     // always Pending on creation
@@ -202,29 +119,19 @@ const createJobOffer = async (applicationId, offerData) => {
     },
   };
 
-  const res = await fetch('http://127.0.0.1:8000/api/job-offer/create/', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Accept: 'application/json',
-      Authorization: `Bearer ${accessToken}`,
-    },
-    body: JSON.stringify(payload),
-  });
-
-  if (!res.ok) {
-    let txt = '';
-    try { txt = await res.text(); } catch {}
-    throw new Error(`Failed to create offer: ${res.status} ${txt}`);
+  try {
+    const res = await api.post('/api/job-offer/create/', payload);
+    return res.data; // {offer_id:…, message:…}
+  } catch (error) {
+    const errorMsg = error.response?.data?.detail || error.message || `Failed to create offer: ${error.response?.status}`;
+    throw new Error(errorMsg);
   }
-
-  return await res.json(); // {offer_id:…, message:…}
 };
 
 export default function JobDetailPage() {
   const params = useParams();
   const jobId = parseInt(params.id, 10);
-  const router = useRouter(); // <-- Add this line
+  const router = useRouter();
   const [job, setJob] = useState(null);
   const [applicants, setApplicants] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -251,7 +158,7 @@ export default function JobDetailPage() {
   const [confirmAction, setConfirmAction] = useState(null); // 'Accepted' or 'Rejected'
   const [confirmLoading, setConfirmLoading] = useState(false);
   const [confirmResult, setConfirmResult] = useState(null);
-  // Offer modal state (local-only, no APIs)
+  // Offer modal state
   const [showOfferModal, setShowOfferModal] = useState(false);
   const [offerApplicant, setOfferApplicant] = useState(null);
   const [offerData, setOfferData] = useState({ salary: '', starting_date: '', benefits: '' });
@@ -261,7 +168,7 @@ export default function JobDetailPage() {
   const [showChatModal, setShowChatModal] = useState(false);
   const [currentChatApplicant, setCurrentChatApplicant] = useState(null);
   const [conversationId, setConversationId] = useState(null);
-  
+
 
   // helper to extract application_id from applicant.raw or applicant object
   const getApplicationIdFromApplicant = (applicant) => {
@@ -275,64 +182,46 @@ export default function JobDetailPage() {
     if (!applicationId) throw new Error('Missing application id');
     setApplicationUpdating(prev => ({ ...prev, [applicationId]: true }));
     setApplicationUpdateError(prev => ({ ...prev, [applicationId]: null }));
-    try {
-      let accessToken;
-      if (typeof window !== 'undefined') {
-        accessToken = localStorage.getItem('accessToken');
-      }
-      if (!accessToken) throw new Error('No access token found');
 
+    try {
       const body = {};
       if (rating !== undefined && rating !== null) body.rating = String(rating);
       if (status !== undefined) body.status = status;
       if (comments !== undefined) body.comments = comments;
 
-      const res = await fetch(`http://127.0.0.1:8000/api/job-application/update/${applicationId}/`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-          'Authorization': `Bearer ${accessToken}`,
-        },
-        body: JSON.stringify(body),
-      });
-
-      if (!res.ok) {
-        let errText = '';
-        try { errText = await res.text(); } catch (e) { errText = String(res.status); }
-        throw new Error(`Failed to update application: ${res.status} ${errText}`);
-      }
-
-      const data = await res.json().catch(() => null);
-      return data || body;
+      const res = await api.put(`/api/job-application/update/${applicationId}/`, body);
+      return res.data || body;
     } catch (err) {
-      setApplicationUpdateError(prev => ({ ...prev, [applicationId]: String(err) }));
-      throw err;
+      const errorMsg = err.response?.data?.detail || err.message || `Failed to update application: ${err.response?.status}`;
+      setApplicationUpdateError(prev => ({ ...prev, [applicationId]: errorMsg }));
+      throw new Error(errorMsg);
     } finally {
       setApplicationUpdating(prev => ({ ...prev, [applicationId]: false }));
     }
   };
-// Start chat with applicant
-const handleStartChat = async (applicant) => {
-  if (loading) return;
-  setLoading(true);
-  try {
-    const userId = applicant.raw.freelancer_user_id;
-    if (!userId) throw new Error("No user ID found for this applicant.");
-    const conversation = await startChat(userId);
 
-    if (conversation?.id) {
-      router.push(`/message?conversation_id=${conversation.id}`);
-    } else {
-      throw new Error("Conversation ID missing from server response.");
+  // Start chat with applicant
+  const handleStartChat = async (applicant) => {
+    if (loading) return;
+    setLoading(true);
+    try {
+      const userId = applicant.raw.freelancer_user_id;
+      if (!userId) throw new Error("No user ID found for this applicant.");
+      const conversation = await startChat(userId);
+
+      if (conversation?.id) {
+        router.push(`/message?conversation_id=${conversation.id}`);
+      } else {
+        throw new Error("Conversation ID missing from server response.");
+      }
+    } catch (error) {
+      console.error("Failed to start chat:", error);
+      alert("Could not start chat: " + error.message);
+    } finally {
+      setLoading(false);
     }
-  } catch (error) {
-    console.error("Failed to start chat:", error);
-    alert("Could not start chat: " + error.message);
-  } finally {
-    setLoading(false);
-  }
-};
+  };
+
   // Map UI labels to backend enum values expected by the API
   const INTERVIEW_MODE_MAP = {
     'Zoom': 'zoom',
@@ -342,9 +231,8 @@ const handleStartChat = async (applicant) => {
     'Other': 'other',
   };
 
-  // Save schedule to backend API (requires application_id, job_id, freelance_id)
+  // Save schedule to backend API
   const handleSaveSchedule = async () => {
-    // basic validation
     if (!scheduleApplicant || !scheduleApplicant.id) {
       alert('No applicant selected');
       return;
@@ -358,17 +246,9 @@ const handleStartChat = async (applicant) => {
       return;
     }
 
-    // Determine application_id: prefer applicant.raw.application_id or raw.id, fallback to applicant.id
-    const applicationId = scheduleApplicant.raw && (scheduleApplicant.raw.application_id || scheduleApplicant.raw.id) ?
-      (scheduleApplicant.raw.application_id || scheduleApplicant.raw.id) : scheduleApplicant.id;
-
-    // Required identifiers for the new API contract
-    const jobIdForPayload = (job && job.id) ? job.id : (Number.isFinite(jobId) ? jobId : null);
-    const freelanceId = (
-      (scheduleApplicant.raw && (scheduleApplicant.raw.freelance_id ?? scheduleApplicant.raw.freelancer_id)) ??
-      scheduleApplicant.freelance_id ??
-      null
-    );
+    const applicationId = getApplicationIdFromApplicant(scheduleApplicant);
+    const jobIdForPayload = job?.id ?? (Number.isFinite(jobId) ? jobId : null);
+    const freelanceId = scheduleApplicant.raw?.freelance_id ?? scheduleApplicant.raw?.freelancer_id ?? scheduleApplicant.freelance_id ?? null;
 
     if (!jobIdForPayload) {
       alert('Missing job_id for scheduling.');
@@ -383,9 +263,7 @@ const handleStartChat = async (applicant) => {
       application_id: applicationId,
       job_id: jobIdForPayload,
       freelance_id: freelanceId,
-      // convert local datetime-local value to ISO for backend
       date_time: convertDatetimeLocalToIso(scheduleData.date_time),
-      // translate UI value to backend enum if mapping exists
       interview_mode: INTERVIEW_MODE_MAP[scheduleData.interview_mode] || scheduleData.interview_mode,
       interview_link: scheduleData.interview_link || null,
       interview_notes: scheduleData.interview_notes || null,
@@ -395,49 +273,20 @@ const handleStartChat = async (applicant) => {
     setScheduleError(null);
 
     try {
-      let accessToken;
-      if (typeof window !== 'undefined') {
-        accessToken = localStorage.getItem('accessToken');
-      }
-      if (!accessToken) {
-        throw new Error('No access token found');
-      }
+      const res = await api.post('/api/job-interview/schedule/', payload);
+      const saved = res.data || payload;
 
-      const res = await fetch('http://127.0.0.1:8000/api/job-interview/schedule/', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-          'Authorization': `Bearer ${accessToken}`,
-        },
-        body: JSON.stringify(payload),
-      });
-
-      if (!res.ok) {
-        // try to read json or text error
-        let errText = '';
-        try { errText = await res.text(); } catch (e) { errText = String(res.status); }
-        throw new Error(`Failed to save schedule: ${res.status} ${errText}`);
-      }
-
-      const responseData = await res.json().catch(() => null);
-
-      // Use responseData if present, otherwise the payload we sent
-      const saved = responseData || payload;
-
-      // update local UI state
       setSchedules(prev => ({ ...prev, [scheduleApplicant.id]: saved }));
       setApplicants(prev => prev.map(a => a.id === scheduleApplicant.id ? { ...a, schedule: saved } : a));
 
-      // close modal
       setShowScheduleModal(false);
       setScheduleApplicant(null);
       setScheduleData({ date_time: '', interview_mode: 'Zoom', interview_link: '', interview_notes: '' });
     } catch (err) {
-      console.error('Schedule save error', err);
-      setScheduleError(String(err));
-      // show a simple alert for now
-      alert('Could not save schedule: ' + (err.message || String(err)));
+      const errorMsg = err.response?.data?.detail || err.message || String(err);
+      console.error('Schedule save error', errorMsg);
+      setScheduleError(errorMsg);
+      alert('Could not save schedule: ' + errorMsg);
     } finally {
       setScheduleSaving(false);
     }
@@ -548,27 +397,19 @@ const handleStartChat = async (applicant) => {
   const updateJobPosting = async (jobId, updates = {}) => {
     if (!jobId) throw new Error('Missing job id');
     try {
-      let accessToken;
-      if (typeof window !== 'undefined') {
-        accessToken = localStorage.getItem('accessToken');
-      }
-      if (!accessToken) throw new Error('No access token found');
-      // Build payload using the original backend fields when available (job.raw)
-      // so we only change job_status while keeping all other fields identical to backend values.
-      const fromRaw = job && job.raw ? job.raw : {};
+      const fromRaw = job?.raw || {};
       const payload = {
-        job_title: fromRaw.job_title ?? fromRaw.jobTitle ?? job?.title ?? '',
+        job_title: fromRaw.job_title ?? job?.title ?? '',
         department: fromRaw.department ?? job?.department ?? '',
-        job_type: fromRaw.job_type ?? fromRaw.jobType ?? job?.jobType ?? '',
+        job_type: fromRaw.job_type ?? job?.jobType ?? '',
         work_location: fromRaw.work_location ?? job?.workLocation ?? '',
         work_mode: fromRaw.work_mode ?? job?.workMode ?? '',
         role_overview: fromRaw.role_overview ?? job?.roleOverview ?? '',
         key_responsibilities: fromRaw.key_responsibilities ?? job?.keyResponsibilities ?? '',
         required_qualifications: fromRaw.required_qualifications ?? job?.requiredQualifications ?? '',
         preferred_qualifications: fromRaw.preferred_qualifications ?? job?.preferredQualifications ?? '',
-        // backend may use language_required or languages_required
         languages_required: fromRaw.languages_required ?? fromRaw.language_required ?? job?.languagesRequired ?? '',
-        job_category: fromRaw.job_category ?? fromRaw.category ?? job?.category ?? '',
+        job_category: fromRaw.job_category ?? job?.category ?? '',
         salary_from: fromRaw.salary_from ?? job?.salaryFrom ?? '',
         salary_to: fromRaw.salary_to ?? job?.salaryTo ?? '',
         currency: fromRaw.currency ?? job?.currency ?? '',
@@ -576,7 +417,7 @@ const handleStartChat = async (applicant) => {
         application_method: fromRaw.application_method ?? job?.applicationMethod ?? '',
         interview_mode: fromRaw.interview_mode ?? job?.interviewMode ?? '',
         hiring_manager: fromRaw.hiring_manager ?? job?.hiringManager ?? '',
-        number_of_openings: fromRaw.number_of_openings ?? job?.numberOfOpenings ?? job?.number_of_openings ?? 1,
+        number_of_openings: fromRaw.number_of_openings ?? job?.numberOfOpenings ?? 1,
         expected_start_date: fromRaw.expected_start_date ?? job?.expectedStartDate ?? null,
         screening_questions: fromRaw.screening_questions ?? job?.screeningQuestions ?? '',
         file_upload: fromRaw.file_upload ?? '',
@@ -584,16 +425,11 @@ const handleStartChat = async (applicant) => {
         remote_work: fromRaw.remote_work ?? job?.benefits?.remoteWork ?? false,
         paid_leave: fromRaw.paid_leave ?? job?.benefits?.paidLeave ?? false,
         bonus: fromRaw.bonus ?? job?.benefits?.bonus ?? false,
-        // set job_status from updates if provided; otherwise keep backend/raw value or fall back
-        job_status: updates.job_status ?? fromRaw.job_status ?? fromRaw.jobStatus ?? (job?.status ? String(job.status).toLowerCase() : 'open'),
+        job_status: updates.job_status ?? fromRaw.job_status ?? (job?.status ? String(job.status).toLowerCase() : 'open'),
       };
 
-      // Allow callers to override or add fields explicitly
       Object.assign(payload, updates);
 
-      // Remove empty-string fields before sending. Some backend choice fields
-      // (e.g. application_method) reject empty strings as invalid choices.
-      // Keep boolean false and numeric 0 values; only remove strings that are empty/whitespace.
       Object.keys(payload).forEach((k) => {
         const v = payload[k];
         if (typeof v === 'string' && v.trim() === '') {
@@ -601,34 +437,17 @@ const handleStartChat = async (applicant) => {
         }
       });
 
-      // Debug: show the outgoing payload when running in browser (remove in prod)
-      if (typeof window !== 'undefined' && window.console && process?.env?.NODE_ENV !== 'production') {
-        console.debug('updateJobPosting payload:', payload);
-      }
+      console.debug('updateJobPosting payload:', payload);
 
-      const res = await fetch(`http://127.0.0.1:8000/api/job-posting/${jobId}/`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-          'Authorization': `Bearer ${accessToken}`,
-        },
-        body: JSON.stringify(payload),
-      });
-
-      if (!res.ok) {
-        let txt = '';
-        try { txt = await res.text(); } catch (e) { txt = String(res.status); }
-        throw new Error(`Failed to update job posting: ${res.status} ${txt}`);
-      }
-
-      const data = await res.json().catch(() => null);
-      return data || payload;
+      const res = await api.put(`/api/job-posting/${jobId}/`, payload);
+      return res.data || payload;
     } catch (err) {
-      console.error('updateJobPosting error', err);
-      throw err;
+      const errorMsg = err.response?.data?.detail || err.message || `Failed to update job: ${err.response?.status}`;
+      console.error('updateJobPosting error', errorMsg);
+      throw new Error(errorMsg);
     }
   };
+
 
   useEffect(() => {
     const loadJobDetails = async () => {
@@ -643,20 +462,20 @@ const handleStartChat = async (applicant) => {
           workLocation: jobData.work_location,
           workMode: jobData.work_mode,
           roleOverview: jobData.role_overview,
-          keyResponsibilities: Array.isArray(jobData.key_responsibilities) ? 
-            jobData.key_responsibilities : 
+          keyResponsibilities: Array.isArray(jobData.key_responsibilities) ?
+            jobData.key_responsibilities :
             jobData.key_responsibilities ? [jobData.key_responsibilities] : [],
-          requiredQualifications: Array.isArray(jobData.required_qualifications) ? 
-            jobData.required_qualifications : 
+          requiredQualifications: Array.isArray(jobData.required_qualifications) ?
+            jobData.required_qualifications :
             jobData.required_qualifications ? [jobData.required_qualifications] : [],
-          preferredQualifications: Array.isArray(jobData.preferred_qualifications) ? 
-            jobData.preferred_qualifications : 
+          preferredQualifications: Array.isArray(jobData.preferred_qualifications) ?
+            jobData.preferred_qualifications :
             jobData.preferred_qualifications ? [jobData.preferred_qualifications] : [],
-          languagesRequired: Array.isArray(jobData.language_required) ? 
-            jobData.language_required : 
+          languagesRequired: Array.isArray(jobData.language_required) ?
+            jobData.language_required :
             jobData.language_required ? [jobData.language_required] : [], // Note: backend uses language_required
           category: jobData.category,
-          salaryFrom: jobData.salary_from, 
+          salaryFrom: jobData.salary_from,
           salaryTo: jobData.salary_to,
           currency: jobData.currency,
           applicationDeadline: jobData.application_deadline,
@@ -664,8 +483,8 @@ const handleStartChat = async (applicant) => {
           hiringManager: jobData.hiring_manager,
           numberOfOpenings: jobData.number_of_openings,
           expectedStartDate: jobData.expected_start_date,
-          screeningQuestions: Array.isArray(jobData.screening_questions) ? 
-            jobData.screening_questions : 
+          screeningQuestions: Array.isArray(jobData.screening_questions) ?
+            jobData.screening_questions :
             jobData.screening_questions ? [jobData.screening_questions] : [],
           benefits: {
             healthInsurance: jobData.health_insurance || false,
@@ -778,13 +597,12 @@ const handleStartChat = async (applicant) => {
             <p>
               <strong>Status:</strong>{" "}
               <span
-                className={`badge ${
-                  job.status?.toLowerCase() === "open"
-                    ? "bg-success"
-                    : job.status?.toLowerCase() === "closed"
+                className={`badge ${job.status?.toLowerCase() === "open"
+                  ? "bg-success"
+                  : job.status?.toLowerCase() === "closed"
                     ? "bg-danger"
                     : "bg-secondary"
-                }`}
+                  }`}
               >
                 {job.status ? job.status.charAt(0).toUpperCase() + job.status.slice(1).toLowerCase() : "Unknown"}
               </span>
@@ -795,9 +613,9 @@ const handleStartChat = async (applicant) => {
         return (
           <ul className="mt-3 text-muted">
             {job.keyResponsibilities ? (
-              typeof job.keyResponsibilities === 'string' ? 
+              typeof job.keyResponsibilities === 'string' ?
                 <li>{job.keyResponsibilities}</li> :
-                Array.isArray(job.keyResponsibilities) ? 
+                Array.isArray(job.keyResponsibilities) ?
                   job.keyResponsibilities.map((item, i) => (
                     <li key={i}>{item}</li>
                   )) :
@@ -813,9 +631,9 @@ const handleStartChat = async (applicant) => {
             <p><strong>Required Qualifications:</strong></p>
             <ul>
               {job.requiredQualifications ? (
-                typeof job.requiredQualifications === 'string' ? 
+                typeof job.requiredQualifications === 'string' ?
                   <li>{job.requiredQualifications}</li> :
-                  Array.isArray(job.requiredQualifications) ? 
+                  Array.isArray(job.requiredQualifications) ?
                     job.requiredQualifications.map((item, i) => (
                       <li key={i}>{item}</li>
                     )) :
@@ -827,9 +645,9 @@ const handleStartChat = async (applicant) => {
             <p><strong>Preferred Qualifications:</strong></p>
             <ul>
               {job.preferredQualifications ? (
-                typeof job.preferredQualifications === 'string' ? 
+                typeof job.preferredQualifications === 'string' ?
                   <li>{job.preferredQualifications}</li> :
-                  Array.isArray(job.preferredQualifications) ? 
+                  Array.isArray(job.preferredQualifications) ?
                     job.preferredQualifications.map((item, i) => (
                       <li key={i}>{item}</li>
                     )) :
@@ -839,11 +657,11 @@ const handleStartChat = async (applicant) => {
               )}
             </ul>
             <p><strong>Languages Required:</strong>{' '}
-              {job.languagesRequired ? 
-                (Array.isArray(job.languagesRequired) ? 
-                  job.languagesRequired.join(", ") : 
+              {job.languagesRequired ?
+                (Array.isArray(job.languagesRequired) ?
+                  job.languagesRequired.join(", ") :
                   job.languagesRequired
-                ) : 
+                ) :
                 "None specified"}
             </p>
           </div>
@@ -860,9 +678,9 @@ const handleStartChat = async (applicant) => {
             <p><strong>Screening Questions:</strong></p>
             <ul>
               {job.screeningQuestions ? (
-                typeof job.screeningQuestions === 'string' ? 
+                typeof job.screeningQuestions === 'string' ?
                   <li>{job.screeningQuestions}</li> :
-                  Array.isArray(job.screeningQuestions) ? 
+                  Array.isArray(job.screeningQuestions) ?
                     job.screeningQuestions.map((q, i) => (
                       <li key={i}>{q}</li>
                     )) :
@@ -918,60 +736,60 @@ const handleStartChat = async (applicant) => {
       </div>
 
       {/* Tabs for Job Details */}
-{/* Tabs for Job Details */}
-<div className="row">
-  <div className="col-xl-12">
-    <div className="ps-widget bgc-white bdrs4 p30 mb30 overflow-hidden position-relative">
-      <h5 className="fw500 mb-0 mb-3">Job Details</h5> {/* moved inside and added mb-3 */}
-      <ul className="nav nav-tabs">
-        <li className="nav-item">
-          <button
-            className={`nav-link ${activeTab === "overview" ? "active" : ""}`}
-            onClick={() => setActiveTab("overview")}
-          >
-            Overview
-          </button>
-        </li>
-        <li className="nav-item">
-          <button
-            className={`nav-link ${activeTab === "responsibilities" ? "active" : ""}`}
-            onClick={() => setActiveTab("responsibilities")}
-          >
-            Responsibilities
-          </button>
-        </li>
-        <li className="nav-item">
-          <button
-            className={`nav-link ${activeTab === "qualifications" ? "active" : ""}`}
-            onClick={() => setActiveTab("qualifications")}
-          >
-            Qualifications
-          </button>
-        </li>
-        <li className="nav-item">
-          <button
-            className={`nav-link ${activeTab === "application" ? "active" : ""}`}
-            onClick={() => setActiveTab("application")}
-          >
-            Application Info
-          </button>
-        </li>
-        <li className="nav-item">
-          <button
-            className={`nav-link ${activeTab === "salaryBenefits" ? "active" : ""}`}
-            onClick={() => setActiveTab("salaryBenefits")}
-          >
-            Salary & Benefits
-          </button>
-        </li>
-      </ul>
+      {/* Tabs for Job Details */}
+      <div className="row">
+        <div className="col-xl-12">
+          <div className="ps-widget bgc-white bdrs4 p30 mb30 overflow-hidden position-relative">
+            <h5 className="fw500 mb-0 mb-3">Job Details</h5> {/* moved inside and added mb-3 */}
+            <ul className="nav nav-tabs">
+              <li className="nav-item">
+                <button
+                  className={`nav-link ${activeTab === "overview" ? "active" : ""}`}
+                  onClick={() => setActiveTab("overview")}
+                >
+                  Overview
+                </button>
+              </li>
+              <li className="nav-item">
+                <button
+                  className={`nav-link ${activeTab === "responsibilities" ? "active" : ""}`}
+                  onClick={() => setActiveTab("responsibilities")}
+                >
+                  Responsibilities
+                </button>
+              </li>
+              <li className="nav-item">
+                <button
+                  className={`nav-link ${activeTab === "qualifications" ? "active" : ""}`}
+                  onClick={() => setActiveTab("qualifications")}
+                >
+                  Qualifications
+                </button>
+              </li>
+              <li className="nav-item">
+                <button
+                  className={`nav-link ${activeTab === "application" ? "active" : ""}`}
+                  onClick={() => setActiveTab("application")}
+                >
+                  Application Info
+                </button>
+              </li>
+              <li className="nav-item">
+                <button
+                  className={`nav-link ${activeTab === "salaryBenefits" ? "active" : ""}`}
+                  onClick={() => setActiveTab("salaryBenefits")}
+                >
+                  Salary & Benefits
+                </button>
+              </li>
+            </ul>
 
-      <div className="tab-content p-3 border-top">
-        {renderTabContent()}
+            <div className="tab-content p-3 border-top">
+              {renderTabContent()}
+            </div>
+          </div>
+        </div>
       </div>
-    </div>
-  </div>
-</div>
 
 
       {/* Applicants List */}
@@ -1076,34 +894,34 @@ const handleStartChat = async (applicant) => {
                               className="btn btn-sm btn-outline-secondary me-2"
                               title="Schedule"
                               onClick={async () => {
-                                  setScheduleApplicant(applicant);
-                                  // Try to use cached schedule; if missing, fetch latest from API
-                                  let existing = schedules && schedules[applicant.id] ? schedules[applicant.id] : null;
-                                  if (!existing) {
-                                    try {
-                                      const fetched = await fetchInterviewForApplication(applicant.id);
-                                      if (fetched) {
-                                        setSchedules(prev => ({ ...prev, [applicant.id]: fetched }));
-                                        existing = fetched;
-                                      }
-                                    } catch (e) {
-                                      console.error('Error fetching interview on schedule click', e);
+                                setScheduleApplicant(applicant);
+                                // Try to use cached schedule; if missing, fetch latest from API
+                                let existing = schedules && schedules[applicant.id] ? schedules[applicant.id] : null;
+                                if (!existing) {
+                                  try {
+                                    const fetched = await fetchInterviewForApplication(applicant.id);
+                                    if (fetched) {
+                                      setSchedules(prev => ({ ...prev, [applicant.id]: fetched }));
+                                      existing = fetched;
                                     }
+                                  } catch (e) {
+                                    console.error('Error fetching interview on schedule click', e);
                                   }
-                                  setScheduleData(existing ? {
-                                    date_time: convertIsoToDatetimeLocal(existing.interview_date) || '',
-                                    interview_mode: existing.interview_mode || 'Zoom',
-                                    interview_link: existing.interview_link || '',
-                                    interview_notes: existing.interview_notes || '',
-                                  } : { date_time: '', interview_mode: 'Zoom', interview_link: '', interview_notes: '' });
-                                  setShowScheduleModal(true);
-                                }}
+                                }
+                                setScheduleData(existing ? {
+                                  date_time: convertIsoToDatetimeLocal(existing.interview_date) || '',
+                                  interview_mode: existing.interview_mode || 'Zoom',
+                                  interview_link: existing.interview_link || '',
+                                  interview_notes: existing.interview_notes || '',
+                                } : { date_time: '', interview_mode: 'Zoom', interview_link: '', interview_notes: '' });
+                                setShowScheduleModal(true);
+                              }}
                             ><i className="fal fa-calendar-alt" /></button>
                             <button
-  className="btn btn-sm btn-info me-2"
-  title="Chat"
-  onClick={() => handleStartChat(applicant)}
-><i className="fal fa-comments" /></button>
+                              className="btn btn-sm btn-info me-2"
+                              title="Chat"
+                              onClick={() => handleStartChat(applicant)}
+                            ><i className="fal fa-comments" /></button>
                             <button
                               className="btn btn-sm btn-success me-2"
                               title="Accept"
@@ -1157,71 +975,71 @@ const handleStartChat = async (applicant) => {
             {showHired && (
               <div className="mt-3 table-responsive" style={{ maxHeight: "300px", overflowY: "auto" }}>
                 <table className="table-style3 table at-savesearch mb-0">
-                <thead className="t-head">
-                  <tr>
-                    <th>Person</th>
-                    <th>Action</th>
-                  </tr>
-                </thead>
-                <tbody className="t-body">
-                  {applicantsLoading ? (
+                  <thead className="t-head">
                     <tr>
-                      <td colSpan="2" className="text-center">Loading hired persons...</td>
+                      <th>Person</th>
+                      <th>Action</th>
                     </tr>
-                  ) : applicantsError ? (
-                    <tr>
-                      <td colSpan="2" className="text-danger">Error loading applicants: {applicantsError}</td>
-                    </tr>
-                  ) : (
-                    (() => {
-                      const accepted = Array.isArray(applicants) ? applicants.filter(a => (a.status || '').toLowerCase() === 'accepted') : [];
-                      if (accepted.length === 0) {
-                        return (
-                          <tr>
-                            <td colSpan="2" className="text-center">No hired persons yet.</td>
+                  </thead>
+                  <tbody className="t-body">
+                    {applicantsLoading ? (
+                      <tr>
+                        <td colSpan="2" className="text-center">Loading hired persons...</td>
+                      </tr>
+                    ) : applicantsError ? (
+                      <tr>
+                        <td colSpan="2" className="text-danger">Error loading applicants: {applicantsError}</td>
+                      </tr>
+                    ) : (
+                      (() => {
+                        const accepted = Array.isArray(applicants) ? applicants.filter(a => (a.status || '').toLowerCase() === 'accepted') : [];
+                        if (accepted.length === 0) {
+                          return (
+                            <tr>
+                              <td colSpan="2" className="text-center">No hired persons yet.</td>
+                            </tr>
+                          );
+                        }
+                        return accepted.map((applicant) => (
+                          <tr key={applicant.id}>
+                            <td>
+                              {applicant.name}
+                              {(() => {
+                                const iv = schedules && schedules[applicant.id];
+                                if (!iv) return null;
+                                const st = String(iv.status || '').toLowerCase();
+                                let label = 'Scheduled';
+                                if (st.includes('resched') || st.includes('rescheduled') || st.includes('reschedule')) {
+                                  label = 'Rescheduled';
+                                }
+                                const cls = label === 'Rescheduled' ? 'badge bg-primary text-white ms-2' : 'badge bg-info text-white ms-2';
+                                return (
+                                  <span className={cls} title={iv?.interview_link ? `Interview link: ${iv.interview_link}` : `Status: ${iv.status || ''}`}>{label}</span>
+                                );
+                              })()}
+                            </td>
+                            <td>
+                              <button
+                                className="btn btn-sm btn-success me-2"
+                                title="Offer"
+                                onClick={() => {
+                                  // open local offer modal
+                                  setOfferApplicant(applicant);
+                                  setOfferData({ salary: (applicant.offer && applicant.offer.salary) || '', starting_date: (applicant.offer && applicant.offer.starting_date) || '', benefits: (applicant.offer && applicant.offer.benefits) || '' });
+                                  setShowOfferModal(true);
+                                }}
+                              >Offer</button>
+                              <button
+                                className="btn btn-sm btn-info me-2"
+                                title="Chat"
+                                onClick={() => handleStartChat(applicant)}
+                              ><i className="fal fa-comments" /></button>
+                            </td>
                           </tr>
-                        );
-                      }
-                      return accepted.map((applicant) => (
-                        <tr key={applicant.id}>
-                          <td>
-                            {applicant.name}
-                            {(() => {
-                              const iv = schedules && schedules[applicant.id];
-                              if (!iv) return null;
-                              const st = String(iv.status || '').toLowerCase();
-                              let label = 'Scheduled';
-                              if (st.includes('resched') || st.includes('rescheduled') || st.includes('reschedule')) {
-                                label = 'Rescheduled';
-                              }
-                              const cls = label === 'Rescheduled' ? 'badge bg-primary text-white ms-2' : 'badge bg-info text-white ms-2';
-                              return (
-                                <span className={cls} title={iv?.interview_link ? `Interview link: ${iv.interview_link}` : `Status: ${iv.status || ''}`}>{label}</span>
-                              );
-                            })()}
-                          </td>
-                          <td>
-                            <button
-                              className="btn btn-sm btn-success me-2"
-                              title="Offer"
-                              onClick={() => {
-                                // open local offer modal
-                                setOfferApplicant(applicant);
-                                setOfferData({ salary: (applicant.offer && applicant.offer.salary) || '', starting_date: (applicant.offer && applicant.offer.starting_date) || '', benefits: (applicant.offer && applicant.offer.benefits) || '' });
-                                setShowOfferModal(true);
-                              }}
-                            >Offer</button>
-<button
-  className="btn btn-sm btn-info me-2"
-  title="Chat"
-  onClick={() => handleStartChat(applicant)}
-><i className="fal fa-comments" /></button>
-                          </td>
-                        </tr>
-                      ));
-                    })()
-                  )}
-                </tbody>
+                        ));
+                      })()
+                    )}
+                  </tbody>
                 </table>
               </div>
             )}

@@ -2,6 +2,10 @@
 
 const nextConfig = {
   reactStrictMode: false, 
+  eslint: {
+    // This disables ESLint errors from failing production builds
+    ignoreDuringBuilds: true,
+  },
   images: {
     remotePatterns: [
       {

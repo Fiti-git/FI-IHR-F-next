@@ -6,11 +6,12 @@ import Sticky from "react-stickynode";
 import ProjectPriceWidget1 from "../element/ProjectPriceWidget1";
 import ProjectContactWidget1 from "../element/ProjectContactWidget1";
 import useScreen from "@/hook/useScreen";
+import api from '@/lib/axios'; // Import the centralized Axios instance
 
 export default function ProjectDetail1() {
   const isMatchedScreen = useScreen(1216);
   const { id } = useParams();
-  
+
   // State management
   const [projectData, setProjectData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -21,150 +22,91 @@ export default function ProjectDetail1() {
   const [proposalSuccess, setProposalSuccess] = useState(false);
   const [proposalError, setProposalError] = useState(null);
   const [currentUser, setCurrentUser] = useState(null);
-  const [userType, setUserType] = useState(null); // 'freelancer' or 'job_provider'
+  const [userType, setUserType] = useState(null);
   const [userProfileLoading, setUserProfileLoading] = useState(true);
   const [existingProposal, setExistingProposal] = useState(null);
 
-  // API URLs
-   const BASE_API_URL = process.env.NEXT_PUBLIC_BASE_API_URL || "http://127.0.0.1:8000/";
-   const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000/api/project";
+  // API constants are no longer needed, as the base URL is in the api instance.
 
-   // Fetch current user profile to determine role
-useEffect(() => {
-  const fetchCurrentUser = async () => {
-    const token = localStorage.getItem('accessToken');
+  // Fetch current user profile to determine role
+  useEffect(() => {
+    const fetchCurrentUser = async () => {
+      const token = localStorage.getItem('access_token');
+      if (!token) {
+        setUserProfileLoading(false);
+        return;
+      }
 
-    if (!token) {
-      console.log("No token found - user not logged in");
-      setUserProfileLoading(false);
-      setUserType(null);
-      setCurrentUser(null);
-      return;
-    }
-
-    try {
       setUserProfileLoading(true);
-
-      // Try freelancer profile first
-      const freelancerRes = await fetch(`${BASE_API_URL}api/profile/freelancer/`, {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`,
-        },
-      });
-
-      if (freelancerRes.ok) {
-        const data = await freelancerRes.json();
-        console.log("✅ Detected freelancer profile:", data);
-        setCurrentUser(data);
+      try {
+        // Try to fetch freelancer profile first
+        const freelancerRes = await api.get('/api/profile/freelancer/');
+        console.log("✅ Detected freelancer profile:", freelancerRes.data);
+        setCurrentUser(freelancerRes.data);
         setUserType('freelancer');
+      } catch (freelancerError) {
+        // If freelancer profile not found (e.g., 404), try job-provider
+        if (freelancerError.response && (freelancerError.response.status === 404 || freelancerError.response.status === 403)) {
+          try {
+            const jpRes = await api.get('/api/profile/job-provider/');
+            console.log("✅ Detected job-provider profile:", jpRes.data);
+            setCurrentUser(jpRes.data);
+            setUserType('job_provider');
+          } catch (jpError) {
+            console.error("Could not fetch any user profile:", jpError);
+            setUserType(null);
+            setCurrentUser(null);
+          }
+        } else {
+          // A different error occurred (e.g., 500, or network error)
+          console.error("Error fetching user profile:", freelancerError);
+          setUserType(null);
+          setCurrentUser(null);
+        }
+      } finally {
         setUserProfileLoading(false);
-        return;
       }
+    };
 
-      // If not freelancer, try job-provider
-      const jpRes = await fetch(`${BASE_API_URL}/api/profile/job-provider/`, {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`,
-        },
-      });
-
-      if (jpRes.ok) {
-        const data = await jpRes.json();
-        console.log("✅ Detected job-provider profile:", data);
-        setCurrentUser(data);
-        setUserType('job_provider');
-        setUserProfileLoading(false);
-        return;
-      }
-
-      // Token might be expired or profile endpoints returned not found
-      if (freelancerRes.status === 401 || jpRes.status === 401) {
-        console.log("Token expired or unauthorized - clearing storage");
-        localStorage.removeItem('accessToken');
-        localStorage.removeItem('refreshToken');
-      }
-
-      setUserType(null);
-      setCurrentUser(null);
-      setUserProfileLoading(false);
-    } catch (err) {
-      console.error("Error fetching user profile:", err);
-      setUserType(null);
-      setCurrentUser(null);
-      setUserProfileLoading(false);
-    }
-  };
-
-  fetchCurrentUser();
-}, [BASE_API_URL]);
+    fetchCurrentUser();
+  }, []);
 
   // Fetch project details
   useEffect(() => {
     const fetchProjectDetails = async () => {
       if (!id) return;
-
+      setLoading(true);
+      setError(null);
       try {
-        setLoading(true);
-        setError(null);
-
-        const response = await fetch(`${API_URL}/projects/${id}/`, {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-          },
-        });
-
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-
-        const data = await response.json();
-        console.log("Fetched project details:", data);
-        setProjectData(data);
+        // The api instance can be used even without auth for public endpoints
+        const response = await api.get(`/api/project/projects/${id}/`);
+        console.log("Fetched project details:", response.data);
+        setProjectData(response.data);
       } catch (err) {
         console.error("Error fetching project details:", err);
-        setError(err.message || "Failed to fetch project details");
+        setError(err.response?.data?.detail || err.message || "Failed to fetch project details");
       } finally {
         setLoading(false);
       }
     };
 
     fetchProjectDetails();
-  }, [id, API_URL]);
+  }, [id]);
 
   // Check if user already submitted a proposal for this project
   useEffect(() => {
     const checkExistingProposal = async () => {
-      if (!currentUser || !projectData || userType !== 'freelancer') {
-        return;
-      }
-
-      const token = localStorage.getItem('accessToken');
-      if (!token) return;
+      if (!currentUser || !projectData || userType !== 'freelancer') return;
 
       try {
         const currentUserId = currentUser.user?.id || currentUser.id;
-        const response = await fetch(
-          `${API_URL}/proposals/?project_id=${projectData.id}&freelancer_id=${currentUserId}`,
-          {
-            method: "GET",
-            headers: {
-              "Content-Type": "application/json",
-              "Authorization": `Bearer ${token}`,
-            },
-          }
+        const response = await api.get(
+          `/api/project/proposals/?project_id=${projectData.id}&freelancer_id=${currentUserId}`
         );
-
-        if (response.ok) {
-          const proposals = await response.json();
-          if (proposals && proposals.length > 0) {
-            setExistingProposal(proposals[0]);
-            console.log("User already has a proposal for this project");
-          }
+        const proposals = response.data;
+        if (proposals && proposals.length > 0) {
+          setExistingProposal(proposals[0]);
+          console.log("User already has a proposal for this project");
         }
       } catch (err) {
         console.error("Error checking existing proposals:", err);
@@ -172,75 +114,34 @@ useEffect(() => {
     };
 
     checkExistingProposal();
-  }, [currentUser, projectData, userType, API_URL]);
+  }, [currentUser, projectData, userType]);
 
-  // Check if current user is the project owner
+
   const isProjectOwner = () => {
-    if (!currentUser || !projectData || !projectData.user) {
-      return false;
-    }
-    
+    if (!currentUser || !projectData?.user) return false;
     const currentUserId = currentUser.user?.id || currentUser.id;
-    const projectOwnerId = projectData.user.id;
-    
-    return currentUserId === projectOwnerId;
+    return currentUserId === projectData.user.id;
   };
 
-  // Check if user can submit proposal
-  const canSubmitProposal = () => {
-    // Must be logged in
-    if (!currentUser) {
-      return false;
-    }
+  const canSubmitProposal = () => (
+    currentUser &&
+    userType === 'freelancer' &&
+    !isProjectOwner() &&
+    projectData?.status === 'open' &&
+    !existingProposal
+  );
 
-    // Must be a freelancer
-    if (userType !== 'freelancer') {
-      return false;
-    }
-    
-    // Must not be the project owner
-    if (isProjectOwner()) {
-      return false;
-    }
-    
-    // Project must be open
-    if (projectData?.status !== 'open') {
-      return false;
-    }
-
-    // Must not have existing proposal
-    if (existingProposal) {
-      return false;
-    }
-    
-    return true;
-  };
-
-  // Handle proposal submission
   const handleSubmitProposal = async (e) => {
     e.preventDefault();
     setSubmitting(true);
     setProposalError(null);
     setProposalSuccess(false);
 
-    // Check authentication
-    const token = localStorage.getItem('accessToken');
-    if (!token) {
-      setProposalError("Please log in to submit a proposal");
-      setSubmitting(false);
-      setTimeout(() => {
-        window.location.href = '/login';
-      }, 2000);
-      return;
-    }
-
-    // Validate inputs
     if (!proposalBudget || parseFloat(proposalBudget) <= 0) {
       setProposalError("Please enter a valid budget");
       setSubmitting(false);
       return;
     }
-
     if (!coverLetter.trim()) {
       setProposalError("Please write a cover letter");
       setSubmitting(false);
@@ -254,64 +155,37 @@ useEffect(() => {
         cover_letter: coverLetter.trim(),
       };
 
-      const response = await fetch(`${API_URL}/proposals/`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`,
-        },
-        body: JSON.stringify(proposalData),
-      });
+      const response = await api.post('/api/project/proposals/', proposalData);
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        
-        if (response.status === 401) {
-          localStorage.removeItem('accessToken');
-          localStorage.removeItem('refreshToken');
-          setProposalError("Session expired. Please log in again.");
-          setTimeout(() => {
-            window.location.href = '/login';
-          }, 2000);
-          return;
-        }
-
-        if (response.status === 403) {
-          setProposalError(errorData.detail || "Only freelancers can submit proposals.");
-          return;
-        }
-
-        throw new Error(errorData.detail || errorData.message || "Failed to submit proposal");
-      }
-
-      const data = await response.json();
-      console.log("Proposal submitted successfully:", data);
-      
+      console.log("Proposal submitted successfully:", response.data);
       setProposalSuccess(true);
-      setExistingProposal(data);
+      setExistingProposal(response.data);
       setProposalBudget("");
       setCoverLetter("");
 
-      setTimeout(() => {
-        setProposalSuccess(false);
-      }, 5000);
+      setTimeout(() => setProposalSuccess(false), 5000);
 
     } catch (err) {
-      console.error("Error submitting proposal:", err);
-      setProposalError(err.message || "Failed to submit proposal");
+      console.error("Error submitting proposal:", err.response);
+      let errorMessage = err.response?.data?.detail || "Failed to submit proposal.";
+      if (err.response?.status === 403) {
+        errorMessage = err.response.data.detail || "Only freelancers can submit proposals.";
+      }
+      setProposalError(errorMessage);
     } finally {
       setSubmitting(false);
     }
   };
 
+  // ... (All your helper functions and JSX remain unchanged) ...
   // Format date helper
   const formatDate = (dateString) => {
     if (!dateString) return "N/A";
     const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', { 
-      year: 'numeric', 
-      month: 'long', 
-      day: 'numeric' 
+    return date.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
     });
   };
 
@@ -330,7 +204,7 @@ useEffect(() => {
     const date = new Date(dateString);
     const now = new Date();
     const diffInSeconds = Math.floor((now - date) / 1000);
-    
+
     if (diffInSeconds < 60) return "Just now";
     if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)} minutes ago`;
     if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)} hours ago`;
@@ -418,17 +292,17 @@ useEffect(() => {
             <div className="col-lg-8">
               <div className="column">
                 <div className="scrollbalance-inner">
-                  
+
                   <div className="service-about">
                     {/* Project Image */}
                     {projectData.image_url && (
                       <div className="mb-4">
-                        <img 
-                          src={projectData.image_url} 
+                        <img
+                          src={projectData.image_url}
                           alt={projectData.title}
                           className="w-100 rounded"
-                          style={{ 
-                            maxHeight: '400px', 
+                          style={{
+                            maxHeight: '400px',
                             objectFit: 'cover',
                             border: '1px solid #e9ecef'
                           }}
@@ -481,12 +355,11 @@ useEffect(() => {
                           <div className="details">
                             <h5 className="title">Status</h5>
                             <p className="mb-0 text">
-                              <span className={`badge ${
-                                projectData.status === 'open' ? 'bg-success' : 
-                                projectData.status === 'in_progress' ? 'bg-warning' : 
-                                projectData.status === 'completed' ? 'bg-primary' : 
-                                'bg-secondary'
-                              }`}>
+                              <span className={`badge ${projectData.status === 'open' ? 'bg-success' :
+                                projectData.status === 'in_progress' ? 'bg-warning' :
+                                  projectData.status === 'completed' ? 'bg-primary' :
+                                    'bg-secondary'
+                                }`}>
                                 {projectData.status?.replace('_', ' ').toUpperCase()}
                               </span>
                             </p>
@@ -497,7 +370,7 @@ useEffect(() => {
 
                     {/* Description */}
                     <h4 className="mb-3">Description</h4>
-                    <div 
+                    <div
                       className="text mb30"
                       style={{ whiteSpace: 'pre-wrap' }}
                     >
@@ -525,7 +398,7 @@ useEffect(() => {
                         <div className="d-flex">
                           <span className="fw-bold me-2">Client:</span>
                           <span>
-                            {projectData.user?.first_name && projectData.user?.last_name 
+                            {projectData.user?.first_name && projectData.user?.last_name
                               ? `${projectData.user.first_name} ${projectData.user.last_name}`
                               : projectData.user?.username || 'Anonymous'}
                           </span>
@@ -630,7 +503,7 @@ useEffect(() => {
                             </div>
                             <div className="col-md-12">
                               <div className="d-grid">
-                                <button 
+                                <button
                                   type="submit"
                                   className="ud-btn btn-thm"
                                   disabled={submitting}
@@ -681,7 +554,7 @@ useEffect(() => {
                         <div>
                           <h5 className="alert-heading">Job Providers Cannot Submit Proposals</h5>
                           <p className="mb-0">
-                            You are logged in as a <strong>Job Provider</strong>. 
+                            You are logged in as a <strong>Job Provider</strong>.
                             Only freelancers can submit proposals to projects.
                             <br />
                             <small className="text-muted mt-2 d-block">

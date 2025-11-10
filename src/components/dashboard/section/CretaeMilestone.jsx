@@ -6,17 +6,18 @@ import { useState, useEffect } from "react";
 import Pagination1 from "@/components/section/Pagination1";
 import ProposalModal1 from "../modal/ProposalModal1";
 import DeleteModal from "../modal/DeleteModal";
+import api from '@/lib/axios';
 
 export default function CreateMilestone() {
   const router = useRouter();
   const params = useParams();
-  
+
   // Get project info from URL params
   const [project, setProject] = useState({
     id: params?.id || null,
     name: "Loading..."
   });
-  
+
   const [milestones, setMilestones] = useState([]);
   const [hasAccess, setHasAccess] = useState(false);
   const [accessError, setAccessError] = useState("");
@@ -28,7 +29,7 @@ export default function CreateMilestone() {
   const [endDate, setEndDate] = useState("");
   const [budget, setBudget] = useState("");
   const [description, setDescription] = useState("");
-  
+
   // Loading and error states
   const [loading, setLoading] = useState(false);
   const [fetchLoading, setFetchLoading] = useState(false);
@@ -37,14 +38,11 @@ export default function CreateMilestone() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [actionLoading, setActionLoading] = useState({}); // Track loading state for individual actions
 
-  // API URL - FIXED: Changed to base API URL without /milestones/
-  const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000/api/project";
-
   // Verify freelancer access on component mount
   useEffect(() => {
-    const token = localStorage.getItem('accessToken');
+    const token = localStorage.getItem('access_token');
     setIsAuthenticated(!!token);
-    
+
     if (!token) {
       setVerifying(false);
       setAccessError("Please log in to access this page");
@@ -53,7 +51,7 @@ export default function CreateMilestone() {
       }, 2000);
       return;
     }
-    
+
     if (!project.id) {
       setVerifying(false);
       setAccessError("No project specified");
@@ -62,30 +60,21 @@ export default function CreateMilestone() {
       }, 2000);
       return;
     }
-    
+
     verifyFreelancerAccess();
   }, [project.id]);
 
   // Verify if freelancer has access to this project
   const verifyFreelancerAccess = async () => {
     setVerifying(true);
-    const token = localStorage.getItem('accessToken');
-    
+    const token = localStorage.getItem('access_token');
+
     try {
       // FIXED: Added proper slash before milestones
-      const response = await fetch(
-        `${API_URL}/milestones/verify_freelancer_access/?project_id=${project.id}`,
-        {
-          method: "GET",
-          headers: {
-            "Authorization": `Bearer ${token}`
-          }
-        }
-      );
+      const response = await api.get(`/api/project/milestones/verify_freelancer_access/?project_id=${project.id}`);
+      const data = response.data;
 
-      const data = await response.json();
-
-      if (response.ok && data.has_access) {
+      if (res.statusText == "OK" && data.has_access) {
         setHasAccess(true);
         setProject(prev => ({
           ...prev,
@@ -94,13 +83,13 @@ export default function CreateMilestone() {
         fetchMilestones();
       } else {
         setHasAccess(false);
-        
+
         if (data.is_project_owner) {
           setAccessError("You are the project owner. Only assigned freelancers can create milestones.");
         } else {
           setAccessError(data.error || "You don't have permission to create milestones for this project");
         }
-        
+
         setTimeout(() => {
           router.push('/freelancer-projects');
         }, 3000);
@@ -119,36 +108,17 @@ export default function CreateMilestone() {
   // Fetch existing milestones for this project
   const fetchMilestones = async () => {
     setFetchLoading(true);
-    const token = localStorage.getItem('accessToken');
-    
-    try {
-      // FIXED: Added proper slash before milestones
-      const response = await fetch(
-        `${API_URL}/milestones/?project_id=${project.id}`,
-        {
-          method: "GET",
-          headers: {
-            "Authorization": `Bearer ${token}`
-          }
-        }
-      );
 
-      if (response.ok) {
-        const data = await response.json();
-        const milestonesArray = data.results ? data.results : data;
-        setMilestones(milestonesArray);
-      } else if (response.status === 401) {
-        localStorage.removeItem('accessToken');
-        localStorage.removeItem('refreshToken');
+    try {
+      const response = await api.get(`/api/project/milestones/?project_id=${project.id}`);
+      const milestonesArray = response.data.results ? response.data.results : response.data;
+      setMilestones(milestonesArray);
+    } catch (error) {
+      if (error.response?.status === 401) {
+        // Axios interceptor will redirect to login
         setIsAuthenticated(false);
         setError("Session expired. Please log in again.");
-        setTimeout(() => {
-          router.push('/login');
-        }, 2000);
       }
-    } catch (err) {
-      console.error("Error fetching milestones:", err);
-      setError("Failed to load milestones");
     } finally {
       setFetchLoading(false);
     }
@@ -162,7 +132,7 @@ export default function CreateMilestone() {
     setLoading(true);
 
     // Check authentication
-    const token = localStorage.getItem('accessToken');
+    const token = localStorage.getItem('access_token');
     if (!token) {
       setError("Please log in to create a milestone");
       setLoading(false);
@@ -231,73 +201,33 @@ export default function CreateMilestone() {
     try {
       console.log("Creating milestone:", milestoneData);
 
-      // FIXED: Added proper slash before milestones
-      const response = await fetch(`${API_URL}/milestones/`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`
-        },
-        body: JSON.stringify(milestoneData),
-      });
-
-      if (!response.ok) {
-        let errorData;
-        try {
-          errorData = await response.json();
-          console.log("API Error Response:", errorData);
-        } catch (parseError) {
-          errorData = { message: "Failed to parse error response" };
-        }
-
-        if (response.status === 401) {
-          localStorage.removeItem('accessToken');
-          localStorage.removeItem('refreshToken');
-          setError("Session expired. Please log in again.");
-          setTimeout(() => {
-            router.push('/login');
-          }, 2000);
-          return;
-        } else if (response.status === 403) {
-          setError(errorData.detail || "You don't have permission to create milestones for this project.");
-          return;
-        } else if (response.status === 400) {
-          // Handle validation errors
-          const errorKeys = Object.keys(errorData);
-          if (errorKeys.length > 0) {
-            const firstError = errorData[errorKeys[0]];
-            setError(`${errorKeys[0]}: ${Array.isArray(firstError) ? firstError[0] : firstError}`);
-          } else {
-            setError("Invalid milestone data. Please check your input.");
-          }
-          return;
-        }
-
-        throw new Error(errorData.detail || errorData.message || "Failed to create milestone");
-      }
-
-      const data = await response.json();
-      console.log("Milestone created successfully:", data);
+      const response = await api.post('/api/project/milestones/', milestoneData);
+      console.log("Milestone created successfully:", response.data);
 
       setSuccess("Milestone created successfully! It has been sent to the client for approval.");
-      
-      // Refresh milestones list
       fetchMilestones();
-
-      // Clear form
       resetForm();
 
-      // Clear success message after 5 seconds
       setTimeout(() => {
         setSuccess("");
       }, 5000);
 
-    } catch (err) {
-      console.error("Error creating milestone:", err);
-      if (err.name === 'TypeError' && err.message === 'Failed to fetch') {
-        setError("Network error. Please check your internet connection and try again.");
+    } catch (error) {
+      console.log("API Error Response:", error.response?.data);
+
+      if (error.response?.status === 403) {
+        setError(error.response.data.detail || "You don't have permission to create milestones for this project.");
+      } else if (error.response?.status === 400) {
+        const errorData = error.response.data;
+        const errorKeys = Object.keys(errorData);
+        if (errorKeys.length > 0) {
+          const firstError = errorData[errorKeys[0]];
+          setError(`${errorKeys[0]}: ${Array.isArray(firstError) ? firstError[0] : firstError}`);
+        } else {
+          setError("Invalid milestone data. Please check your input.");
+        }
       } else {
-        setError(err.message || "An unexpected error occurred while creating the milestone");
+        setError(error.response?.data?.detail || error.response?.data?.message || "Failed to create milestone");
       }
     } finally {
       setLoading(false);
@@ -311,36 +241,18 @@ export default function CreateMilestone() {
     }
 
     setActionLoading(prev => ({ ...prev, [milestoneId]: 'completing' }));
-    const token = localStorage.getItem('accessToken');
-    
-    try {
-      // FIXED: Added proper slash before milestones
-      const response = await fetch(`${API_URL}/milestones/${milestoneId}/complete/`, {
-        method: "PATCH",
-        headers: {
-          "Authorization": `Bearer ${token}`,
-          "Content-Type": "application/json"
-        }
-      });
 
-      if (response.ok) {
-        setSuccess("Milestone marked as completed! Payment request sent to client.");
-        fetchMilestones();
-        setTimeout(() => setSuccess(""), 3000);
-      } else if (response.status === 401) {
-        setError("Session expired. Please log in again.");
-        setTimeout(() => {
-          router.push('/login');
-        }, 2000);
-      } else if (response.status === 403) {
+    try {
+      await api.patch(`/api/project/milestones/${milestoneId}/complete/`);
+      setSuccess("Milestone marked as completed! Payment request sent to client.");
+      fetchMilestones();
+      setTimeout(() => setSuccess(""), 3000);
+    } catch (error) {
+      if (error.response?.status === 403) {
         setError("You don't have permission to complete this milestone.");
       } else {
-        const errorData = await response.json();
-        setError(errorData.error || "Failed to mark milestone as completed");
+        setError(error.response?.data?.error || "Failed to mark milestone as completed");
       }
-    } catch (err) {
-      console.error("Error completing milestone:", err);
-      setError("Failed to mark milestone as completed");
     } finally {
       setActionLoading(prev => ({ ...prev, [milestoneId]: false }));
     }
@@ -349,37 +261,18 @@ export default function CreateMilestone() {
   // Update milestone status (freelancer can change status)
   const handleUpdateMilestoneStatus = async (milestoneId, newStatus) => {
     setActionLoading(prev => ({ ...prev, [milestoneId]: 'updating' }));
-    const token = localStorage.getItem('accessToken');
-    
-    try {
-      // FIXED: Added proper slash before milestones
-      const response = await fetch(`${API_URL}/milestones/${milestoneId}/`, {
-        method: "PATCH",
-        headers: {
-          "Authorization": `Bearer ${token}`,
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({ status: newStatus })
-      });
 
-      if (response.ok) {
-        setSuccess(`Milestone status updated to "${newStatus.replace('_', ' ')}"!`);
-        fetchMilestones();
-        setTimeout(() => setSuccess(""), 3000);
-      } else if (response.status === 401) {
-        setError("Session expired. Please log in again.");
-        setTimeout(() => {
-          router.push('/login');
-        }, 2000);
-      } else if (response.status === 403) {
+    try {
+      await api.patch(`/api/project/milestones/${milestoneId}/`, { status: newStatus });
+      setSuccess(`Milestone status updated to "${newStatus.replace('_', ' ')}"!`);
+      fetchMilestones();
+      setTimeout(() => setSuccess(""), 3000);
+    } catch (error) {
+      if (error.response?.status === 403) {
         setError("You don't have permission to update this milestone.");
       } else {
-        const errorData = await response.json();
-        setError(errorData.error || errorData.detail || "Failed to update milestone status");
+        setError(error.response?.data?.error || error.response?.data?.detail || "Failed to update milestone status");
       }
-    } catch (err) {
-      console.error("Error updating milestone:", err);
-      setError("Failed to update milestone status");
     } finally {
       setActionLoading(prev => ({ ...prev, [milestoneId]: false }));
     }
@@ -392,35 +285,19 @@ export default function CreateMilestone() {
     }
 
     setActionLoading(prev => ({ ...prev, [milestoneId]: 'deleting' }));
-    const token = localStorage.getItem('accessToken');
-    
-    try {
-      // FIXED: Added proper slash before milestones
-      const response = await fetch(`${API_URL}/milestones/${milestoneId}/`, {
-        method: "DELETE",
-        headers: {
-          "Authorization": `Bearer ${token}`
-        }
-      });
+    const token = localStorage.getItem('access_token');
 
-      if (response.ok) {
-        setSuccess("Milestone deleted successfully!");
-        fetchMilestones();
-        setTimeout(() => setSuccess(""), 3000);
-      } else if (response.status === 401) {
-        setError("Session expired. Please log in again.");
-        setTimeout(() => {
-          router.push('/login');
-        }, 2000);
-      } else if (response.status === 403) {
-        const errorData = await response.json();
-        setError(errorData.detail || "You don't have permission to delete this milestone.");
+    try {
+      await api.delete(`/api/project/milestones/${milestoneId}/`);
+      setSuccess("Milestone deleted successfully!");
+      fetchMilestones();
+      setTimeout(() => setSuccess(""), 3000);
+    } catch (error) {
+      if (error.response?.status === 403) {
+        setError(error.response?.data?.detail || "You don't have permission to delete this milestone.");
       } else {
         setError("Failed to delete milestone");
       }
-    } catch (err) {
-      console.error("Error deleting milestone:", err);
-      setError("Failed to delete milestone");
     } finally {
       setActionLoading(prev => ({ ...prev, [milestoneId]: false }));
     }
@@ -447,10 +324,10 @@ export default function CreateMilestone() {
   // Format date for display
   const formatDate = (dateString) => {
     const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', { 
-      year: 'numeric', 
-      month: 'short', 
-      day: 'numeric' 
+    return date.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
     });
   };
 
@@ -563,8 +440,8 @@ export default function CreateMilestone() {
               <h2>Milestone Management</h2>
               <p className="text">Project: <strong>{project.name}</strong></p>
               <div className="mt-2">
-                <Link 
-                  href="/freelancer-projects" 
+                <Link
+                  href="/freelancer-projects"
                   className="text-decoration-none"
                 >
                   <i className="fal fa-arrow-left me-2"></i>
@@ -601,7 +478,7 @@ export default function CreateMilestone() {
         <div className="row">
           <div className="col-xl-12">
             <div className="ps-widget bgc-white bdrs4 p30 mb30 overflow-hidden position-relative">
-              
+
               {/* Success Message */}
               {success && (
                 <div className="alert alert-success mb-3 d-flex align-items-center alert-dismissible fade show" role="alert">
@@ -685,7 +562,7 @@ export default function CreateMilestone() {
                             </td>
                             <td>
                               {getStatusBadge(m.status)}
-                              
+
                               {/* Status Change Dropdown */}
                               {getAvailableStatusOptions(m.status).length > 0 && (
                                 <div className="mt-2">
@@ -888,8 +765,8 @@ export default function CreateMilestone() {
 
                     <div className="col-md-12">
                       <div className="d-flex gap-2">
-                        <button 
-                          type="submit" 
+                        <button
+                          type="submit"
                           className="btn btn-success"
                           disabled={loading}
                         >
@@ -905,9 +782,9 @@ export default function CreateMilestone() {
                             </>
                           )}
                         </button>
-                        
-                        <button 
-                          type="button" 
+
+                        <button
+                          type="button"
                           className="btn btn-secondary"
                           onClick={resetForm}
                           disabled={loading}

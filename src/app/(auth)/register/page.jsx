@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Footer from "@/components/footer/Footer";
 import Header20 from "@/components/header/Header20";
 import Link from "next/link";
+import api from '@/lib/axios';
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -33,16 +34,14 @@ export default function RegisterPage() {
     setMessage(""); // Clear previous messages
 
     try {
-      // Corrected API endpoint from '/register/' to '/signup/' to match urls.py
-      const res = await fetch("http://127.0.0.1:8000/myapi/signup/", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
+      const res = await api.post('/myapi/signup/', {
+        email,
+        password
       });
 
-      const data = await res.json();
+      const data = await res.data;
 
-      if (!res.ok) {
+      if (res.statusText != "OK") {
         // Show error message from backend
         setMessage(data.error || "Registration failed.");
       } else {
@@ -63,10 +62,8 @@ export default function RegisterPage() {
     setLoading(true);
     setMessage("");
     try {
-      const res = await fetch("http://127.0.0.1:8000/myapi/google-login/", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ token: response.credential }),
+      const res = await api.post('/myapi/google-login/', {
+        token: response.credential
       });
 
       const data = await res.json();
@@ -74,8 +71,9 @@ export default function RegisterPage() {
       if (!res.ok) {
         setMessage(data.error || "Google sign-up failed.");
       } else {
-        localStorage.setItem("accessToken", data.tokens.access);
-        localStorage.setItem("refreshToken", data.tokens.refresh);
+        localStorage.setItem("access_token", data.tokens.access);
+        localStorage.setItem("refresh_token", data.tokens.refresh);
+        document.cookie = `token=${data.tokens.access}; path=/; max-age=${15 * 60}; SameSite=Lax`;
         // If the user is new (i.e., has no role), redirect to role selection.
         // The backend should tell us if the role is missing.
         if (!data.user.role) {
@@ -83,7 +81,7 @@ export default function RegisterPage() {
         } else {
           // This handles the case where an existing user signs up again.
           // Send them to the appropriate dashboard.
-          const dashboard = data.user.role === 'employer' ? '/job-provider' : '/freelancer';
+          const dashboard = data.user.role === 'Job Provider' ? '/job-provider' : '/freelancer';
           router.push(dashboard);
         }
       }

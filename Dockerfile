@@ -1,34 +1,30 @@
 # ---- Build Stage ----
-FROM node:18-slim AS builder
+FROM node:18-alpine AS builder
 WORKDIR /app
 
-# Copy dependency files first for better Docker caching
+# Copy dependencies first
 COPY package*.json ./
+RUN npm install
 
-# Use npm ci for faster, deterministic installs (especially in CI/CD)
-RUN npm ci
-
-# Copy only what's needed for the build
+# Copy source code
 COPY . .
 
 # Build the Next.js app
 RUN npm run build
 
 # ---- Production Stage ----
-FROM node:18-slim AS runner
+FROM node:18-alpine AS runner
 WORKDIR /app
 
-ENV NODE_ENV=production
-
-# Copy only the necessary files for runtime
+# Copy build artifacts and dependencies
 COPY --from=builder /app/package*.json ./
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/.next ./.next
 COPY --from=builder /app/public ./public
 COPY --from=builder /app/next.config.js ./next.config.js
 
-# Expose port 3000
+ENV NODE_ENV=production
 EXPOSE 3000
 
-# Run the app
+# Start the app
 CMD ["npm", "start"]

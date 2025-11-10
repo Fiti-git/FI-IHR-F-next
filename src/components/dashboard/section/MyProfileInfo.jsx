@@ -19,8 +19,8 @@ export default function MyProfileInfo() {
             <div className="dashboard_title_area">
               <h2>My Profile</h2>
               <p className="text">
-  Update your personal and professional details to let clients know more about you.
-</p>
+                Update your personal and professional details to let clients know more about you.
+              </p>
 
             </div>
           </div>
@@ -28,11 +28,11 @@ export default function MyProfileInfo() {
         <div className="row">
           <div className="col-xl-12">
             <ProfileDetails />
-            
+
             <Education />
             <WorkExperience />
             <ChangePassword />
-            <ConfirmPassword />
+            {/* <ConfirmPassword /> */}
           </div>
         </div>
       </div>

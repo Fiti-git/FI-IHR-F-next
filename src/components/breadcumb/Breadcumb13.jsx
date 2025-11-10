@@ -3,6 +3,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
+import api from '@/lib/axios';
 
 export default function Breadcumb13() {
   const { id } = useParams();
@@ -16,24 +17,16 @@ export default function Breadcumb13() {
         return;
       }
       try {
-        const headers = { 'Content-Type': 'application/json' };
-        const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
-        if (token) headers.Authorization = `Bearer ${token}`;
-
-        const res = await fetch(`http://127.0.0.1:8000/api/job-posting/${id}/`, { headers });
-        if (res.status === 401) {
-          // Unauthorized - token missing or invalid
+        const res = await api.get(`/api/job-posting/${id}/`);
+        setJob(res.data);
+      } catch (err) {
+        if (err.response?.status === 401) {
+          // Unauthorized - will be redirected by axios interceptor
           console.warn('Unauthorized when fetching job details');
           setJob(null);
-          setLoading(false);
-          return;
+        } else {
+          console.error(err);
         }
-        if (res.ok) {
-          const data = await res.json();
-          setJob(data);
-        }
-      } catch (err) {
-        console.error(err);
       } finally {
         setLoading(false);
       }

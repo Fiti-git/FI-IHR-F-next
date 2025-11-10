@@ -3,12 +3,13 @@
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import api from '@/lib/axios';
 
 export default function AppliedJobDetailPage() {
   const params = useParams();
+  // Ensure jobId is an integer
   const jobId = parseInt(params.id, 10);
 
-  // === ALL HOOKS MUST BE AT THE TOP (in order) ===
   const [job, setJob] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -16,8 +17,6 @@ export default function AppliedJobDetailPage() {
   const [applicationId, setApplicationId] = useState(null);
   const [interviewDetails, setInterviewDetails] = useState(null);
   const [isJobOpen, setIsJobOpen] = useState(true);
-  const [activeTab, setActiveTab] = useState("overview"); // ← Moved UP
-  const [interviewOpen, setInterviewOpen] = useState(true);
 
   const API_BASE_URL = "http://127.0.0.1:8000/api";
 
@@ -65,13 +64,14 @@ export default function AppliedJobDetailPage() {
       const n = safeParseInt(v);
       if (n) return n;
     }
-    const token = localStorage.getItem("accessToken");
+    // Fallback: try to decode from JWT
+    const token = localStorage.getItem("access_token");
     if (token) {
       const payload = decodeJwt(token) || {};
-      const idKeys = ["freelancer_id", "freelance_id", "user_id", "id"];
-      for (const k of idKeys) {
-        const n = safeParseInt(payload[k]);
-        if (n) return n;
+      const possibleKeys = ["freelancer_id", "freelance_id", "user_id", "id"];
+      for (const k of possibleKeys) {
+        const parsed = safeParseInt(payload?.[k]);
+        if (parsed) return parsed;
       }
     }
     return null;
@@ -83,87 +83,112 @@ export default function AppliedJobDetailPage() {
   useEffect(() => {
     async function fetchJob() {
       try {
-        const token = localStorage.getItem("accessToken");
-        if (!token) throw new Error("Access token missing");
+        const token = localStorage.getItem("access_token");
 
-        const res = await fetch(`${API_BASE_URL}/job-posting/${jobId}/`, {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-        });
-        if (!res.ok) throw new Error(`Job fetch failed (${res.status})`);
-
-        const raw = await res.json();
-
-        const transformed = {
-          id: raw.job_id,
-          title: raw.job_title,
-          department: raw.department,
-          jobType: raw.job_type,
-          workLocation: raw.work_location,
-          workMode: raw.work_mode,
-          roleOverview: raw.role_overview,
-          keyResponsibilities: Array.isArray(raw.key_responsibilities)
-            ? raw.key_responsibilities
-            : raw.key_responsibilities
-            ? [raw.key_responsibilities]
-            : [],
-          requiredQualifications: Array.isArray(raw.required_qualifications)
-            ? raw.required_qualifications
-            : raw.required_qualifications
-            ? [raw.required_qualifications]
-            : [],
-          preferredQualifications: Array.isArray(raw.preferred_qualifications)
-            ? raw.preferred_qualifications
-            : raw.preferred_qualifications
-            ? [raw.preferred_qualifications]
-            : [],
-          languagesRequired: Array.isArray(raw.language_required)
-            ? raw.language_required
-            : raw.language_required
-            ? [raw.language_required]
-            : [],
-          category: raw.category,
-          salaryFrom: raw.salary_from,
-          salaryTo: raw.salary_to,
-          currency: raw.currency,
-          applicationDeadline: raw.application_deadline,
-          interviewMode: raw.interview_mode,
-          hiringManager: raw.hiring_manager,
-          numberOfOpenings: raw.number_of_openings,
-          expectedStartDate: raw.expected_start_date,
-          screeningQuestions: Array.isArray(raw.screening_questions)
-            ? raw.screening_questions
-            : raw.screening_questions
-            ? [raw.screening_questions]
-            : [],
-          benefits: {
-            healthInsurance: raw.health_insurance ?? false,
-            remoteWork: raw.remote_work ?? false,
-            paidLeave: raw.paid_leave ?? false,
-            bonus: raw.bonus ?? false,
-          },
-          date: raw.date_posted,
-          status: raw.job_status || "Open",
-          description: raw.role_overview || "",
-          raw,
-        };
-        setJob(transformed);
-
-        if (raw.application_deadline) {
-          const dl = new Date(raw.application_deadline);
-          setIsJobOpen(!isNaN(dl) && Date.now() <= dl.getTime());
+        if (!token) {
+          throw new Error("Access token not found. Please log in again.");
         }
-      } catch (e) {
-        console.error(e);
-        setError(e.message);
+
+        const res = await api.get(`/api/job-posting/${jobId}/`);
+        setJob(res.data);
+
+        // Derive Open/Closed from application_deadline when available
+        try {
+          if (res.data?.application_deadline) {
+            const deadline = new Date(res.data.application_deadline);
+            setIsJobOpen(!isNaN(deadline) ? Date.now() <= deadline.getTime() : true);
+          } else {
+            setIsJobOpen(true);
+          }
+        } catch {
+          setIsJobOpen(true);
+        }
+      } catch (err) {
+        console.error("Error fetching job:", err);
+        setError(err.response?.data?.message || err.message);
       } finally {
         setLoading(false);
       }
     }
-    if (jobId) fetchJob();
+
+    fetchJob();
+  }, [jobId]);
+
+  // --- Fetch Interview Info (FIXED) ---
+  useEffect(() => {
+    async function fetchInterviews() {
+      try {
+        const token = localStorage.getItem("access_token");
+        if (!token) {
+          return;
+        }
+
+        const res = await api.get(`/api/job-interview/${jobId}/`);
+        const data = res.data;
+
+        // Handle both single object and array responses
+        let interviews = [];
+        if (Array.isArray(data)) {
+          interviews = data;
+        } else if (data && typeof data === 'object' && data.interview_id) {
+          interviews = [data];
+        }
+
+        if (interviews.length === 0) {
+          return;
+        }
+
+        // Filter and sort by 'date_time'
+        const latest = interviews
+          .filter(iv => iv && iv.date_time)
+          .sort((a, b) => new Date(b.date_time) - new Date(a.date_time))[0] || interviews[0];
+
+        if (!latest) return;
+
+        // Use 'date_time' from the API response
+        const d = new Date(latest.date_time);
+
+        // Use "Scheduled" as a default status if the 'status' field is missing in the interview object
+        const rawInterviewStatus = latest.status || "Scheduled";
+        const status = normalizeStatus(rawInterviewStatus);
+
+        if (!isNaN(d)) {
+          const date = d.toLocaleDateString();
+          const time = d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+          setInterviewDetails({
+            date,
+            time,
+            link: latest.interview_link || "",
+            mode: latest.interview_mode || "",
+            status: status,
+            notes: latest.interview_notes || "",
+          });
+        } else {
+          setInterviewDetails({
+            date: latest.date_time,
+            time: "Time N/A",
+            link: latest.interview_link || "",
+            mode: latest.interview_mode || "",
+            status: status,
+            notes: latest.interview_notes || "",
+          });
+        }
+
+        // Update the main application status based on the latest interview status (normalized)
+        setUserApplicationStatus(status);
+      } catch (err) {
+        console.error("Error fetching interviews:", err);
+        if (err.response?.status !== 404) {
+          console.warn(`Failed to fetch interviews. Continuing.`);
+        }
+        setUserApplicationStatus("");
+        setInterviewDetails(null);
+      }
+    }
+
+    if (jobId && !isNaN(jobId)) {
+      fetchInterviews();
+    }
   }, [jobId]);
 
   // -----------------------------------------------------------------
@@ -172,23 +197,17 @@ export default function AppliedJobDetailPage() {
   useEffect(() => {
     async function fetchAppStatus() {
       try {
-        const token = localStorage.getItem("accessToken");
+        const token = localStorage.getItem("access_token");
         if (!token) return;
-        const res = await fetch(`${API_BASE_URL}/job-application/job/${jobId}`, {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-        });
-        if (!res.ok) return;
 
-        const data = await res.json();
-        const apps = Array.isArray(data)
-          ? data
-          : Array.isArray(data?.applications)
-          ? data.applications
-          : [];
+        const res = await api.get(`/api/job-application/job/${jobId}`);
+        const data = res.data;
+
+        const apps = Array.isArray(data) ? data : Array.isArray(data?.applications) ? data.applications : [];
+        if (!apps.length) {
+          setApplicationStatus("");
+          return;
+        }
 
         const myId = getCurrentFreelancerId();
         if (!myId) return;
@@ -204,8 +223,19 @@ export default function AppliedJobDetailPage() {
           const appId = safeParseInt(mine.application_id || mine.applicationId || mine.id);
           if (appId) setApplicationId(appId);
         }
-      } catch (e) {
-        console.error(e);
+
+        // Normalize status (e.g., "Pending" -> "Pending", "Rejected" -> "Rejected", etc.)
+        const rawAppStatus = (mine?.status || "").trim();
+        const normalized = normalizeStatus(rawAppStatus);
+
+        // If the API uses 'Pending' or similar, leave it as Pending; Accepted/Rejected will be normalized
+        setApplicationStatus(normalized);
+      } catch (err) {
+        console.error("Error fetching applications:", err);
+        if (err.response?.status !== 404) {
+          console.warn(`Failed to fetch applications.`);
+        }
+        setApplicationStatus("");
       }
     }
     if (jobId) fetchAppStatus();

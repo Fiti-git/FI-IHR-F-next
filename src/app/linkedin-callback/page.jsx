@@ -3,6 +3,7 @@ export const dynamic = "force-dynamic";
 
 import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import api from '@/lib/axios';
 
 function LinkedInCallbackInner() {
     const router = useRouter();
@@ -15,29 +16,29 @@ function LinkedInCallbackInner() {
         if (code) {
             const handleLinkedInLogin = async (authCode) => {
                 try {
-                    const res = await fetch("http://127.0.0.1:8000/myapi/linkedin-login/", {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({ code: authCode }),
+                    const res = await api.post("/myapi/linkedin-login/", {
+                        code: authCode
                     });
 
-                    const data = await res.json();
+                    const data = res.data;
 
-                    if (!res.ok) {
-                        setMessage(data.error || "LinkedIn login failed. Please try again.");
+                    // Store tokens (use consistent key names with axios interceptor)
+                    localStorage.setItem("access_token", data.tokens.access);
+                    localStorage.setItem("refresh_token", data.tokens.refresh);
+                    document.cookie = `token=${data.tokens.access}; path=/; max-age=${15 * 60}; SameSite=Lax`;
+
+                    // Route based on user role
+                    if (data.user && !data.user.role) {
+                        router.push("/select-role");
                     } else {
-                        localStorage.setItem("accessToken", data.tokens.access);
-                        localStorage.setItem("refreshToken", data.tokens.refresh);
-
-                        if (data.user && !data.user.role) {
-                            router.push("/select-role");
-                        } else {
-                            const dashboard = data.user.role === "employer" ? "/job-provider" : "/freelancer";
-                            router.push(dashboard);
-                        }
+                        const dashboard = data.user.role === "Job Provider" ? "/job-provider" : "/freelancer";
+                        router.push(dashboard);
                     }
+
                 } catch (error) {
-                    setMessage("An error occurred. Please return to the login page and try again.");
+                    console.error('LinkedIn login error:', error);
+                    const errorMessage = error.response?.data?.error || "An error occurred. Please return to the login page and try again.";
+                    setMessage(errorMessage);
                 }
             };
 

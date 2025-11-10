@@ -7,6 +7,8 @@ import { useState, useEffect } from "react";
 import Navigation from "./Navigation";
 import MobileNavigation2 from "./MobileNavigation2";
 
+import api from '@/lib/axios';
+
 export default function Header20() {
     const path = usePathname();
     const router = useRouter();
@@ -15,31 +17,25 @@ export default function Header20() {
 
     useEffect(() => {
         const checkAuthStatus = async () => {
-            const accessToken = localStorage.getItem("accessToken");
-            if (!accessToken) {
+            const access_token = localStorage.getItem("access_token");
+            if (!access_token) {
                 setUser(null);
                 return;
             }
 
             try {
-                const response = await fetch("http://127.0.0.1:8000/api/profile/check-auth/", {
-                    method: "GET",
-                    headers: {
-                        "Authorization": `Bearer ${accessToken}`,
-                    },
-                });
-                if (response.ok) {
-                    const data = await response.json();
-                    // 2. Set the user state with API data
-                    if (data.isAuthenticated) {
-                        setUser(data);
-                    }
+                const response = await api.get("/api/profile/check-auth/");
+
+                // Set the user state with data from the API (which includes roles)
+                if (response.data.isAuthenticated) {
+                    setUser(response.data);
                 } else {
                     setUser(null);
                 }
             } catch (error) {
                 console.error('Error checking authentication status:', error);
                 setUser(null);
+                // Axios interceptor will handle 401 redirect automatically
             }
         };
 
@@ -47,7 +43,7 @@ export default function Header20() {
     }, []);
 
     const handleLogout = () => {
-        localStorage.removeItem("accessToken");
+        localStorage.removeItem("access_token");
         setUser(null);
         router.push("/login");
     };
@@ -105,7 +101,7 @@ export default function Header20() {
                                                 </Link>
                                             ) : user.roles?.includes('job-provider') ? (
                                                 <Link href="/job-provider-dashboard" className="login-info small-text">
-                                                    Employer Dashboard
+                                                    Job Provider Dashboard
                                                 </Link>
                                             ) : (
                                                 <Link href="/dashboard" className="login-info small-text">

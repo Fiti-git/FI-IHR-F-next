@@ -2,9 +2,11 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
+import api from '@/lib/axios';
+import { API_BASE_URL } from '@/lib/config';
 
 // ==========================================================================
-// 1. CHILD COMPONENT: SelectInput
+// 1. CHILD COMPONENT: SelectInput (No changes needed here)
 // ==========================================================================
 function SelectInput({
   label,
@@ -74,7 +76,7 @@ function SelectInput({
 
 
 // ==========================================================================
-// 2. PARENT COMPONENT: Freelancer Profile Details
+// 2. PARENT COMPONENT: Freelancer Profile Details (Updated with Axios)
 // ==========================================================================
 export default function ProfileDetails() {
   const [isEditMode, setIsEditMode] = useState(false);
@@ -107,53 +109,49 @@ export default function ProfileDetails() {
   useEffect(() => {
     const fetchProfileData = async () => {
       setLoading(true);
-      const accessToken = localStorage.getItem("accessToken");
-      if (!accessToken) {
-        router.push("/login");
-        return;
-      }
-
+      // The Axios interceptor handles the token. If no token, it may redirect.
       try {
-        const response = await fetch("http://127.0.0.1:8000/api/profile/freelancer/", {
-          headers: { "Authorization": `Bearer ${accessToken}` },
-        });
+        const response = await api.get("/api/profile/freelancer/");
+        const data = response.data; // Axios wraps the response in a `data` object
 
-        if (response.ok) {
-          const data = await response.json();
-          if (data && Object.keys(data).length > 0) {
-            const skillsArray = data.skills ? data.skills.split(',').map(s => s.trim()) : [];
-            const fullProfileData = { ...data, skills: skillsArray };
+        if (data && Object.keys(data).length > 0) {
+          const skillsArray = data.skills ? data.skills.split(',').map(s => s.trim()) : [];
+          const fullProfileData = { ...data, skills: skillsArray };
 
-            setProfileData(fullProfileData);
-            setInitialProfileData(fullProfileData);
-            setHasProfile(true);
+          setProfileData(fullProfileData);
+          setInitialProfileData(fullProfileData);
+          setHasProfile(true);
 
-            if (data.profile_image) {
-              const fullImageUrl = data.profile_image.startsWith("http")
-                ? data.profile_image
-                : `http://127.0.0.1:8000${data.profile_image}`;
-              setSelectedImage(fullImageUrl);
-            }
+          if (data.profile_image) {
+            const fullImageUrl = data.profile_image.startsWith("http")
+              ? data.profile_image
+              : `${API_BASE_URL}${data.profile_image}`;
+            setSelectedImage(fullImageUrl);
+          }
 
-            if (data.resume) {
-              const fullResumeUrl = data.resume.startsWith("http")
-                ? data.resume
-                : `http://127.0.0.1:8000${data.resume}`;
-              setSelectedResumeName(fullResumeUrl.split('/').pop());
-              // Store full URL so we can link it later
-              setProfileData((prev) => ({ ...prev, resume: fullResumeUrl }));
-            }
-
-          } else {
-            setIsEditMode(true);
-            setHasProfile(false);
-            setMessage("Welcome! Please complete your profile to get started.");
+          if (data.resume) {
+            const fullResumeUrl = data.resume.startsWith("http")
+              ? data.resume
+              : `${API_BASE_URL}${data.resume}`;
+            setSelectedResumeName(fullResumeUrl.split('/').pop());
+            setProfileData((prev) => ({ ...prev, resume: fullResumeUrl }));
           }
         } else {
-          setMessage("Could not load profile. Please try again.");
+          // This case handles a 200 OK with an empty object, indicating a new profile
+          setIsEditMode(true);
+          setHasProfile(false);
+          setMessage("Welcome! Please complete your profile to get started.");
         }
       } catch (error) {
-        setMessage("An error occurred while fetching your profile.");
+        // Handle cases where the profile doesn't exist (e.g., 404 Not Found)
+        if (error.response && error.response.status === 404) {
+          setIsEditMode(true);
+          setHasProfile(false);
+          setMessage("Welcome! Please complete your profile to get started.");
+        } else {
+          console.error("Error fetching profile:", error);
+          setMessage(error.response?.data?.detail || "An error occurred while fetching your profile.");
+        }
       } finally {
         setLoading(false);
       }
@@ -214,26 +212,16 @@ export default function ProfileDetails() {
   const handleSave = async () => {
     setLoading(true);
     setMessage("");
-    const accessToken = localStorage.getItem("accessToken");
-    if (!accessToken) {
-      router.push("/login");
-      return;
-    }
+    // No need to get the token; the interceptor handles it.
 
-    const method = hasProfile ? "PUT" : "POST";
     const dataToSend = new FormData();
 
     for (const key in profileData) {
       const value = profileData[key];
-
-      // Skip null or undefined values
-      if (value === null || value === undefined) {
-        continue;
-      }
+      if (value === null || value === undefined) continue;
 
       if (key === 'skills') {
-        const skillsString = Array.isArray(value) ? value.join(',') : '';
-        dataToSend.append(key, skillsString);
+        dataToSend.append(key, Array.isArray(value) ? value.join(',') : '');
       } else if (value instanceof File) {
         dataToSend.append(key, value);
       } else if (key !== 'profile_image' && key !== 'resume') {
@@ -242,39 +230,50 @@ export default function ProfileDetails() {
     }
 
     try {
-      const res = await fetch("http://127.0.0.1:8000/api/profile/freelancer/", {
-        method: method,
-        headers: { "Authorization": `Bearer ${accessToken}` },
-        body: dataToSend,
-      });
+      const response = hasProfile
+        ? await api.put("/api/profile/freelancer/", dataToSend)
+        : await api.post("/api/profile/freelancer/", dataToSend);
 
-      if (!res.ok) {
-        const errorData = await res.json();
-        const errorMessages = Object.entries(errorData)
-          .map(([field, errors]) => `${field.replace(/_/g, " ")}: ${errors.join(' ')}`)
-          .join(' | ');
-        throw new Error(errorMessages || "Failed to save profile.");
-      }
-
-      const updatedProfile = await res.json();
+      const updatedProfile = response.data; // Get data from Axios response
       const skillsArray = updatedProfile.skills ? updatedProfile.skills.split(',').map(s => s.trim()) : [];
       const fullProfileData = { ...updatedProfile, skills: skillsArray };
 
       setProfileData(fullProfileData);
       setInitialProfileData(fullProfileData);
       setHasProfile(true);
-      if (updatedProfile.profile_image) setSelectedImage(updatedProfile.profile_image);
-      if (updatedProfile.resume) setSelectedResumeName(updatedProfile.resume.split('/').pop());
+
+      if (updatedProfile.profile_image) {
+        // The API returns a full URL, so we can use it directly
+        setSelectedImage(updatedProfile.profile_image);
+      }
+      if (updatedProfile.resume) {
+        setSelectedResumeName(updatedProfile.resume.split('/').pop());
+      }
+
 
       setIsEditMode(false);
       setMessage("Profile saved successfully!");
 
     } catch (error) {
-      setMessage(error.message);
+      console.error("Failed to save profile:", error.response);
+      const errorData = error.response?.data;
+      let errorMessage = "Failed to save profile. Please check your inputs.";
+
+      if (typeof errorData === 'object' && errorData !== null) {
+        // Format detailed error messages from the backend
+        errorMessage = Object.entries(errorData)
+          .map(([field, errors]) => `${field.replace(/_/g, " ")}: ${Array.isArray(errors) ? errors.join(' ') : errors}`)
+          .join(' | ');
+      } else if (typeof errorData === 'string') {
+        errorMessage = errorData;
+      }
+
+      setMessage(errorMessage);
     } finally {
       setLoading(false);
     }
   };
+
 
   return (
     <div className="ps-widget bgc-white bdrs4 p30 mb30 overflow-hidden position-relative">
@@ -284,29 +283,27 @@ export default function ProfileDetails() {
       {message && <div className={`alert mb-3 ${message.includes('success') ? 'alert-success' : 'alert-danger'}`}>{message}</div>}
 
       <div className="col-xl-7">
-        {/* ... (The rest of your JSX remains exactly the same) ... */}
         <div className="profile-box d-sm-flex align-items-center mb30">
           <div className="profile-img mb20-sm">
             {selectedImage ? (
-  <Image
-    height={71}
-    width={71}
-    className="rounded-circle wa-xs"
-    src={selectedImage}
-    style={{ height: "71px", width: "71px", objectFit: "cover" }}
-    alt="profile"
-  />
-) : (
-  <Image
-    height={71}
-    width={71}
-    className="rounded-circle wa-xs"
-    src="/images/team/fl-1.png"
-    style={{ height: "71px", width: "71px", objectFit: "cover" }}
-    alt="default-profile"
-  />
-)}
-
+              <Image
+                height={71}
+                width={71}
+                className="rounded-circle wa-xs"
+                src={selectedImage}
+                style={{ height: "71px", width: "71px", objectFit: "cover" }}
+                alt="profile"
+              />
+            ) : (
+              <Image
+                height={71}
+                width={71}
+                className="rounded-circle wa-xs"
+                src="/images/team/fl-1.png"
+                style={{ height: "71px", width: "71px", objectFit: "cover" }}
+                alt="default-profile"
+              />
+            )}
           </div>
           {isEditMode &&
             <div className="profile-content ml20 ml0-xs">
@@ -328,7 +325,6 @@ export default function ProfileDetails() {
       <div className="col-lg-7">
         <form className="form-style1" onSubmit={(e) => e.preventDefault()}>
           <div className="row">
-            {/* ... (All your input fields and JSX) ... */}
             <div className="col-sm-6">
               <div className="mb20">
                 <label className="heading-color ff-heading fw500 mb10">Full Name</label>
@@ -411,25 +407,21 @@ export default function ProfileDetails() {
                       <span className="ud-btn btn-white">Choose File<i className="fal fa-arrow-right-long ms-2"></i></span>
                     </label>
                   )}
-{profileData.resume && !(profileData.resume instanceof File) && (
-  <p className="mb-0 text-muted">
-    Current:{" "}
-    <a
-      href={
-        typeof profileData.resume === "string" && profileData.resume.startsWith("http")
-          ? profileData.resume
-          : `http://127.0.0.1:8000${profileData.resume}`
-      }
-      target="_blank"
-      rel="noopener noreferrer"
-      className="text-thm"
-    >
-      {selectedResumeName || "View Resume"}
-    </a>
-  </p>
-)}
-
-
+                  {profileData.resume && !(profileData.resume instanceof File) ? (
+                    <p className="mb-0 text-muted">
+                      Current:{" "}
+                      <a
+                        href={profileData.resume} // It's already a full URL
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-thm"
+                      >
+                        {selectedResumeName || "View Resume"}
+                      </a>
+                    </p>
+                  ) : selectedResumeName && (
+                    <p className="mb-0 text-muted">New: {selectedResumeName}</p>
+                  )}
                 </div>
               </div>
             </div>

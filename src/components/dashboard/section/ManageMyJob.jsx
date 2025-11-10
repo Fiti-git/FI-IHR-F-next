@@ -6,6 +6,7 @@ import { getAuthToken } from "@/utils/auth";
 import Pagination1 from "@/components/section/Pagination1";
 import ProposalModal1 from "../modal/ProposalModal1";
 import DeleteModal from "../modal/DeleteModal";
+import api from '@/lib/axios';
 
 // Dummy applied job data (removed "On Going")
 // const appliedJobs = [...] // Removed as we use the fetched data
@@ -93,7 +94,7 @@ const ApplicantStatusBadge = ({ status }) => {
 // Row component for Applied Jobs
 function AppliedJobsRow({ job }) {
   // Ensure job.id is available, otherwise the 'View' link is broken
-  const jobLink = job.id ? `/applied-jobs/${job.id}` : "#"; 
+  const jobLink = job.id ? `/applied-jobs/${job.id}` : "#";
   return (
     <tr>
       <td>{job.title}</td>
@@ -120,15 +121,12 @@ export default function AppliedJobs() {
   const [jobs, setJobs] = useState([]);
   const [jobsLoading, setJobsLoading] = useState(false);
   const [jobsError, setJobsError] = useState(null);
- 
+
 
   useEffect(() => {
     const fetchFreelancer = async () => {
       try {
-        let token = getAuthToken();
-        if (!token && typeof window !== "undefined") {
-          token = localStorage.getItem("accessToken") || localStorage.getItem("token");
-        }
+        let token = localStorage.getItem("access_token") || localStorage.getItem("token");
 
         if (!token) {
           setFetchError("No auth token found");
@@ -136,54 +134,41 @@ export default function AppliedJobs() {
           return;
         }
 
-        // NOTE: Using the correct production-like URL from the second file for consistency and stability.
-        // If the local URL is mandatory, change it back, but the structure is the key fix.
-        const res = await fetch("http://127.0.0.1:8000/api/profile/freelancer/", {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-        });
+        // // NOTE: Using the correct production-like URL from the second file for consistency and stability.
+        // // If the local URL is mandatory, change it back, but the structure is the key fix.
+        // const res = await fetch("http://127.0.0.1:8000/api/profile/freelancer/", {
+        //   method: "GET",
+        //   headers: {
+        //     "Content-Type": "application/json",
+        //     Authorization: `Bearer ${token}`,
+        //   },
+        // });
+        const res = await api.get("/api/profile/freelancer/");
+        const data = res.data;
 
-        if (!res.ok) {
-          const msg = `Failed to fetch freelancer profile: ${res.status} ${res.statusText}`;
-          console.error(msg, await res.text());
-          setFetchError(msg);
+        // Extract user ID from profile data
+        let userId = null;
+        if (Array.isArray(data) && data.length > 0) {
+          userId = data[0].user?.id;
+        }
+
+        // If the API returns a single object { ..., user: { id: 123, ... } }
+        if (data.user && data.user.id) {
+          userId = data.user.id;
+        }
+
+        if (!userId) {
+          setFetchError("Could not find User ID in profile data.");
           setLoading(false);
           return;
         }
 
-        const data = await res.json();
-        
-        // 🚀 FIX APPLIED HERE: Correctly extract the user.id from the first object
-        // assuming the API returns an array of profiles or just an object with a 'user' property.
-        // Based on FreelancerDashboard.js, the profile data seems to be an object *containing* the user object.
-        // Let's adapt the logic from the first file's array assumption to extract the *user ID* like the second file does.
-        
-        // Assuming API response is an array [ { ..., user: { id: 123, ... } } ]
-        let userId = null;
-        if (Array.isArray(data) && data.length > 0) {
-            userId = data[0].user?.id; // Access user.id if it exists
-        } 
-        
-        // If the API returns a single object { ..., user: { id: 123, ... } }
-        if (data.user && data.user.id) {
-            userId = data.user.id;
-        }
-
-        if (!userId) {
-            setFetchError("Could not find User ID in profile data.");
-            setLoading(false);
-            return;
-        }
-
-        setFreelancerUserId(userId); // Set the User ID
+        setFreelancerUserId(userId);
         setLoading(false);
 
       } catch (err) {
         console.error("Error fetching freelancer profile:", err);
-        setFetchError(String(err));
+        setFetchError(err.response?.data?.message || String(err));
         setLoading(false);
       }
     };
@@ -194,16 +179,12 @@ export default function AppliedJobs() {
   // When we have a freelancerUserId, fetch that freelancer's jobs
   useEffect(() => {
     const fetchFreelancerJobs = async () => {
-      // 💡 USING freelancerUserId (which is the user.id)
-      if (!freelancerUserId) return; 
-      
+      if (!freelancerUserId) return;
+
       setJobsLoading(true);
       setJobsError(null);
       try {
-        let token = getAuthToken();
-        if (!token && typeof window !== "undefined") {
-          token = localStorage.getItem("accessToken") || localStorage.getItem("token");
-        }
+        let token = localStorage.getItem("access_token") || localStorage.getItem("token");
         if (!token) {
           setJobsError("No auth token found");
           setJobs([]);
@@ -211,53 +192,33 @@ export default function AppliedJobs() {
           return;
         }
 
-        // 🚀 FIX APPLIED HERE: Use the correct ID (freelancerUserId) and URL format (from FreelancerDashboard.js)
-        const res = await fetch(`http://127.0.0.1:8000/api/freelance/${freelancerUserId}/`, {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-        });
+        const res = await api.get(`/api/freelance/${freelancerUserId}/`);
+        const data = res.data;
 
-        if (!res.ok) {
-          const txt = await res.text();
-          const msg = `Failed to fetch freelancer jobs: ${res.status} ${res.statusText}`;
-          console.error(msg, txt);
-          setJobsError(msg);
-          setJobs([]);
-          setJobsLoading(false);
-          return;
-        }
-
-        const data = await res.json();
         // API returns { freelance_id, jobs: [ { job_id, job_title, job_category, date_posted, job_status } ] }
         const mapped = Array.isArray(data.jobs)
           ? data.jobs.map((j) => ({
-              id: j.job_id,
-              title: j.job_title,
-              // Capitalize first letter for display in the Category column
-              category: capitalizeFirst(j.job_category),
-              date: j.date_posted,
-              // store original normalized job status
-              status: normalizeStatus(j.job_status),
-              // displayStatus will be computed (may be overridden by application/interview status)
-              displayStatus: normalizeStatus(j.job_status),
-            }))
+            id: j.job_id,
+            title: j.job_title,
+            category: j.job_category,
+            date: j.date_posted,
+            status: capitalizeFirst(j.job_status),
+          }))
           : [];
 
         setJobs(mapped);
         setJobsLoading(false);
       } catch (err) {
         console.error("Error fetching freelancer jobs:", err);
-        setJobsError(String(err));
+        setJobsError(err.response?.data?.message || String(err));
         setJobs([]);
         setJobsLoading(false);
       }
     };
 
     fetchFreelancerJobs();
-  }, [freelancerUserId]); // 💡 DEPENDENCY: Use the new state variable
+  }, [freelancerUserId]); //Retry
+
 
 
   // Enrich each job with application/interview state for the current freelancer
@@ -369,7 +330,7 @@ export default function AppliedJobs() {
             <div className="dashboard_title_area">
               <h2>Applied Jobs</h2>
               <p className="text">Manage all your applied job listings and their statuses.</p>
-          {/* Debug info hidden per request
+              {/* Debug info hidden per request
           <p className="text-muted small">
            User ID: **{freelancerUserId || 'N/A'}** | 
            Profile Status: **{loading ? 'Fetching...' : fetchError ? 'Error' : 'Ready'}** | 
@@ -421,17 +382,17 @@ export default function AppliedJobs() {
                   </thead>
                   <tbody className="t-body">
                     {jobsLoading ? (
-                        <tr>
-                            <td colSpan="5" className="text-center">
-                            Loading jobs...
-                            </td>
-                        </tr>
+                      <tr>
+                        <td colSpan="5" className="text-center">
+                          Loading jobs...
+                        </td>
+                      </tr>
                     ) : jobsError ? (
-                        <tr>
-                            <td colSpan="5" className="text-center text-danger">
-                            Error fetching jobs: {jobsError}
-                            </td>
-                        </tr>
+                      <tr>
+                        <td colSpan="5" className="text-center text-danger">
+                          Error fetching jobs: {jobsError}
+                        </td>
+                      </tr>
                     ) : filteredJobs.length > 0 ? (
                       filteredJobs.map((job) => (
                         <AppliedJobsRow key={job.id} job={job} />

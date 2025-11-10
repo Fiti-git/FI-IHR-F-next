@@ -8,6 +8,7 @@ import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import MobileNavigation2 from "@/components/header/MobileNavigation2";
 import Jobform from "@/components/dashboard/section/JobFormInformation";
 // import UploadAttachment from "@/components/dashboard/section/UploadAttachment";
+import api from '@/lib/axios';
 
 export default function EditJobPage() {
   const params = useParams();
@@ -19,19 +20,11 @@ export default function EditJobPage() {
   useEffect(() => {
     const load = async () => {
       try {
-        const headers = { 'Content-Type': 'application/json' };
-        if (typeof window !== 'undefined') {
-          const token = localStorage.getItem('accessToken');
-          if (token) headers.Authorization = `Bearer ${token}`;
-        }
-
-        const res = await fetch(`http://127.0.0.1:8000/api/job-posting/${jobId}/`, { headers });
-        if (!res.ok) throw new Error(`Failed to fetch job (${res.status})`);
-        const data = await res.json();
-        setInitialData(data);
+        const res = await api.get(`/api/job-posting/${jobId}/`);
+        setInitialData(res.data);
       } catch (err) {
         console.error('Error loading job:', err);
-        setError(err.message);
+        setError(err.response?.data?.message || err.message || 'Failed to fetch job');
       } finally {
         setLoading(false);
       }
@@ -50,33 +43,33 @@ export default function EditJobPage() {
     <>
       <MobileNavigation2 />
       <DashboardLayout>
-      <div className="dashboard__content hover-bgc-color">
-        <div className="row pb40">
-          <div className="col-lg-12">
-            <DashboardNavigation />
-          </div>
-          <div className="col-lg-9">
-            <div className="dashboard_title_area">
-              <h2>Edit Job</h2>
-              <p className="text">Edit and publish updates to this job posting.</p>
+        <div className="dashboard__content hover-bgc-color">
+          <div className="row pb40">
+            <div className="col-lg-12">
+              <DashboardNavigation />
+            </div>
+            <div className="col-lg-9">
+              <div className="dashboard_title_area">
+                <h2>Edit Job</h2>
+                <p className="text">Edit and publish updates to this job posting.</p>
+              </div>
+            </div>
+            <div className="col-lg-3">
+              <div className="text-lg-end">
+                <button type="submit" form="jobPostForm" className="ud-btn btn-dark">
+                  Save &amp; Publish
+                  <i className="fal fa-arrow-right-long" />
+                </button>
+              </div>
             </div>
           </div>
-          <div className="col-lg-3">
-            <div className="text-lg-end">
-              <button type="submit" form="jobPostForm" className="ud-btn btn-dark">
-                Save &amp; Publish
-                <i className="fal fa-arrow-right-long" />
-              </button>
+          <div className="row">
+            <div className="col-xl-12">
+              <Jobform initialData={initialData} mode="edit" jobId={jobId} onSuccess={(id) => router.push(`/jobs/${id || jobId}`)} />
+              {/* <UploadAttachment /> */}
             </div>
           </div>
         </div>
-        <div className="row">
-          <div className="col-xl-12">
-            <Jobform initialData={initialData} mode="edit" jobId={jobId} onSuccess={(id) => router.push(`/jobs/${id || jobId}`)} />
-            {/* <UploadAttachment /> */}
-          </div>
-        </div>
-      </div>
       </DashboardLayout>
     </>
   );

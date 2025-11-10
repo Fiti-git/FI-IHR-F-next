@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import api from '@/lib/axios';
 
 export default function JobPostForm({ initialData = null, mode = "create", jobId = null, onSuccess = null }) {
   const [formData, setFormData] = useState(() => ({
@@ -99,7 +100,7 @@ export default function JobPostForm({ initialData = null, mode = "create", jobId
       const d = new Date(dateStr);
       if (isNaN(d)) return "";
       const pad = (n) => String(n).padStart(2, '0');
-      return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+      return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
     } catch (e) {
       return "";
     }
@@ -161,30 +162,18 @@ export default function JobPostForm({ initialData = null, mode = "create", jobId
           .filter(([_, value]) => value === null)
           .map(([key]) => key)
       });
-      //authentication
-      const accessToken = typeof window !== 'undefined' ? localStorage.getItem("accessToken") : null;
+      const url = mode === 'edit' && jobId ? `/api/job-posting/${jobId}/` : `/api/job-posting/`;
 
-      const headers = {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json'
-      };
-      if (accessToken) headers.Authorization = `Bearer ${accessToken}`;
+      const response = mode === 'edit' && jobId
+        ? await api.put(url, dataToSend)
+        : await api.post(url, dataToSend);
 
-      const url = mode === 'edit' && jobId ? `http://127.0.0.1:8000/api/job-posting/${jobId}/` : `http://127.0.0.1:8000/api/job-posting/`;
-      const method = mode === 'edit' && jobId ? 'PUT' : 'POST';
+      const responseData = response.data;
 
-      const response = await fetch(url, {
-        method,
-        headers,
-        body: JSON.stringify(dataToSend),
-      });
-
-      const responseData = await response.json();
-
-      if (!response.ok) {
+      if (response.statusText != "OK") {
         console.error("API Error Response:", responseData);
         console.log("Submitted Data:", dataToSend);
-        
+
         // Handle different types of error responses
         if (typeof responseData === 'object') {
           // If the error contains field-specific errors
@@ -196,7 +185,7 @@ export default function JobPostForm({ initialData = null, mode = "create", jobId
               errorMessages.push(`${field}: ${errors}`);
             }
           }
-          
+
           if (errorMessages.length > 0) {
             alert('Validation Errors:\n' + errorMessages.join('\n'));
           } else if (responseData.detail) {
@@ -222,7 +211,7 @@ export default function JobPostForm({ initialData = null, mode = "create", jobId
       } catch (e) {
         console.error('onSuccess callback threw:', e);
       }
-      
+
       // If creating, reset form; if editing, keep values
       if (mode !== 'edit') {
         setFormData({

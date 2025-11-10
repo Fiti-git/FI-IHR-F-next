@@ -3,8 +3,12 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Sticky from "react-stickynode";
 import useScreen from "@/hook/useScreen";
+import api from "@/lib/axios"; // Import the centralized Axios instance
 
-// Reusable widgets (you may need to create or adapt these)
+// ==========================================================================
+// 1. Reusable Widgets
+// ==========================================================================
+
 const JobPriceWidget = ({ job }) => {
   const formatBudget = (val) => (val ? parseFloat(val).toLocaleString() : "0");
   const salary = job?.salary_from || job?.salary_to
@@ -36,6 +40,10 @@ const JobContactWidget = ({ job }) => {
   );
 };
 
+// ==========================================================================
+// 2. Main Component
+// ==========================================================================
+
 export default function JobDetail1() {
   const isMatchedScreen = useScreen(1216);
   const { id } = useParams();
@@ -47,8 +55,9 @@ export default function JobDetail1() {
   const [applied, setApplied] = useState(false);
   const [isJobProvider, setIsJobProvider] = useState(false);
   const [accessToken, setAccessToken] = useState(null);
+  const [freelancerId, setFreelancerId] = useState(null);
 
-  // Apply Modal
+  // Apply Modal State
   const [showApplyModal, setShowApplyModal] = useState(false);
   const [resumeFile, setResumeFile] = useState(null);
   const [coverLetter, setCoverLetter] = useState("");
@@ -56,24 +65,17 @@ export default function JobDetail1() {
   const [submitError, setSubmitError] = useState(null);
   const [submitSuccess, setSubmitSuccess] = useState(false);
 
-  const BASE_API_URL = "http://127.0.0.1:8000";
-
-  // Fetch Job
+  // Fetch Job Data
   useEffect(() => {
     const fetchJob = async () => {
       if (!id) return;
       try {
         setLoading(true);
-        const token = localStorage.getItem("accessToken");
-        const headers = { "Content-Type": "application/json" };
-        if (token) headers.Authorization = `Bearer ${token}`;
-
-        const res = await fetch(`${BASE_API_URL}/api/job-posting/${id}/`, { headers });
-        if (!res.ok) throw new Error(`Failed to fetch job (${res.status})`);
-        const data = await res.json();
-        setJob(data);
+        // The api instance can be used without auth for public endpoints
+        const response = await api.get(`/api/job-posting/${id}/`);
+        setJob(response.data);
       } catch (err) {
-        setError(err.message);
+        setError(err.response?.data?.detail || err.message || "Failed to fetch job");
       } finally {
         setLoading(false);
       }
@@ -81,7 +83,7 @@ export default function JobDetail1() {
     fetchJob();
   }, [id]);
 
-  // Sync accessToken
+  // Sync accessToken from localStorage to react to login/logout events
   useEffect(() => {
     const onStorage = (e) => e.key === "accessToken" && setAccessToken(e.newValue);
     window.addEventListener("storage", onStorage);
@@ -89,63 +91,55 @@ export default function JobDetail1() {
     return () => window.removeEventListener("storage", onStorage);
   }, []);
 
-  // Check role
+  // Check user role
   useEffect(() => {
     if (!accessToken) {
       setIsJobProvider(false);
       return;
     }
-    const check = async () => {
+    const checkRole = async () => {
       try {
-        const res = await fetch(`${BASE_API_URL}/api/profile/check-auth/`, {
-          headers: { Authorization: `Bearer ${accessToken}` },
-        });
-        if (res.ok) {
-          const data = await res.json();
-          setIsJobProvider(!!data.is_job_provider);
-        }
+        const response = await api.get('/api/profile/check-auth/');
+        setIsJobProvider(!!response.data.is_job_provider);
       } catch (e) {
         setIsJobProvider(false);
       }
     };
-    check();
+    checkRole();
   }, [accessToken]);
 
-  // Check if already applied
+  // Check if user has already applied
   useEffect(() => {
     if (!id || !accessToken) return;
 
-    const checkApplied = async () => {
+    const checkAppliedStatus = async () => {
       try {
-        let freelancerId = null;
-        const pfRes = await fetch(`${BASE_API_URL}/api/profile/freelancer/`, {
-          headers: { Authorization: `Bearer ${accessToken}` },
-        });
-        if (pfRes.ok) {
-          const profiles = await pfRes.json();
-          const arr = Array.isArray(profiles) ? profiles : profiles.results || [];
-          if (arr[0]?.id) freelancerId = arr[0].id;
+        // First, get the current freelancer's profile ID
+        const profileRes = await api.get('/api/profile/freelancer/');
+        const profiles = profileRes.data;
+        const currentFreelancerId = (Array.isArray(profiles) ? profiles[0]?.id : null) || localStorage.getItem("user_id");
+
+        if (currentFreelancerId) {
+          setFreelancerId(currentFreelancerId); // Store for later use in handleApply
+
+          // Now, check their applications
+          const appsRes = await api.get('/api/job-application/');
+          const apps = appsRes.data?.results || appsRes.data || [];
+          const found = apps.some(app =>
+            Number(app.job) === Number(id) &&
+            Number(app.freelancer_id) === Number(currentFreelancerId)
+          );
+          if (found) setApplied(true);
         }
-
-        const userId = freelancerId || localStorage.getItem("user_id");
-        if (!userId) return;
-
-        const res = await fetch(`${BASE_API_URL}/api/job-application/`, {
-          headers: { Authorization: `Bearer ${accessToken}` },
-        });
-        if (!res.ok) return;
-        const apps = await res.json();
-        const arr = Array.isArray(apps) ? apps : apps.results || [];
-        const found = arr.some(a => Number(a.job) === Number(id) && Number(a.freelancer_id) === Number(userId));
-        if (found) setApplied(true);
       } catch (e) {
-        console.error(e);
+        // It's okay if this fails (e.g., user is a job provider), just log it.
+        console.debug("Could not check application status:", e.message);
       }
     };
-    checkApplied();
+    checkAppliedStatus();
   }, [id, accessToken]);
 
-  // Apply Handler
+  // Handle Application Submission
   const handleApply = async (e) => {
     e.preventDefault();
     setSubmitError(null);
@@ -156,21 +150,9 @@ export default function JobDetail1() {
 
     setSubmitting(true);
     try {
-      const token = localStorage.getItem("accessToken");
-      if (!token) throw new Error("Login required");
-
-      let freelancerId = null;
-      const pfRes = await fetch(`${BASE_API_URL}/api/profile/freelancer/`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (pfRes.ok) {
-        const profiles = await pfRes.json();
-        const arr = Array.isArray(profiles) ? profiles : profiles.results || [];
-        if (arr[0]?.id) freelancerId = arr[0].id;
-      }
-
+      // Use the freelancerId from state, falling back to localStorage
       const userId = freelancerId || localStorage.getItem("user_id");
-      if (!userId) throw new Error("Profile not found");
+      if (!userId) throw new Error("Could not identify freelancer. Please ensure your profile is complete.");
 
       const fd = new FormData();
       fd.append("resume", resumeFile);
@@ -179,28 +161,28 @@ export default function JobDetail1() {
       fd.append("freelancer_id", userId);
       fd.append("cover_letter", coverLetter);
 
-      const res = await fetch(`${BASE_API_URL}/api/job-application/`, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${token}` },
-        body: fd,
-      });
-
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(Object.values(err).flat().join(" ") || "Submission failed");
-      }
+      // The api instance handles the token and headers automatically
+      await api.post('/api/job-application/', fd);
 
       setSubmitSuccess(true);
       setApplied(true);
       setTimeout(() => setShowApplyModal(false), 1500);
+
     } catch (err) {
-      setSubmitError(err.message);
+      const errorData = err.response?.data;
+      let errorMessage = "Submission failed. Please try again.";
+      if (typeof errorData === 'object' && errorData !== null) {
+        errorMessage = Object.values(errorData).flat().join(" ");
+      } else if (typeof errorData === 'string') {
+        errorMessage = errorData;
+      }
+      setSubmitError(errorMessage);
     } finally {
       setSubmitting(false);
     }
   };
 
-  // Helpers
+  // Helper functions
   const formatDate = (d) => d ? new Date(d).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : "N/A";
   const timeAgo = (d) => {
     if (!d) return "Recently";
@@ -209,20 +191,13 @@ export default function JobDetail1() {
     if (diff < 86400) return `${Math.floor(diff / 3600)} hrs ago`;
     return formatDate(d);
   };
-
   const renderMultiline = (text) => {
     if (!text) return null;
     return text.split(/\n/).map((line, i) => line.trim() ? <p key={i} className="mb-2">• {line.trim()}</p> : null);
   };
+  const isClosed = !job || String(job.job_status ?? job.status ?? '').toLowerCase() !== 'open';
 
-  // Use `job_status` to determine if job is closed. If job_status is 'open' (case-insensitive)
-  // the job is considered open; otherwise it's considered closed.
-  const isClosed = (() => {
-    if (!job) return false;
-    const status = job.job_status ?? job.status ?? '';
-    return String(status).toLowerCase() !== 'open';
-  })();
-
+  // Conditional Rendering
   if (loading) return <div className="text-center py-5"><div className="spinner-border" /></div>;
   if (error) return <div className="alert alert-danger text-center">{error}</div>;
   if (!job) return <div className="alert alert-warning text-center">Job not found</div>;
@@ -310,17 +285,13 @@ export default function JobDetail1() {
 
 
                   {/* Apply Section */}
-                  {/* Show apply button only when not a job provider, not applied yet, and job_status is 'open' */}
                   {!isJobProvider && !applied && !isClosed && (
                     <div className="bsp_reveiw_wrt mt25">
                       <h4>Apply for This Job</h4>
                       <button
                         className="ud-btn btn-thm mt-3"
                         onClick={() => {
-                          // If no access token, redirect to login page
-                          const token = localStorage.getItem("accessToken");
-                          if (!token) {
-                            // Use the same redirect approach used elsewhere in the app
+                          if (!accessToken) {
                             window.location.href = '/login';
                             return;
                           }
@@ -336,7 +307,6 @@ export default function JobDetail1() {
                     </div>
                   )}
 
-                  {/* If the job is closed (based on job_status), show a closed message */}
                   {isClosed && !applied && (
                     <div className="alert alert-danger mt-4">
                       <i className="fal fa-times-circle me-2" />
@@ -367,23 +337,14 @@ export default function JobDetail1() {
             {/* Sidebar */}
             <div className="col-lg-4" id="stikyContainer">
               <div className="column">
-                {isMatchedScreen ? (
-                  <Sticky bottomBoundary="#stikyContainer">
-                    <div className="scrollbalance-inner">
-                      <div className="blog-sidebar ms-lg-auto">
-                        <JobPriceWidget job={job} />
-                        <JobContactWidget job={job} />
-                      </div>
-                    </div>
-                  </Sticky>
-                ) : (
+                <Sticky enabled={isMatchedScreen} top={100} bottomBoundary="#stikyContainer">
                   <div className="scrollbalance-inner">
                     <div className="blog-sidebar ms-lg-auto">
                       <JobPriceWidget job={job} />
                       <JobContactWidget job={job} />
                     </div>
                   </div>
-                )}
+                </Sticky>
               </div>
             </div>
           </div>
@@ -400,17 +361,14 @@ export default function JobDetail1() {
               inset: 0,
               background: "rgba(0,0,0,0.5)",
               zIndex: 2000,
-              // ensure the overlay captures clicks but doesn't block the dialog
               pointerEvents: "auto",
             }}
-            // Only close when clicking directly on the overlay (not when clicks bubble from inside the modal)
             onClick={(e) => {
               if (e.target === e.currentTarget) setShowApplyModal(false);
             }}
           />
           <div
             className="modal-dialog"
-            // Prevent clicks inside the modal from bubbling to the overlay
             onClick={(e) => e.stopPropagation()}
             role="dialog"
             aria-modal="true"
@@ -477,17 +435,17 @@ export default function JobDetail1() {
                 </div>
               )}
 
-              <div className="d-flex justify-content-end gap-2">
+              <div className="d-flex justify-content-end gap-2 mt-4">
                 <button
                   type="button"
-                  className="btn btn-secondary"
+                  className="ud-btn btn-light"
                   onClick={() => setShowApplyModal(false)}
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="btn btn-thm"
+                  className="ud-btn btn-thm"
                   disabled={submitting}
                 >
                   {submitting ? "Submitting..." : "Submit Application"}
