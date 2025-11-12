@@ -23,11 +23,11 @@ const gigImagesSmall = [
 export default function EmployeeDetailSlider1() {
   const [thumbsSwiper, setThumbsSwiper] = useState(null);
 
-  return (
+  // return (
     <>
       <div className="employee-single-slider vam_nav_style slider-1-grid owl-carousel owl-theme mt55 mb60 owl-loaded owl-drag">
         <div className="thumb">
-          <Swiper
+          {/* <Swiper
             loop={true}
             spaceBetween={10}
             navigation={{
@@ -52,16 +52,16 @@ export default function EmployeeDetailSlider1() {
                 />
               </SwiperSlide>
             ))}
-          </Swiper>
+          </Swiper> */}
         </div>
-        <button type="button" className="prev-btn">
+        {/* <button type="button" className="prev-btn">
           <i className="far fa-arrow-left-long" />
         </button>
         <button type="button" className="next-btn">
           <i className="far fa-arrow-right-long" />
-        </button>
+        </button> */}
 
-        <Swiper
+        {/* <Swiper
           onSwiper={setThumbsSwiper}
           loop={true}
           spaceBetween={10}
@@ -82,8 +82,8 @@ export default function EmployeeDetailSlider1() {
               />
             </SwiperSlide>
           ))}
-        </Swiper>
+        </Swiper> */}
       </div>
     </>
-  );
+  // );
 }

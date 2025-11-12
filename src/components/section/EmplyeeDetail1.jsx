@@ -203,9 +203,7 @@ export default function EmployeeDetail1() {
 
                 <h5 className="mb20 mt60">Who are we?</h5>
                 <p className="text mb30">
-                  {jobProvider.company_name || "Our company"} is a leading organization in the {industryDisplay} 
-                  industry. We specialize in providing quality services and creating opportunities for 
-                  talented professionals to grow and succeed in their careers.
+                  {jobProvider.company_name || "Our company"} is a leading organization in the {industryDisplay} industry. We specialize in providing quality services and creating opportunities for talented professionals to grow and succeed in their careers.
                 </p>
 
                 <h5 className="mb20 mt60">What do we do?</h5>
