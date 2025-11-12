@@ -85,9 +85,9 @@ export default function JobDetail1() {
 
   // Sync accessToken from localStorage to react to login/logout events
   useEffect(() => {
-    const onStorage = (e) => e.key === "accessToken" && setAccessToken(e.newValue);
+    const onStorage = (e) => e.key === "access_token" && setAccessToken(e.newValue);
     window.addEventListener("storage", onStorage);
-    setAccessToken(localStorage.getItem("accessToken"));
+    setAccessToken(localStorage.getItem("access_token"));
     return () => window.removeEventListener("storage", onStorage);
   }, []);
 
