@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { dasboardNavigation } from "@/data/dashboard";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import api from '@/lib/axios';
 
 export default function DashboardSidebar() {
   const path = usePathname();
@@ -11,33 +12,26 @@ export default function DashboardSidebar() {
   const [loading, setLoading] = useState(true); // To handle loading state
 
   useEffect(() => {
-    const userId = localStorage.getItem("user_id"); // Get the user_id from localStorage
+    const userId = localStorage.getItem("user_id");
 
     if (userId) {
-      // Fetch role based on the user_id
       const fetchRole = async () => {
         try {
-          // Make an API call to fetch roles
-          const response = await fetch(`http://206.189.134.117:8000/api/user/${userId}/roles/`);
-          const data = await response.json();
-          
-          if (response.ok) {
-            // If the response is OK, set the first role from the returned data
-            setRole(data.roles?.[0] || "freelancer"); // Default to 'freelancer' if no role is found
-          } else {
-            setRole("freelancer"); // Fallback role in case of error
-          }
+          const response = await api.get(`/api/user/${userId}/roles/`);
+
+          // Set the first role from the returned data
+          setRole(response.data.roles?.[0] || "freelancer");
         } catch (error) {
           console.error("Error fetching role:", error);
           setRole("freelancer"); // Fallback in case of error
         } finally {
-          setLoading(false); // Stop loading once the data is fetched
+          setLoading(false);
         }
       };
 
       fetchRole();
     } else {
-      setLoading(false); // If no user_id is found in localStorage, stop loading
+      setLoading(false);
     }
   }, []);
 

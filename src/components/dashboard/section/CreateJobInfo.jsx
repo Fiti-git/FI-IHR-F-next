@@ -1,7 +1,7 @@
 "use client";
 import DashboardNavigation from "../header/DashboardNavigation";
 import Jobform from "./JobFormInformation";
-import UploadAttachment from "./UploadAttachment";
+// import UploadAttachment from "./UploadAttachment";
 
 export default function CreateJobInfo() {
   return (
@@ -30,7 +30,6 @@ export default function CreateJobInfo() {
         <div className="row">
           <div className="col-xl-12">
             <Jobform />
-            <UploadAttachment />
           </div>
         </div>
       </div>

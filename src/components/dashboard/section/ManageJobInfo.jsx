@@ -6,34 +6,18 @@ import Pagination1 from "@/components/section/Pagination1";
 import ProposalModal1 from "../modal/ProposalModal1";
 import DeleteModal from "../modal/DeleteModal";
 import { useRouter } from "next/navigation"; // Next.js 13+ app router
+import api from '@/lib/axios';
 
 // Fetch jobs function
-const fetchJobs = async (accessToken) => {
-  if (!accessToken) {
+const fetchJobs = async (access_token) => {
+  if (!access_token) {
     return { jobs: [], unauthorized: true }; // signal to redirect
   }
 
   try {
-    const response = await fetch("http://206.189.134.117:8000/api/job-manage/", {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-        Accept: "application/json",
-        Authorization: `Bearer ${accessToken}`,
-      },
-    });
+    const response = await api.get("/api/job-manage/");
 
-    if (response.status === 401) {
-      return { jobs: [], unauthorized: true }; // invalid token
-    }
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-
-    const data = await response.json();
-
-    const jobsData = data.jobs.map((job) => ({
+    const jobsData = response.data.jobs.map((job) => ({
       id: job.job_id,
       title: job.job_title,
       category: job.job_category,
@@ -46,6 +30,11 @@ const fetchJobs = async (accessToken) => {
     return { jobs: jobsData, unauthorized: false };
   } catch (error) {
     console.error("Error fetching jobs:", error);
+
+    if (error.response?.status === 401) {
+      return { jobs: [], unauthorized: true };
+    }
+
     return { jobs: [], unauthorized: false };
   }
 };
@@ -120,12 +109,12 @@ export default function PostedJobs() {
     const loadJobs = async () => {
       setLoading(true);
 
-      let accessToken;
+      let access_token;
       if (typeof window !== "undefined") {
-        accessToken = localStorage.getItem("accessToken");
+        access_token = localStorage.getItem("access_token");
       }
 
-      const { jobs: jobsData, unauthorized } = await fetchJobs(accessToken);
+      const { jobs: jobsData, unauthorized } = await fetchJobs(access_token);
 
       if (unauthorized) {
         router.push("/login"); // redirect if no token or invalid

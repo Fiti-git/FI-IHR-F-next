@@ -1,9 +1,10 @@
 "use client";
 
-import { useState,useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Header20 from "@/components/header/Header20";
 import Footer from "@/components/footer/Footer";
+import api from '@/lib/axios';
 
 
 // Note: I've updated this form to use <select> dropdowns for fields with choices.
@@ -35,7 +36,7 @@ const EmployerForm = ({ onSubmit, loading }) => {
 
     return (
         <form onSubmit={handleSubmit} className="form-style1 bgc-white p50 p30-sm default-box-shadow1 bdrs12">
-            <h4 className="text-center mb30">Complete Your Employer Profile</h4>
+            <h4 className="text-center mb30">Complete Your Job Provider Profile</h4>
             <div className="mb-3">
                 <label className="form-label">Upload Logo</label>
                 <input type="file" name="profile_image" className="form-control" onChange={handleFileChange} />
@@ -155,7 +156,7 @@ const EmployeeForm = ({ onSubmit, loading }) => {
 
     return (
         <form onSubmit={handleSubmit} className="form-style1 bgc-white p50 p30-sm default-box-shadow1 bdrs12">
-            <h4 className="text-center mb30">Complete Your Employee Profile</h4>
+            <h4 className="text-center mb30">Complete Your Freelancer Profile</h4>
             <div className="mb-3">
                 <label className="form-label">Upload Profile Image</label>
                 <input type="file" name="profile_image" className="form-control" onChange={handleFileChange} />
@@ -302,33 +303,12 @@ export default function SelectRolePage() {
     const [loading, setLoading] = useState(false);
     const [message, setMessage] = useState("");
     const [selectedRole, setSelectedRole] = useState(null);
-const [accessToken, setAccessToken] = useState(null);
-
-useEffect(() => {
-  if (typeof window !== "undefined") {
-    const token = localStorage.getItem("accessToken");
-    setAccessToken(token);
-  }
-}, []);
 
 
     const handleRoleSelection = async (role) => {
         try {
-            const res = await fetch("http://206.189.134.117:8000/myapi/set-role/", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    "Authorization": `Bearer ${accessToken}`, // Send token to authenticate the user
-                },
-                body: JSON.stringify({ role }),
-            });
-
-            if (!res.ok) {
-                const data = await res.json();
-                setMessage(data.error || "Failed to save role.");
-            } else {
-                setSelectedRole(role);
-            }
+            const res = await api.post('/myapi/set-role/', { role });
+            setSelectedRole(role);
         } catch (error) {
             setMessage("An error occurred. Please try again.");
             console.error("Set role error:", error);
@@ -340,11 +320,11 @@ useEffect(() => {
     const handleProfileSubmit = async (profileData) => {
         setLoading(true);
         setMessage("");
-        console.log(localStorage.getItem("accessToken"))
+        console.log(localStorage.getItem("access_token"))
         console.log(localStorage)
 
-        const accessToken = localStorage.getItem("accessToken");
-        if (!accessToken) {
+        const access_token = localStorage.getItem("access_token");
+        if (!access_token) {
             setMessage("Authentication error. Please log in again.");
             setLoading(false);
             router.push("/login");
@@ -352,7 +332,6 @@ useEffect(() => {
         }
 
         const dataToSend = new FormData();
-        let apiUrl = "";
 
         // Populate FormData with all key-value pairs from profileData
         for (const key in profileData) {
@@ -364,10 +343,11 @@ useEffect(() => {
             }
         }
 
-        if (selectedRole === 'employee') {
-            apiUrl = "http://206.189.134.117:8000/api/profile/freelancer/";
-        } else if (selectedRole === 'employer') {
-            apiUrl = "http://206.189.134.117:8000/api/profile/job-provider/";
+        let apiUrl;
+        if (selectedRole === 'Freelancer') {
+            apiUrl = "/api/profile/freelancer/";
+        } else if (selectedRole === 'Job Provider') {
+            apiUrl = "/api/profile/job-provider/";
         } else {
             setMessage("No role selected.");
             setLoading(false);
@@ -375,35 +355,32 @@ useEffect(() => {
         }
 
         try {
-            const res = await fetch(apiUrl, {
-                method: "POST",
-                headers: {
-                    "Authorization": `Bearer ${accessToken}`,
-                    // IMPORTANT: Do NOT set 'Content-Type'.
-                    // The browser will automatically set it to 'multipart/form-data'
-                    // with the correct boundary when the body is a FormData object.
-                },
-                body: dataToSend,
-            });
-
-            if (!res.ok) {
-                const errorData = await res.json();
-                // Create a readable error message from the backend's response
-                const errorMessages = Object.entries(errorData)
-                    .map(([field, errors]) => `${field}: ${errors.join(' ')}`)
-                    .join('\n');
-                throw new Error(errorMessages || "Failed to save profile. Please check the form.");
-            }
+            // IMPORTANT: For FormData, axios automatically sets the correct Content-Type
+            const res = await api.post(apiUrl, dataToSend);
 
             // On success, redirect to the appropriate dashboard
-            if (selectedRole === 'employer') {
+            if (selectedRole === 'Job Provider') {
                 router.push("/job-provider");
             } else {
                 router.push("/freelancer");
             }
 
         } catch (error) {
-            setMessage(error.message);
+            // Handle validation errors from backend
+            const errorData = error.response?.data;
+
+            if (errorData) {
+                const errorMessages = Object.entries(errorData)
+                    .map(([field, errors]) => {
+                        const errorArray = Array.isArray(errors) ? errors : [errors];
+                        return `${field}: ${errorArray.join(' ')}`;
+                    })
+                    .join('\n');
+                setMessage(errorMessages);
+            } else {
+                setMessage(error.message || "Failed to save profile. Please check the form.");
+            }
+
             console.error("Profile submission error:", error);
         } finally {
             setLoading(false);
@@ -411,11 +388,11 @@ useEffect(() => {
     };
 
     const renderContent = () => {
-        if (selectedRole === 'employer') {
+        if (selectedRole === 'Job Provider') {
             return <EmployerForm onSubmit={handleProfileSubmit} loading={loading} />;
         }
 
-        if (selectedRole === 'employee') {
+        if (selectedRole === 'Freelancer') {
             return <EmployeeForm onSubmit={handleProfileSubmit} loading={loading} />;
         }
 
@@ -429,14 +406,14 @@ useEffect(() => {
                 <div className="d-grid gap-3">
                     <button
                         className="ud-btn btn-thm"
-                        onClick={() => handleRoleSelection('employer')}
+                        onClick={() => handleRoleSelection('Job Provider')}
                         disabled={loading}
                     >
-                        {loading ? "..." : "I am an Employer (Hiring)"}
+                        {loading ? "..." : "I am a Job Provider (Hiring)"}
                     </button>
                     <button
                         className="ud-btn btn-dark"
-                        onClick={() => handleRoleSelection('employee')}
+                        onClick={() => handleRoleSelection('Freelancer')}
                         disabled={loading}
                     >
                         {loading ? "..." : "I am a Freelancer (Offering Services)"}

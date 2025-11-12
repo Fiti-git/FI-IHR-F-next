@@ -5,6 +5,7 @@ import { useState, useEffect } from "react";
 import Pagination1 from "@/components/section/Pagination1";
 import ProposalModal1 from "../modal/ProposalModal1";
 import DeleteModal from "../modal/DeleteModal";
+import api from '@/lib/axios';
 
 // Status badge component for consistency
 const StatusBadge = ({ status }) => {
@@ -69,21 +70,21 @@ function ProjectRow({ project, onDelete }) {
       </td>
       <td>
         <div className="d-flex gap-2">
-          <Link 
-            href={`/projects/${project.id}`} 
+          <Link
+            href={`/projects/${project.id}`}
             className="btn btn-sm btn-outline-primary"
             title="View Details"
           >
             <i className="fal fa-eye"></i>
           </Link>
-          <Link 
-            href={`/edit-project/${project.id}`} 
+          <Link
+            href={`/edit-project/${project.id}`}
             className="btn btn-sm btn-outline-secondary"
             title="Edit Project"
           >
             <i className="fal fa-edit"></i>
           </Link>
-          <button 
+          <button
             className="btn btn-sm btn-outline-danger"
             onClick={() => onDelete(project.id)}
             title="Delete Project"
@@ -105,14 +106,11 @@ export default function ManageProjectInfo() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [deleteProjectId, setDeleteProjectId] = useState(null);
 
-  // API URL
-  const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://206.189.134.117:8000/api/project/projects/";
-
   // Check authentication on component mount
   useEffect(() => {
-    const token = localStorage.getItem('accessToken');
+    const token = localStorage.getItem('access_token');
     setIsAuthenticated(!!token);
-    
+
     if (token) {
       fetchProjects();
     } else {
@@ -121,52 +119,28 @@ export default function ManageProjectInfo() {
     }
   }, []);
 
-  // Fetch projects from API
   const fetchProjects = async () => {
     try {
       setLoading(true);
       setError(null);
 
-      const token = localStorage.getItem('accessToken');
+      const token = localStorage.getItem('access_token');
       if (!token) {
         throw new Error("No authentication token found");
       }
 
-      // Fetch only the authenticated user's projects
-      const response = await fetch(`${API_URL}my_projects/`, {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`
-        },
-      });
+      const response = await api.get('/api/project/projects/my_projects/');
+      console.log("Fetched user projects:", response.data);
 
-      if (!response.ok) {
-        if (response.status === 401) {
-          localStorage.removeItem('accessToken');
-          localStorage.removeItem('refreshToken');
-          setIsAuthenticated(false);
-          throw new Error("Session expired. Please log in again.");
-        }
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const data = await response.json();
-      console.log("Fetched user projects:", data);
-      
       // Handle both paginated and non-paginated responses
-      const projectsArray = data.results ? data.results : data;
+      const projectsArray = response.data.results ? response.data.results : response.data;
       setProjects(projectsArray);
 
     } catch (err) {
       console.error("Error fetching projects:", err);
-      setError(err.message || "Failed to fetch projects");
-      
-      if (err.message.includes("Session expired")) {
-        setTimeout(() => {
-          window.location.href = '/login';
-        }, 2000);
-      }
+      setError(err.response?.data?.message || err.message || "Failed to fetch projects");
+
+      // Axios interceptor will handle 401 redirect automatically
     } finally {
       setLoading(false);
     }
@@ -179,26 +153,12 @@ export default function ManageProjectInfo() {
     }
 
     try {
-      const token = localStorage.getItem('accessToken');
+      const token = localStorage.getItem('access_token');
       if (!token) {
         throw new Error("No authentication token found");
       }
 
-      const response = await fetch(`${API_URL}${projectId}/`, {
-        method: "DELETE",
-        headers: {
-          "Authorization": `Bearer ${token}`
-        },
-      });
-
-      if (!response.ok) {
-        if (response.status === 401) {
-          throw new Error("Session expired. Please log in again.");
-        } else if (response.status === 403) {
-          throw new Error("You don't have permission to delete this project.");
-        }
-        throw new Error(`Failed to delete project`);
-      }
+      await api.delete(`/api/project/projects/${projectId}/`);
 
       // Remove project from state
       setProjects(projects.filter(p => p.id !== projectId));
@@ -206,13 +166,18 @@ export default function ManageProjectInfo() {
 
     } catch (err) {
       console.error("Error deleting project:", err);
-      alert(err.message || "Failed to delete project");
+
+      if (err.response?.status === 403) {
+        alert("You don't have permission to delete this project.");
+      } else {
+        alert(err.response?.data?.message || err.message || "Failed to delete project");
+      }
     }
   };
 
   // Filter projects by status
-  const filteredProjects = filter === "All" 
-    ? projects 
+  const filteredProjects = filter === "All"
+    ? projects
     : projects.filter((p) => p.status.toLowerCase() === filter.toLowerCase());
 
   // Render loading state
@@ -275,7 +240,7 @@ export default function ManageProjectInfo() {
             <div className="dashboard_title_area">
               <h2>My Projects</h2>
               <p className="text">
-                Manage all your posted projects. 
+                Manage all your posted projects.
                 <span className="fw-bold ms-2">
                   ({filteredProjects.length} {filteredProjects.length === 1 ? 'project' : 'projects'})
                 </span>
@@ -299,9 +264,9 @@ export default function ManageProjectInfo() {
               {error && (
                 <div className="alert alert-danger alert-dismissible fade show" role="alert">
                   <strong>Error:</strong> {error}
-                  <button 
-                    type="button" 
-                    className="btn-close" 
+                  <button
+                    type="button"
+                    className="btn-close"
                     onClick={() => setError(null)}
                   ></button>
                 </div>
@@ -329,7 +294,7 @@ export default function ManageProjectInfo() {
                     <option value="completed">Completed</option>
                     <option value="cancelled">Cancelled</option>
                   </select>
-                  <button 
+                  <button
                     className="btn btn-sm btn-outline-primary"
                     onClick={fetchProjects}
                     title="Refresh"
@@ -354,8 +319,8 @@ export default function ManageProjectInfo() {
                   <tbody className="t-body">
                     {filteredProjects.length > 0 ? (
                       filteredProjects.map((project) => (
-                        <ProjectRow 
-                          key={project.id} 
+                        <ProjectRow
+                          key={project.id}
                           project={project}
                           onDelete={handleDeleteProject}
                         />
@@ -366,13 +331,13 @@ export default function ManageProjectInfo() {
                           <div className="text-muted">
                             <i className="fal fa-folder-open fa-3x mb-3 d-block"></i>
                             <p className="mb-0">
-                              {filter === "All" 
-                                ? "No projects found. Start by creating your first project!" 
+                              {filter === "All"
+                                ? "No projects found. Start by creating your first project!"
                                 : `No ${filter.toLowerCase()} projects found.`}
                             </p>
                             {filter === "All" && (
-                              <Link 
-                                href="/create-projects" 
+                              <Link
+                                href="/create-projects"
                                 className="btn btn-primary mt-3"
                               >
                                 Create Your First Project

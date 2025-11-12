@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation"; // Use next/navigation for App Router
 import Navigation from "./Navigation";
 import MobileNavigation2 from "./MobileNavigation2";
+import api from '@/lib/axios';
 
 export default function Header19() {
   // 1. Store the full user object instead of just a boolean
@@ -14,32 +15,25 @@ export default function Header19() {
 
   useEffect(() => {
     const checkAuthStatus = async () => {
-      const accessToken = localStorage.getItem("accessToken");
-      if (!accessToken) {
+      const access_token = localStorage.getItem("access_token");
+      if (!access_token) {
         setUser(null);
         return;
       }
 
       try {
-        const response = await fetch("http://206.189.134.117:8000/api/profile/check-auth/", {
-          method: "GET",
-          headers: {
-            "Authorization": `Bearer ${accessToken}`,
-          },
-        });
+        const response = await api.get("/api/profile/check-auth/");
 
-        if (response.ok) {
-          const data = await response.json();
-          // 2. Set the user state with data from the API (which includes roles)
-          if (data.isAuthenticated) {
-            setUser(data);
-          }
+        // Set the user state with data from the API (which includes roles)
+        if (response.data.isAuthenticated) {
+          setUser(response.data);
         } else {
-          setUser(null); // Token is invalid or expired
+          setUser(null);
         }
       } catch (error) {
         console.error('Error checking authentication status:', error);
         setUser(null);
+        // Axios interceptor will handle 401 redirect automatically
       }
     };
 
@@ -47,7 +41,7 @@ export default function Header19() {
   }, []);
 
   const handleLogout = () => {
-    localStorage.removeItem("accessToken");
+    localStorage.removeItem("access_token");
     setUser(null);
     // Redirect to login page after logout
     router.push("/login");
@@ -101,7 +95,7 @@ export default function Header19() {
                         </Link>
                       ) : user.roles?.includes('job-provider') ? (
                         <Link href="/job-provider-dashboard" className="login-info mr10 home18-sign-btn px30 py-1 bdrs12 ml30 bdr1-dark">
-                          Employer Dashboard
+                          Job Provider Dashboard
                         </Link>
                       ) : (
                         // Fallback link if user has no specific role

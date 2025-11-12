@@ -5,7 +5,7 @@ import MobileNavigation2 from "@/components/header/MobileNavigation2";
 
 export const metadata = {
   title:
-    "IHRHUB | Single Job",
+    "IHRHUB | Single Job by id",
 };
 
 export default function page() {

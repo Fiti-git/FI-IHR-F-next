@@ -7,11 +7,12 @@ import EmployeeDetailSlider1 from "../element/EmployeeDetailSlider1";
 import ServiceDetailComment1 from "../element/ServiceDetailComment1";
 import ServiceDetailReviewInfo1 from "../element/ServiceDetailReviewInfo1";
 import JobCard5 from "../card/JobCard5";
+import api from '@/lib/axios';
 
 export default function EmployeeDetail1() {
   const params = useParams();
   const userId = params?.id;
-  
+
   const [jobProvider, setJobProvider] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -22,33 +23,22 @@ export default function EmployeeDetail1() {
 
       try {
         setLoading(true);
-        // Fetch all job providers and find the one with matching user ID
-        const response = await fetch("http://206.189.134.117:8000/api/profile/job-providers/", {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-          },
-        });
 
-        if (response.ok) {
-          const data = await response.json();
-          console.log("Fetched job providers:", data);
-          
-          // Find the job provider with matching user ID
-          const provider = data.find(p => p.user?.id === parseInt(userId));
-          
-          if (provider) {
-            setJobProvider(provider);
-            setError(null);
-          } else {
-            setError("Job provider not found");
-          }
+        const response = await api.get("/api/profile/job-providers/");
+        console.log("Fetched job providers:", response.data);
+
+        // Find the job provider with matching user ID
+        const provider = response.data.find(p => p.user?.id === parseInt(userId));
+
+        if (provider) {
+          setJobProvider(provider);
+          setError(null);
         } else {
-          throw new Error(`HTTP error! status: ${response.status}`);
+          setError("Job provider not found");
         }
       } catch (err) {
         console.error("Error fetching job provider:", err);
-        setError(err.message);
+        setError(err.response?.data?.message || err.message);
       } finally {
         setLoading(false);
       }
@@ -95,7 +85,7 @@ export default function EmployeeDetail1() {
 
   // Extract and format data
   const user = jobProvider.user || {};
-  const displayName = user.first_name && user.last_name 
+  const displayName = user.first_name && user.last_name
     ? `${user.first_name} ${user.last_name}`.trim()
     : user.first_name || user.last_name || user.username || jobProvider.company_name || "User";
 
@@ -140,7 +130,7 @@ export default function EmployeeDetail1() {
             <div className="col-lg-8">
               <div className="service-about">
                 <h4 className="mb20">About {jobProvider.company_name || "Company"}</h4>
-                
+
                 {jobProvider.company_overview ? (
                   <>
                     {jobProvider.company_overview.split('\n\n').map((paragraph, index) => (
@@ -152,13 +142,13 @@ export default function EmployeeDetail1() {
                 ) : (
                   <>
                     <p className="text mb30">
-                      Welcome to {jobProvider.company_name || "our company"}. We are committed to 
-                      providing excellent opportunities and fostering a great work environment for 
+                      Welcome to {jobProvider.company_name || "our company"}. We are committed to
+                      providing excellent opportunities and fostering a great work environment for
                       talented professionals.
                     </p>
                     <p className="text mb30">
-                      Our team is dedicated to innovation and excellence in the {industryDisplay} sector. 
-                      We offer {jobTypeDisplay.toLowerCase()} positions and are always looking for 
+                      Our team is dedicated to innovation and excellence in the {industryDisplay} sector.
+                      We offer {jobTypeDisplay.toLowerCase()} positions and are always looking for
                       passionate individuals to join our growing team.
                     </p>
                   </>
@@ -208,14 +198,14 @@ export default function EmployeeDetail1() {
 
                 <h5 className="mb20 mt60">What do we do?</h5>
                 <p className="text mb30">
-                  We offer {jobTypeDisplay.toLowerCase()} positions in various departments. Our company 
-                  is committed to excellence and innovation, providing a dynamic work environment 
-                  where employees can thrive and develop their skills. We believe in fostering a 
+                  We offer {jobTypeDisplay.toLowerCase()} positions in various departments. Our company
+                  is committed to excellence and innovation, providing a dynamic work environment
+                  where employees can thrive and develop their skills. We believe in fostering a
                   culture of collaboration and continuous improvement.
                 </p>
 
                 <EmployeeDetailSlider1 />
-                
+
                 <div className="row">
                   <h4 className="mb25">Open Positions</h4>
                   <p className="text-muted mb30">

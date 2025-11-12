@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import Image from "next/image";
 import { useParams } from "next/navigation";
+import api from '@/lib/axios';
 
 export default function Breadcumb11() {
   const { id } = useParams();
@@ -9,30 +10,18 @@ export default function Breadcumb11() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://206.189.134.117:8000/api/project/projects/";
-
   useEffect(() => {
     const fetchProject = async () => {
       if (!id) return;
 
       try {
         setLoading(true);
-        const response = await fetch(`${API_URL}${id}/`, {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-          },
-        });
-
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-
-        const data = await response.json();
-        setProject(data);
+        const response = await api.get(`/api/project/projects/${id}/`);
+        setProject(response.data);
+        setError(null); // Clear any previous errors
       } catch (err) {
         console.error("Error fetching project:", err);
-        setError(err.message);
+        setError(err.response?.data?.message || err.message || `Failed to fetch project`);
       } finally {
         setLoading(false);
       }
@@ -88,11 +77,10 @@ export default function Breadcumb11() {
                           <i className="flaticon-calendar me-2"></i>
                           {project.project_type === "fixed_price" ? "Fixed Price" : "Hourly"}
                         </span>
-                        <span className={`badge px-3 py-2 ${
-                          project.status === 'open' ? 'bg-success' : 
-                          project.status === 'in_progress' ? 'bg-warning' : 
-                          project.status === 'completed' ? 'bg-info' : 'bg-secondary'
-                        }`}>
+                        <span className={`badge px-3 py-2 ${project.status === 'open' ? 'bg-success' :
+                          project.status === 'in_progress' ? 'bg-warning' :
+                            project.status === 'completed' ? 'bg-info' : 'bg-secondary'
+                          }`}>
                           <i className="flaticon-tick me-2"></i>
                           {project.status.replace('_', ' ').toUpperCase()}
                         </span>

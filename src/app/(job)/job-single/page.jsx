@@ -17,10 +17,11 @@ export default function JobSinglePage() {
       {/* Wrap dynamic parts in Suspense */}
       <Suspense fallback={<div className="text-center py-5">Loading job details...</div>}>
         <TabSection1 />
+        
         <JobDetail1 />
       </Suspense>
 
-      <Breadcumb10 path={["Home", "Services", "Design & Creative"]} />
+      
       <Breadcumb13 />
     </>
   );

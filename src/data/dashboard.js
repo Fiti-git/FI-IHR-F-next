@@ -5,31 +5,31 @@ export const dasboardNavigation = [
     name: "Dashboard",
     icon: "flaticon-home",
     pathByRole: {
-      "Employer": "/job-provider",
-      "Employee": "/freelancer",
+      "Job Provider": "/job-provider",
+      "Freelancer": "/freelancer",
     },
-    roles: ["Employee", "Employer"],
+    roles: ["Freelancer", "Job Provider"],
   },
   {
     id: 2,
     name: "Messages",
     icon: "flaticon-chat",
     path: "/message",
-    roles: ["Employee", "Employer"],
+    roles: ["Freelancer", "Job Provider"],
   },
   // {
   //   id: 4,
   //   name: "Reviews",
   //   icon: "flaticon-review-1",
   //   path: "/reviews",
-  //   roles: ["freelancer", "Employer"],
+  //   roles: ["freelancer", "Job Provider"],
   // },
   {
     id: 5,
     name: "Wallet",
     icon: "flaticon-wallet",
     path: "/statements",
-    roles: ["Employee", "Employer"],
+    roles: ["Freelancer", "Job Provider"],
   },
 
   // Freelancer
@@ -45,14 +45,14 @@ export const dasboardNavigation = [
     name: "Mange Projects",
     icon: "flaticon-content",
     path: "/my-projects",
-    roles: ["Employee"],
+    roles: ["Freelancer"],
   },
   {
     id: 8,
     name: "Manage Jobs",
     icon: "flaticon-presentation",
     path: "/manage-myjobs",
-    roles: ["Employee"],
+    roles: ["Freelancer"],
   },
   // {
   //   id: 9,
@@ -68,21 +68,21 @@ export const dasboardNavigation = [
     name: "Manage Jobs",
     icon: "flaticon-briefcase",
     path: "/manage-jobs",
-    roles: ["Employer"],
+    roles: ["Job Provider"],
   },
   {
     id: 11,
     name: "Manage Project",
     icon: "flaticon-working",
     path: "/manage-projects",
-    roles: ["Employer"],
+    roles: ["Job Provider"],
   },
   // {
   //   id: 12,
   //   name: "Services",
   //   icon: "flaticon-content",
   //   path: "/request-services",
-  //   roles: ["Employer"],
+  //   roles: ["Job Provider"],
   // },
 
   // Common (Bottom)
@@ -91,10 +91,10 @@ export const dasboardNavigation = [
     name: "My Profile",
     icon: "flaticon-photo",
     pathByRole: {
-      "Employer": "/jp-profile",
-      Employee: "/profile",
+      "Job Provider": "/jp-profile",
+      Freelancer: "/profile",
     },
-    roles: ["Employee", "Employer"],
+    roles: ["Freelancer", "Job Provider"],
   },
 
   {
@@ -102,32 +102,32 @@ export const dasboardNavigation = [
     name: "Logout",
     icon: "flaticon-logout",
     path: "/logout",
-    roles: ["Employee", "Employer"],
+    roles: ["Freelancer", "Job Provider"],
   },
-    {
+  {
     id: 15,
     name: "Support",
     icon: "flaticon-question",
     path: "/help",
-    roles: ["Employee", "Employer"],
+    roles: ["Freelancer", "Job Provider"],
   },
   {
-  id: 99,
-  name: "Explore",
-  icon: "flaticon-search",
-  path: "/explore",
-  roles: [], // <-- Show to everyone, including users with no role
-},
-{
-  id: 100,
-  name: "Login",
-  icon: "flaticon-user",
-  path: "/login",
-  roles: ["undefined"], // Visible even without a role
-}
+    id: 99,
+    name: "Explore",
+    icon: "flaticon-search",
+    path: "/explore",
+    roles: [], // <-- Show to everyone, including users with no role
+  },
+  {
+    id: 100,
+    name: "Login",
+    icon: "flaticon-user",
+    path: "/login",
+    roles: ["undefined"], // Visible even without a role
+  }
 
 
-  
+
 ];
 
 
@@ -285,7 +285,7 @@ export const statement = [
     id: 1,
     date: "April 9, 2023",
     type: 1,
-    Employee: "Jane Smith",
+    Freelancer: "Jane Smith",
     client: "Acme Corp",
     amount: 829,
   },
@@ -293,7 +293,7 @@ export const statement = [
     id: 2,
     date: "April 10, 2023",
     type: 1,
-    Employee: "Mike Johnson",
+    Freelancer: "Mike Johnson",
     client: "Beta LLC",
     amount: 1200,
   },

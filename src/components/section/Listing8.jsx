@@ -7,6 +7,8 @@ import Pagination1 from "./Pagination1";
 import listingStore from "@/store/listingStore";
 import priceStore from "@/store/priceStore";
 import ListingSidebarModal2 from "../modal/ListingSidebarModal2";
+import api from '@/lib/axios';
+import { API_BASE_URL } from '@/lib/config';
 
 export default function Listing8({ searchFilters }) {
   // State for API data
@@ -27,10 +29,6 @@ export default function Listing8({ searchFilters }) {
   const getBestSeller = listingStore((state) => state.getBestSeller);
   const getEnglishLevel = listingStore((state) => state.getEnglishLevel);
 
-  // API URL
-  const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://206.189.134.117:8000/api/project/projects/";
-
-  // Reset to page 1 when search filters change
   useEffect(() => {
     setCurrentPage(1);
   }, [searchFilters]);
@@ -42,37 +40,26 @@ export default function Listing8({ searchFilters }) {
         setLoading(true);
         setError(null);
 
-        const response = await fetch(API_URL, {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-          },
-        });
+        const response = await api.get('/api/project/projects/');
+        console.log("Fetched projects:", response.data);
 
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-
-        const data = await response.json();
-        console.log("Fetched projects:", data);
-        
         // Transform API data to match ProjectCard1 structure
-        const transformedProjects = data.map((project) => {
+        const transformedProjects = response.data.map((project) => {
           // Handle image URL properly - use image_url from serializer or construct it
-          const imageUrl = project.image_url 
-            || (project.image 
-                ? (project.image.startsWith('http') 
-                    ? project.image 
-                    : `http://127.0.0.1:8000${project.image}`)
-                : null);
+          const imageUrl = project.image_url
+            || (project.image
+              ? (project.image.startsWith('http')
+                ? project.image
+                : `${API_BASE_URL}${project.image}`)
+              : null);
 
           // Handle user profile image
           const userProfileImage = project.user?.profile_image_url
             || (project.user?.profile_image
-                ? (project.user.profile_image.startsWith('http')
-                    ? project.user.profile_image
-                    : `http://127.0.0.1:8000${project.user.profile_image}`)
-                : "/images/team/default-avatar.png");
+              ? (project.user.profile_image.startsWith('http')
+                ? project.user.profile_image
+                : `${API_BASE_URL}${project.user.profile_image}`)
+              : "/images/team/default-avatar.png");
 
           return {
             id: project.id,
@@ -87,7 +74,7 @@ export default function Listing8({ searchFilters }) {
             user: project.user,
             createdAt: project.created_at,
             updatedAt: project.updated_at,
-            
+
             // Add fields that ProjectCard1 might expect
             price: {
               min: parseFloat(project.budget),
@@ -95,22 +82,22 @@ export default function Listing8({ searchFilters }) {
             },
             location: project.user?.first_name || "Remote",
             skills: project.category || "",
-            skill: [project.category] || [], // Array format
-            tags: [project.category] || [], // Tags array
+            skill: [project.category] || [],
+            tags: [project.category] || [],
             brief: project.description?.substring(0, 100) + "..." || "No description",
             language: "English",
             englishLevel: "Fluent",
-            
-            // Image field - use project image if exists, otherwise use user avatar or default
+
+            // Image field
             img: imageUrl || userProfileImage,
             imgUrl: imageUrl || userProfileImage,
-            
+
             author: project.user?.username || "Anonymous",
             authorImg: userProfileImage,
             rating: 5.0,
             reviews: 0,
             jobDone: 0,
-            
+
             // Original project data for reference
             originalData: project
           };
@@ -119,7 +106,7 @@ export default function Listing8({ searchFilters }) {
         setProjects(transformedProjects);
       } catch (err) {
         console.error("Error fetching projects:", err);
-        setError(err.message || "Failed to fetch projects");
+        setError(err.response?.data?.message || err.message || "Failed to fetch projects");
       } finally {
         setLoading(false);
       }
@@ -135,7 +122,7 @@ export default function Listing8({ searchFilters }) {
     }
 
     const keyword = searchFilters.keyword.toLowerCase().trim();
-    
+
     // Search in these fields
     const searchableFields = [
       item.title,
@@ -149,7 +136,7 @@ export default function Listing8({ searchFilters }) {
       item.brief
     ];
 
-    return searchableFields.some(field => 
+    return searchableFields.some(field =>
       field && field.toString().toLowerCase().includes(keyword)
     );
   };
@@ -179,12 +166,12 @@ export default function Listing8({ searchFilters }) {
   const searchFilter = (item) =>
     getSearch !== ""
       ? item.title?.toLowerCase().includes(getSearch.toLowerCase()) ||
-        item.description?.toLowerCase().includes(getSearch.toLowerCase()) ||
-        item.location
-            ?.split("-")
-            .join(" ")
-            .toLowerCase()
-            .includes(getSearch.toLowerCase())
+      item.description?.toLowerCase().includes(getSearch.toLowerCase()) ||
+      item.location
+        ?.split("-")
+        .join(" ")
+        .toLowerCase()
+        .includes(getSearch.toLowerCase())
       : item;
 
   const speakFilter = (item) =>
@@ -260,7 +247,7 @@ export default function Listing8({ searchFilters }) {
               <i className="flaticon-search fz60 mb-3 d-block"></i>
               <h5>No projects found</h5>
               <p>
-                {isSearchActive 
+                {isSearchActive
                   ? `No results found for "${searchFilters.keyword}". Try different keywords or adjust your filters.`
                   : "Try adjusting your filters to see more results."}
               </p>
