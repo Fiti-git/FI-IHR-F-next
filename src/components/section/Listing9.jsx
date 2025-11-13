@@ -21,6 +21,9 @@ const parseSalaryRange = (rangeStr) => {
   return { min: isNaN(min) ? 0 : min, max: isNaN(max) ? Infinity : max };
 };
 
+// Capitalize only the first letter of a string (leave the rest as-is)
+const capitalizeFirst = (s) => (typeof s === 'string' && s.length) ? s.charAt(0).toUpperCase() + s.slice(1) : s;
+
 export default function Listing9() {
   const [jobs, setJobs] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -65,7 +68,7 @@ export default function Listing9() {
                 : "General",
             benefits: [
               job.salary_range || "Not specified",
-              job.work_mode || "Full Time",
+              capitalizeFirst(job.job_type || "Full Time"),
               job.location || "Not Specified",
               job.remote_work ? "Remote" : "On-site",
             ],
@@ -73,7 +76,7 @@ export default function Listing9() {
             salaryMin,
             salaryMax,
             salary: salaryMin,
-            jobType: job.job_type || "Full Time",
+            jobType: capitalizeFirst(job.job_type || "Full Time"),
             level: "new",
             sort: "new-arrivals",
           };
