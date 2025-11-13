@@ -40,14 +40,14 @@ export default function ProjectContactWidget1({ projectData }) {
   };
 
   // Format member since date
-  const formatMemberSince = (dateString) => {
-    if (!dateString) return "Recently joined";
+  function formatMemberSince(dateString) {
+    if (!dateString) return "—";
     const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', { 
-      year: 'numeric', 
-      month: 'short'
-    });
-  };
+    return date.toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "long",
+    }); // Example: "November 2025"
+  }
 
   if (!projectData || !projectData.user) {
     return (
@@ -117,22 +117,24 @@ export default function ProjectContactWidget1({ projectData }) {
           {/* Stats Grid */}
           <div className="fl-meta d-flex align-items-center justify-content-between flex-wrap">
             <div className="meta fw500 text-start mb-3">
-              <span className="text-muted fz13">Projects Posted</span>
+              <span className="text-muted fz13">No Projects</span>
               <br />
-              <span className="fz16 fw600 dark-color">{stats.projects}</span>
+              <span className="fz16 fw600 dark-color">
+                {projectData?.project_count ?? 0}
+              </span>
             </div>
             <div className="meta fw500 text-start mb-3">
               <span className="text-muted fz13">Member Since</span>
               <br />
               <span className="fz14 fw400 dark-color">
-                {formatMemberSince(stats.memberSince)}
+                {formatMemberSince(projectData?.join_date)}
               </span>
             </div>
             <div className="meta fw500 text-start mb-3">
               <span className="text-muted fz13">Location</span>
               <br />
               <span className="fz14 fw400 dark-color">
-                {projectData.user.location || "Remote"}
+                {projectData.country_name || "Remote"}
               </span>
             </div>
           </div>

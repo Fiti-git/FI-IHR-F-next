@@ -294,7 +294,7 @@ export default function ProjectDetail1() {
                 <div className="scrollbalance-inner">
 
                   <div className="service-about">
-                    {/* Project Image */}
+                    {/* Project Image
                     {projectData.image_url && (
                       <div className="mb-4">
                         <img
@@ -308,7 +308,7 @@ export default function ProjectDetail1() {
                           }}
                         />
                       </div>
-                    )}
+                    )} */}
 
                     {/* Project Info Cards */}
                     <div className="row mb-4">
@@ -398,9 +398,9 @@ export default function ProjectDetail1() {
                         <div className="d-flex">
                           <span className="fw-bold me-2">Client:</span>
                           <span>
-                            {projectData.user?.first_name && projectData.user?.last_name
-                              ? `${projectData.user.first_name} ${projectData.user.last_name}`
-                              : projectData.user?.username || 'Anonymous'}
+                            {projectData.company_name 
+                              ? projectData.company_name
+                              : projectData.company_name || 'Anonymous'}
                           </span>
                         </div>
                       </div>

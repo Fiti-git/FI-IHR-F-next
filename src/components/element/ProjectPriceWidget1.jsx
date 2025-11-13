@@ -131,7 +131,7 @@ export default function ProjectPriceWidget1({ projectData }) {
           </div>
         )}
 
-        {/* Submit Proposal Button - Only show if project is open */}
+        {/* Submit Proposal Button - Only show if project is open
         {projectData.status === 'open' ? (
           <div className="d-grid">
             <a 
@@ -156,7 +156,7 @@ export default function ProjectPriceWidget1({ projectData }) {
               This project is {projectData.status?.replace('_', ' ')}
             </small>
           </div>
-        )}
+        )} */}
       </div>
     </>
   );
