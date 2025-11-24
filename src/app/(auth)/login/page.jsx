@@ -21,10 +21,10 @@ function LoginPageContent() {
 
   // Redirect based on user role from backend
   const handleRedirect = (user) => {
-    if (user.role === "Job Provider") {
+    if (user.role === "Employer") {
       router.push("/job-provider");
-    } else if (user.role === "Freelancer") {
-      router.push("/freelancer");
+    } else if (user.role === "Employee") {
+      router.push("/Employee");
     } else {
       router.push("/select-role");
     }
