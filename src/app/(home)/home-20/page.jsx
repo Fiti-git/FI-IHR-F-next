@@ -11,6 +11,7 @@ import HighestRated18 from "@/components/section/HighestRated2";
 import OurFaq1 from "@/components/section/OurFaq1";
 import TrendingService14 from "@/components/section/TrendingService14";
 import React from "react";
+import Hero3 from "@/components/hero/Hero3";
 
 export const metadata = {
     title: "IHRHUB | Home 20",
@@ -22,7 +23,7 @@ export default function page() {
             <div className="wrapper ovh">
                 <Header19 /> ..
                 <div className="body_content">
-                    <Hero2 />
+                    <Hero3/>
                     <NeedSomething2 />
                     <TrendingService14 />
                     <BrowserCategory20 />
@@ -30,7 +31,6 @@ export default function page() {
                     <CtaBanner18 />
                     <OurFaq1 />
                     <InspireingWork20 />
-                    <InspiringService11 />
                     <CtaBanner21 />
                 </div>
                 <Footer14 />

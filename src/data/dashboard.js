@@ -5,17 +5,17 @@ export const dasboardNavigation = [
     name: "Dashboard",
     icon: "flaticon-home",
     pathByRole: {
-      "Employer": "/job-provider",
-      "Employee": "/Employee",
+      "Job Provider": "/job-provider",
+      "Freelancer": "/freelancer",
     },
-    roles: ["Employee", "Employer"],
+    roles: ["Freelancer", "Job Provider"],
   },
   {
     id: 2,
     name: "Messages",
     icon: "flaticon-chat",
     path: "/message",
-    roles: ["Employee", "Employer"],
+    roles: ["Freelancer", "Job Provider"],
   },
   // {
   //   id: 4,
@@ -29,7 +29,7 @@ export const dasboardNavigation = [
     name: "Wallet",
     icon: "flaticon-wallet",
     path: "/statements",
-    roles: ["Employee", "Employer"],
+    roles: ["Freelancer", "Job Provider"],
   },
 
   // Employee
@@ -45,14 +45,14 @@ export const dasboardNavigation = [
     name: "Mange Projects",
     icon: "flaticon-content",
     path: "/my-projects",
-    roles: ["Employee"],
+    roles: ["Freelancer"],
   },
   {
     id: 8,
     name: "Manage Jobs",
     icon: "flaticon-presentation",
     path: "/manage-myjobs",
-    roles: ["Employee"],
+    roles: ["Freelancer"],
   },
   // {
   //   id: 9,
@@ -68,14 +68,14 @@ export const dasboardNavigation = [
     name: "Manage Jobs",
     icon: "flaticon-briefcase",
     path: "/manage-jobs",
-    roles: ["Employer"],
+    roles: ["Job Provider"],
   },
   {
     id: 11,
     name: "Manage Project",
     icon: "flaticon-working",
     path: "/manage-projects",
-    roles: ["Employer"],
+    roles: ["Job Provider"],
   },
   // {
   //   id: 12,
@@ -91,10 +91,10 @@ export const dasboardNavigation = [
     name: "My Profile",
     icon: "flaticon-photo",
     pathByRole: {
-      "Employer": "/jp-profile",
-      Employee: "/profile",
+      "Job Provider": "/jp-profile",
+      Freelancer: "/profile",
     },
-    roles: ["Employee", "Employer"],
+    roles: ["Freelancer", "Job Provider"],
   },
 
   {
@@ -102,14 +102,14 @@ export const dasboardNavigation = [
     name: "Logout",
     icon: "flaticon-logout",
     path: "/logout",
-    roles: ["Employee", "Employer"],
+    roles: ["Freelancer", "Job Provider"],
   },
   {
     id: 15,
     name: "Support",
     icon: "flaticon-question",
     path: "/help",
-    roles: ["Employee", "Employer"],
+    roles: ["Freelancer", "Job Provider"],
   },
   {
     id: 99,

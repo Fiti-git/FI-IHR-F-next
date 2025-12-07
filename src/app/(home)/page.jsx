@@ -30,7 +30,6 @@ export default function page() {
                     <CtaBanner18 />
                     <OurFaq1 />
                     <InspireingWork20 />
-                    <InspiringService11 />
                     <CtaBanner21 />
                 </div>
                 <Footer14 />
