@@ -47,21 +47,22 @@ const StatusBadge = ({ status }) => {
   const colorClass = (() => {
     switch (key) {
       case "open":
-        return "badge bg-success";
+        return "pending-style style1"; // Yellow/Orange background
       case "closed":
-        return "badge bg-danger";
+        return "pending-style style3"; // Pink/Red background
       case "pending":
       case "in review":
       case "in-review":
-        return "badge bg-warning text-dark";
+        return "pending-style style1"; // Yellow/Orange background
       case "draft":
-        return "badge bg-secondary";
+        return "pending-style style4"; // Dark background
       case "paused":
-        return "badge bg-info text-dark";
+        return "pending-style style2"; // Light blue background
       case "filled":
-        return "badge bg-primary";
+      case "completed":
+        return "pending-style style2"; // Light blue background
       default:
-        return "badge bg-secondary";
+        return "pending-style style5"; // Light orange background
     }
   })();
 
