@@ -372,12 +372,12 @@ export default function AppliedJobDetailPage() {
             <p>
               <strong>Status:</strong>{" "}
               <span
-                className={`badge ${
+                className={`pending-style ${
                   job.job_status?.toLowerCase() === "open"
-                    ? "bg-success"
+                    ? "style2"
                     : job.job_status?.toLowerCase() === "closed"
-                    ? "bg-danger"
-                    : "bg-secondary"
+                    ? "style4"
+                    : "style5"
                 }`}
               >
                 {job.job_status ? job.job_status.charAt(0).toUpperCase() + job.job_status.slice(1).toLowerCase() : "Unknown"}
@@ -479,12 +479,12 @@ export default function AppliedJobDetailPage() {
 
   const badgeCls =
     {
-      Rejected: "badge bg-danger",
-      Accepted: "badge bg-success",
-      Scheduled: "badge bg-info text-white",
-      Open: "badge bg-primary",
-      Closed: "badge bg-dark",
-    }[displayStatus] || "badge bg-secondary";
+      Rejected: "pending-style style3",
+      Accepted: "pending-style style2",
+      Scheduled: "pending-style style6",
+      Open: "pending-style style2",
+      Closed: "pending-style style4",
+    }[displayStatus] || "pending-style style5";
 
   // -----------------------------------------------------------------
   // Final JSX
@@ -496,8 +496,7 @@ export default function AppliedJobDetailPage() {
         <div className="col-lg-12">
           <div className="dashboard_title_area d-flex justify-content-between align-items-center">
             <div>
-              <h2>{job.title}</h2>
-              <p className="text">Your application and job details</p>
+              <h2>{job.job_title}</h2>
             </div>
             <div>
               <Link href="/manage-myjobs" className="ud-btn btn-dark default-box-shadow2">
