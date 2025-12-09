@@ -1,6 +1,5 @@
 "use client";
 import toggleStore from "@/store/toggleStore";
-import SortOption1 from "../option/SortOption1";
 import ClearButton from "../button/ClearButton";
 import Image from "next/image";
 
@@ -38,7 +37,6 @@ export default function ListingOption2({ itemLength }) {
                 </li>
               </ul>
             </div>
-            <SortOption1 />
           </div>
         </div>
       </div>

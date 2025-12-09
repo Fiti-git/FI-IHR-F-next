@@ -156,8 +156,7 @@ export default function Listing9({ searchFilters }) {
     return getLocation.includes(jobLocation);
   };
 
-  const sortByFilter = (item) =>
-    getBestSeller === "best-seller" ? true : item.sort === getBestSeller;
+
 
   // Calculate available categories with counts
   const availableCategories = jobs.reduce((acc, job) => {
@@ -214,7 +213,6 @@ export default function Listing9({ searchFilters }) {
     .filter(salaryFilter)
     .filter(jobTypeFilter)
     .filter(locationFilter)
-    .filter(sortByFilter);
 
   // Pagination
   const indexOfLastItem = currentPage * itemsPerPage;
