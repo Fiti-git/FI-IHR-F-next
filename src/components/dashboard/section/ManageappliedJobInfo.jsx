@@ -524,6 +524,7 @@ export default function AppliedJobDetailPage() {
                   <button
                     className={`nav-link ${activeTab === t ? "active" : ""}`}
                     onClick={() => setActiveTab(t)}
+                    style={{ color: 'black' }}
                   >
                     {t.charAt(0).toUpperCase() +
                       t

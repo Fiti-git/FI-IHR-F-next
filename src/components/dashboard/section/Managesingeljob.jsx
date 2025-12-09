@@ -746,6 +746,7 @@ export default function JobDetailPage() {
                 <button
                   className={`nav-link ${activeTab === "overview" ? "active" : ""}`}
                   onClick={() => setActiveTab("overview")}
+                  style={{ color: 'black' }}
                 >
                   Overview
                 </button>
@@ -754,6 +755,7 @@ export default function JobDetailPage() {
                 <button
                   className={`nav-link ${activeTab === "responsibilities" ? "active" : ""}`}
                   onClick={() => setActiveTab("responsibilities")}
+                  style={{ color: 'black' }}
                 >
                   Responsibilities
                 </button>
@@ -762,6 +764,7 @@ export default function JobDetailPage() {
                 <button
                   className={`nav-link ${activeTab === "qualifications" ? "active" : ""}`}
                   onClick={() => setActiveTab("qualifications")}
+                  style={{ color: 'black' }}
                 >
                   Qualifications
                 </button>
@@ -770,6 +773,7 @@ export default function JobDetailPage() {
                 <button
                   className={`nav-link ${activeTab === "application" ? "active" : ""}`}
                   onClick={() => setActiveTab("application")}
+                  style={{ color: 'black' }}
                 >
                   Application Info
                 </button>
@@ -778,6 +782,7 @@ export default function JobDetailPage() {
                 <button
                   className={`nav-link ${activeTab === "salaryBenefits" ? "active" : ""}`}
                   onClick={() => setActiveTab("salaryBenefits")}
+                  style={{ color: 'black' }}
                 >
                   Salary & Benefits
                 </button>
