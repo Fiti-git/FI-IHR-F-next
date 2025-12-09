@@ -870,7 +870,8 @@ export default function JobDetailPage() {
                           </td>
                           <td>
                             <button
-                              className="btn btn-sm btn-outline-primary me-2"
+                              className="ud-btn btn-thm-border me-2"
+                              style={{ padding: '10px', fontSize: '14px', transform: 'none', WebkitTransform: 'none', MozTransform: 'none', OTransform: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', lineHeight: '1', minWidth: '38px', minHeight: '38px', textAlign: 'center' }}
                               title="CV"
                               onClick={() => {
                                 if (!applicant.resume) {
@@ -885,18 +886,20 @@ export default function JobDetailPage() {
                                   window.location.href = url;
                                 }
                               }}
-                            ><i className="fal fa-file-download" /></button>
+                            ><i className="fal fa-file-download" style={{ transform: 'none', WebkitTransform: 'none', MozTransform: 'none', OTransform: 'none', display: 'block', margin: '0 auto' }} /></button>
                             <button
-                              className="btn btn-sm btn-secondary me-2"
+                              className="ud-btn btn-thm-border me-2"
+                              style={{ padding: '10px', fontSize: '14px', transform: 'none', WebkitTransform: 'none', MozTransform: 'none', OTransform: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', lineHeight: '1', minWidth: '38px', minHeight: '38px', textAlign: 'center' }}
                               title="Rate"
                               onClick={() => {
                                 setRatingApplicant(applicant);
                                 setRatingValue(ratings && ratings[applicant.id] ? ratings[applicant.id] : 5);
                                 setShowRatingModal(true);
                               }}
-                            ><i className="fal fa-star" /></button>
+                            ><i className="fal fa-star" style={{ transform: 'none', WebkitTransform: 'none', MozTransform: 'none', OTransform: 'none', display: 'block', margin: '0 auto' }} /></button>
                             <button
-                              className="btn btn-sm btn-outline-secondary me-2"
+                              className="ud-btn btn-thm-border me-2"
+                              style={{ padding: '10px', fontSize: '14px', transform: 'none', WebkitTransform: 'none', MozTransform: 'none', OTransform: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', lineHeight: '1', minWidth: '38px', minHeight: '38px', textAlign: 'center' }}
                               title="Schedule"
                               onClick={async () => {
                                 setScheduleApplicant(applicant);
@@ -921,14 +924,16 @@ export default function JobDetailPage() {
                                 } : { date_time: '', interview_mode: 'Zoom', interview_link: '', interview_notes: '' });
                                 setShowScheduleModal(true);
                               }}
-                            ><i className="fal fa-calendar-alt" /></button>
+                            ><i className="fal fa-calendar-alt" style={{ transform: 'none', WebkitTransform: 'none', MozTransform: 'none', OTransform: 'none', display: 'block', margin: '0 auto' }} /></button>
                             <button
-                              className="btn btn-sm btn-info me-2"
+                              className="ud-btn btn-thm-border me-2"
+                              style={{ padding: '10px', fontSize: '14px', transform: 'none', WebkitTransform: 'none', MozTransform: 'none', OTransform: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', lineHeight: '1', minWidth: '38px', minHeight: '38px', textAlign: 'center' }}
                               title="Chat"
                               onClick={() => handleStartChat(applicant)}
-                            ><i className="fal fa-comments" /></button>
+                            ><i className="fal fa-comments" style={{ transform: 'none', WebkitTransform: 'none', MozTransform: 'none', OTransform: 'none', display: 'block', margin: '0 auto' }} /></button>
                             <button
-                              className="btn btn-sm btn-success me-2"
+                              className="ud-btn btn-thm me-2"
+                              style={{ padding: '10px', fontSize: '14px', transform: 'none', WebkitTransform: 'none', MozTransform: 'none', OTransform: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', lineHeight: '1', minWidth: '38px', minHeight: '38px', textAlign: 'center' }}
                               title="Accept"
                               onClick={() => {
                                 setConfirmApplicant(applicant);
@@ -936,9 +941,10 @@ export default function JobDetailPage() {
                                 setConfirmResult(null);
                                 setShowConfirmModal(true);
                               }}
-                            ><i className="fal fa-check" /></button>
+                            ><i className="fal fa-check" style={{ transform: 'none', WebkitTransform: 'none', MozTransform: 'none', OTransform: 'none', display: 'block', margin: '0 auto' }} /></button>
                             <button
-                              className="btn btn-sm btn-outline-danger"
+                              className="ud-btn btn-dark"
+                              style={{ padding: '10px', fontSize: '14px', transform: 'none', WebkitTransform: 'none', MozTransform: 'none', OTransform: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', lineHeight: '1', minWidth: '38px', minHeight: '38px', textAlign: 'center' }}
                               title="Reject"
                               onClick={() => {
                                 setConfirmApplicant(applicant);
@@ -946,7 +952,7 @@ export default function JobDetailPage() {
                                 setConfirmResult(null);
                                 setShowConfirmModal(true);
                               }}
-                            ><i className="fal fa-times" /></button>
+                            ><i className="fal fa-times" style={{ transform: 'none', WebkitTransform: 'none', MozTransform: 'none', OTransform: 'none', display: 'block', margin: '0 auto' }} /></button>
                           </td>
                         </tr>
                       ))
@@ -1071,8 +1077,8 @@ export default function JobDetailPage() {
                 />
               </div>
               <div className="d-flex justify-content-end">
-                <button className="btn btn-secondary me-2" onClick={() => { setShowRatingModal(false); setRatingApplicant(null); }}>Cancel</button>
-                <button className="btn btn-primary" onClick={async () => {
+                <button className="ud-btn btn-dark me-2" style={{ padding: '8px 16px', fontSize: '14px' }} onClick={() => { setShowRatingModal(false); setRatingApplicant(null); }}>Cancel</button>
+                <button className="ud-btn btn-thm" style={{ padding: '8px 16px', fontSize: '14px' }} onClick={async () => {
                   if (!ratingApplicant || !ratingApplicant.id) {
                     alert('No applicant selected');
                     return;
@@ -1162,9 +1168,10 @@ export default function JobDetailPage() {
                 />
               </div>
               <div className="d-flex justify-content-end">
-                <button className="btn btn-secondary me-2" onClick={() => { setShowScheduleModal(false); setScheduleApplicant(null); }}>Cancel</button>
+                <button className="ud-btn btn-dark me-2" style={{ padding: '8px 16px', fontSize: '14px' }} onClick={() => { setShowScheduleModal(false); setScheduleApplicant(null); }}>Cancel</button>
                 <button
-                  className="btn btn-primary"
+                  className="ud-btn btn-thm"
+                  style={{ padding: '8px 16px', fontSize: '14px' }}
                   onClick={() => handleSaveSchedule()}
                   disabled={scheduleSaving}
                 >
@@ -1186,8 +1193,8 @@ export default function JobDetailPage() {
                   <h5 className="mb-3">{confirmAction} applicant</h5>
                   <p>Are you sure you want to <strong>{confirmAction.toLowerCase()}</strong> <strong>{confirmApplicant.name}</strong>?</p>
                   <div className="d-flex justify-content-end">
-                    <button className="btn btn-secondary me-2" onClick={() => { setShowConfirmModal(false); setConfirmApplicant(null); setConfirmAction(null); setConfirmResult(null); }}>Cancel</button>
-                    <button className="btn btn-primary" onClick={() => handleConfirmAction()} disabled={confirmLoading}>
+                    <button className="ud-btn btn-dark me-2" style={{ padding: '8px 16px', fontSize: '14px' }} onClick={() => { setShowConfirmModal(false); setConfirmApplicant(null); setConfirmAction(null); setConfirmResult(null); }}>Cancel</button>
+                    <button className="ud-btn btn-thm" style={{ padding: '8px 16px', fontSize: '14px' }} onClick={() => handleConfirmAction()} disabled={confirmLoading}>
                       {confirmLoading ? 'Saving...' : confirmAction}
                     </button>
                   </div>
@@ -1196,7 +1203,7 @@ export default function JobDetailPage() {
                 <>
                   <h5 className="mb-3">{confirmResult}</h5>
                   <div className="d-flex justify-content-end">
-                    <button className="btn btn-primary" onClick={() => { setShowConfirmModal(false); setConfirmApplicant(null); setConfirmAction(null); setConfirmResult(null); }}>OK</button>
+                    <button className="ud-btn btn-thm" style={{ padding: '8px 16px', fontSize: '14px' }} onClick={() => { setShowConfirmModal(false); setConfirmApplicant(null); setConfirmAction(null); setConfirmResult(null); }}>OK</button>
                   </div>
                 </>
               )}
