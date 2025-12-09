@@ -564,9 +564,9 @@ export default function AppliedJobDetailPage() {
                       <p><strong>Date:</strong> {interviewDetails.date}</p>
                       <p><strong>Time:</strong> {interviewDetails.time}</p>
                       {interviewDetails.link && (
-                        <p>
+                        <p style={{ display: 'flex', alignItems: 'center' }}>
                           <strong>Link:</strong>{' '}
-                          <a href={interviewDetails.link} target="_blank" rel="noopener noreferrer" className="btn btn-primary btn-sm">
+                          <a href={interviewDetails.link} target="_blank" rel="noopener noreferrer" className="ud-btn btn-thm" style={{ padding: '4px 10px', fontSize: '12px', textDecoration: 'none', display: 'inline-block', marginLeft: '8px' }}>
                             Join Interview
                           </a>
                         </p>
