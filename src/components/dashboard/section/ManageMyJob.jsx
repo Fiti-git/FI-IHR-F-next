@@ -80,13 +80,13 @@ const ApplicantStatusBadge = ({ status }) => {
   const n = normalizeStatus(status);
   const cls =
     {
-      Rejected: "badge bg-danger",
-      Accepted: "badge bg-success",
-      Scheduled: "badge bg-info text-white",
-      Open: "badge bg-primary",
-      Closed: "badge bg-dark",
-      Pending: "badge bg-warning text-dark",
-    }[n] || "badge bg-secondary";
+      Rejected: "pending-style style3",
+      Accepted: "pending-style style2",
+      Scheduled: "pending-style style6",
+      Open: "pending-style style2",
+      Closed: "pending-style style4",
+      Pending: "pending-style style1",
+    }[n] || "pending-style style5";
 
   return <span className={cls}>{n || capitalizeFirst(status)}</span>;
 };
