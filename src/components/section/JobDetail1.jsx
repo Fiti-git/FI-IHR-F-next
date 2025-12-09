@@ -183,12 +183,15 @@ export default function JobDetail1() {
   };
 
   // Helper functions
-  const formatDate = (d) => d ? new Date(d).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : "N/A";
+  const formatDate = (d) => {
+    if (!d) return "N/A";
+    const date = new Date(d);
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
   const timeAgo = (d) => {
-    if (!d) return "Recently";
-    const diff = (Date.now() - new Date(d)) / 1000;
-    if (diff < 3600) return `${Math.floor(diff / 60)} mins ago`;
-    if (diff < 86400) return `${Math.floor(diff / 3600)} hrs ago`;
     return formatDate(d);
   };
   const renderMultiline = (text) => {
@@ -219,7 +222,7 @@ export default function JobDetail1() {
                         <div className="icon flex-shrink-0"><span className="flaticon-calendar text-thm2 fz40" /></div>
                         <div className="details">
                           <h5 className="title">Posted</h5>
-                          <p className="mb-0 text">{timeAgo(job.created_at)}</p>
+                          <p className="mb-0 text">{formatDate(job.date_posted)}</p>
                         </div>
                       </div>
                     </div>
