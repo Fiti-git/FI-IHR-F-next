@@ -1015,20 +1015,6 @@ export default function JobDetailPage() {
                           <tr key={applicant.id}>
                             <td>
                               {applicant.name}
-                              {(() => {
-                                const iv = schedules && schedules[applicant.id];
-                                if (!iv) return null;
-                                const st = String(iv.status || '').toLowerCase();
-                                let label = 'Scheduled';
-                                let cls = 'pending-style style6 ms-2'; // blue for scheduled
-                                if (st.includes('resched') || st.includes('rescheduled') || st.includes('reschedule')) {
-                                  label = 'Rescheduled';
-                                  cls = 'pending-style style2 ms-2'; // also blue
-                                }
-                                return (
-                                  <span className={cls} title={iv?.interview_link ? `Interview link: ${iv.interview_link}` : `Status: ${iv.status || ''}`}>{label}</span>
-                                );
-                              })()}
                             </td>
                             <td>
                               <button
