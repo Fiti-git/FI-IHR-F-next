@@ -2,7 +2,7 @@
 import { category } from "@/data/listing";
 import listingStore from "@/store/listingStore";
 
-export default function CategoryOption1() {
+export default function CategoryOption1({ availableCategories }) {
   const getCategory = listingStore((state) => state.getCategory);
   const setCategory = listingStore((state) => state.setCategory);
 
@@ -11,12 +11,23 @@ export default function CategoryOption1() {
     setCategory(data);
   };
 
+  // Capitalize first letter of category
+  const capitalizeFirstLetter = (str) => {
+    if (!str) return str;
+    return str.charAt(0).toUpperCase() + str.slice(1);
+  };
+
+  // Use availableCategories if provided, otherwise fall back to static data
+  const categoriesToShow = availableCategories && availableCategories.length > 0 
+    ? availableCategories 
+    : category;
+
   return (
     <>
       <div className="checkbox-style1 mb15">
-        {category.map((item,i) => (
+        {categoriesToShow.map((item,i) => (
           <label key={ i } className="custom_checkbox">
-            {item.title}
+            {capitalizeFirstLetter(item.title)}
             <input
               type="checkbox"
               onChange={() => categoryHandler(item.title)}

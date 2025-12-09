@@ -144,6 +144,20 @@ export default function Listing9({ searchFilters }) {
   const sortByFilter = (item) =>
     getBestSeller === "best-seller" ? true : item.sort === getBestSeller;
 
+  // Calculate available categories with counts
+  const availableCategories = jobs.reduce((acc, job) => {
+    const category = job.category;
+    if (category) {
+      if (!acc[category]) {
+        acc[category] = { title: category, total: 0 };
+      }
+      acc[category].total++;
+    }
+    return acc;
+  }, {});
+
+  const categoryList = Object.values(availableCategories);
+
   // Apply all filters
   const filteredJobs = jobs
     .filter(breadcrumbSearchFilter)  // NEW: Apply breadcrumb search first
@@ -228,7 +242,7 @@ export default function Listing9({ searchFilters }) {
         <div className="container">
           <div className="row">
             <div className="col-lg-3">
-              <ListingSidebar3 />
+              <ListingSidebar3 availableCategories={categoryList} />
             </div>
             <div className="col-lg-9">
               {/* Search Results Info */}
