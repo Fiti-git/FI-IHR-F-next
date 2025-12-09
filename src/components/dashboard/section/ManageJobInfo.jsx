@@ -90,9 +90,10 @@ function PostedJobsRow({ job }) {
       <td>
         <Link
           href={`/jobs/${job.id}`}
-          className="btn btn-sm btn-outline-primary me-2"
+          className="btn btn-sm btn-outline-primary"
+          title="View Details"
         >
-          View
+          <i className="fal fa-eye"></i>
         </Link>
       </td>
     </tr>
