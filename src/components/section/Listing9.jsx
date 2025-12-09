@@ -36,6 +36,7 @@ export default function Listing9({ searchFilters }) {
   const priceRange = priceStore((state) => state.priceRange);
   const getJobType = listingStore((state) => state.getJobType);
   const getBestSeller = listingStore((state) => state.getBestSeller);
+  const getLocation = listingStore((state) => state.getLocation);
 
   // Reset to page 1 when search filters change
   useEffect(() => {
@@ -83,6 +84,7 @@ export default function Listing9({ searchFilters }) {
             salaryMax,
             salary: salaryMin,
             jobType: capitalizeFirst(job.job_type || "Full Time"),
+            location: job.location || "Not Specified",
             level: "new",
             sort: "new-arrivals",
           };
@@ -141,6 +143,19 @@ export default function Listing9({ searchFilters }) {
   const jobTypeFilter = (item) =>
     getJobType?.length ? getJobType.includes(item.jobType) : true;
 
+  const locationFilter = (item) => {
+    if (!getLocation?.length) return true;
+    
+    // Extract country from job location if in "City, Country" format
+    let jobLocation = item.location;
+    if (jobLocation && jobLocation.includes(',')) {
+      const parts = jobLocation.split(',');
+      jobLocation = parts[parts.length - 1].trim(); // Get country
+    }
+    
+    return getLocation.includes(jobLocation);
+  };
+
   const sortByFilter = (item) =>
     getBestSeller === "best-seller" ? true : item.sort === getBestSeller;
 
@@ -172,12 +187,33 @@ export default function Listing9({ searchFilters }) {
 
   const jobTypeList = Object.values(availableJobTypes);
 
+  // Calculate available locations with counts
+  const availableLocations = jobs.reduce((acc, job) => {
+    let location = job.location;
+    if (location && location !== "Not Specified") {
+      // Extract country if location is in format "City, Country"
+      if (location.includes(',')) {
+        const parts = location.split(',');
+        location = parts[parts.length - 1].trim(); // Get the last part (country)
+      }
+      
+      if (!acc[location]) {
+        acc[location] = { title: location, total: 0 };
+      }
+      acc[location].total++;
+    }
+    return acc;
+  }, {});
+
+  const locationList = Object.values(availableLocations);
+
   // Apply all filters
   const filteredJobs = jobs
     .filter(breadcrumbSearchFilter)  // NEW: Apply breadcrumb search first
     .filter(categoryFilter)
     .filter(salaryFilter)
     .filter(jobTypeFilter)
+    .filter(locationFilter)
     .filter(sortByFilter);
 
   // Pagination
@@ -256,7 +292,11 @@ export default function Listing9({ searchFilters }) {
         <div className="container">
           <div className="row">
             <div className="col-lg-3">
-              <ListingSidebar3 availableCategories={categoryList} availableJobTypes={jobTypeList} />
+              <ListingSidebar3 
+                availableCategories={categoryList} 
+                availableJobTypes={jobTypeList}
+                availableLocations={locationList}
+              />
             </div>
             <div className="col-lg-9">
               {/* Search Results Info */}

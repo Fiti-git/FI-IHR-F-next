@@ -2,26 +2,31 @@
 import { level } from "@/data/listing";
 import listingStore from "@/store/listingStore";
 
-export default function LevelOption1() {
-  const getLevel = listingStore((state) => state.getLevel);
-  const setLevel = listingStore((state) => state.setLevel);
+export default function LevelOption1({ availableLocations }) {
+  const getLocation = listingStore((state) => state.getLocation);
+  const setLocation = listingStore((state) => state.setLocation);
 
   // handler
-  const levelHandler = (data) => {
-    setLevel(data);
+  const locationHandler = (data) => {
+    setLocation(data);
   };
+
+  // Use availableLocations if provided, otherwise fall back to static data
+  const locationsToShow = availableLocations && availableLocations.length > 0 
+    ? availableLocations 
+    : level;
 
   return (
     <>
       <div className="card-body card-body px-0 pt-0">
         <div className="checkbox-style1">
-          {level.map((item,i) => (
+          {locationsToShow.map((item,i) => (
             <label key={ i } className="custom_checkbox">
               {item.title}
               <input
                 type="checkbox"
-                onChange={() => levelHandler(item.value)}
-                checked={getLevel.includes(item.value)}
+                onChange={() => locationHandler(item.title)}
+                checked={getLocation.includes(item.title)}
               />
               <span className="checkmark" />
               <span className="right-tags">({item.total})</span>

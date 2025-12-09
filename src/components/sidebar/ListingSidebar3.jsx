@@ -4,7 +4,7 @@ import CategoryOption1 from "../option/CategoryOption1";
 import JobTypeOption1 from "../option/JobTypeOption1";
 import LevelOption1 from "../option/LevelOption1";
 
-export default function ListingSidebar3({ availableCategories = [], availableJobTypes = [] }) {
+export default function ListingSidebar3({ availableCategories = [], availableJobTypes = [], availableLocations = [] }) {
   return (
     <>
       <div className="list-sidebar-style1 d-none d-lg-block">
@@ -100,7 +100,7 @@ export default function ListingSidebar3({ availableCategories = [], availableJob
                   aria-expanded="false"
                   aria-controls="collapse3"
                 >
-                  Level
+                  Location
                 </button>
               </h4>
             </div>
@@ -111,7 +111,7 @@ export default function ListingSidebar3({ availableCategories = [], availableJob
               data-parent="#accordionExample"
             >
               <div className="card-body card-body px-0 pt-0">
-                <LevelOption1 />
+                <LevelOption1 availableLocations={availableLocations} />
               </div>
             </div>
           </div>
