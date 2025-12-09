@@ -371,17 +371,7 @@ export default function AppliedJobDetailPage() {
             <p><strong>Date Posted:</strong> {job.date_posted}</p>
             <p>
               <strong>Status:</strong>{" "}
-              <span
-                className={`pending-style ${
-                  job.job_status?.toLowerCase() === "open"
-                    ? "style2"
-                    : job.job_status?.toLowerCase() === "closed"
-                    ? "style4"
-                    : "style5"
-                }`}
-              >
-                {job.job_status ? job.job_status.charAt(0).toUpperCase() + job.job_status.slice(1).toLowerCase() : "Unknown"}
-              </span>
+              {job.job_status ? job.job_status.charAt(0).toUpperCase() + job.job_status.slice(1).toLowerCase() : "Unknown"}
             </p>
           </div>
         );
