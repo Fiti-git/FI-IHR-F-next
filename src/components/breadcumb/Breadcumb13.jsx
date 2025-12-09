@@ -78,7 +78,7 @@ export default function Breadcumb13() {
                       </a>
                       <div className="ml20 ml0-xs mt15-sm">
                         <h2 className="text-black">{titleText}</h2>
-                        <div className="mt-3 d-flex flex-wrap gap-3"></div>
+                        <div className="mt-3 d-flex flex-wrap" style={{ gap: '1rem' }}>
                           <span className="badge bg-white text-dark px-3 py-2">
                             <i className="flaticon-folder me-2"></i>
                             {salaryText ?? "$125k-$135k Hourly"}
@@ -98,7 +98,8 @@ export default function Breadcumb13() {
                           <span className="badge bg-white text-dark px-3 py-2">
                               <i className="flaticon-folder me-2"></i>
                               {modeText ?? "Mode N/A"}
-                            </span>
+                          </span>
+                        </div>
                       </div>
                     </div>
 
