@@ -257,6 +257,12 @@ export default function JobDetail1() {
 
                   <hr className="opacity-100 mb60" />
 
+                  {/* Mobile: Show Salary & Job Details before Role Overview */}
+                  <div className="d-lg-none mb-4">
+                    <JobPriceWidget job={job} />
+                    <JobContactWidget job={job} />
+                  </div>
+
                   {/* Description */}
                   <h4 className="mb-3">Role Overview</h4>
                   <div className="text mb30" style={{ whiteSpace: 'pre-wrap' }}>
@@ -338,7 +344,7 @@ export default function JobDetail1() {
             </div>
 
             {/* Sidebar */}
-            <div className="col-lg-4" id="stikyContainer">
+            <div className="col-lg-4 d-none d-lg-block" id="stikyContainer">
               <div className="column">
                 <Sticky enabled={isMatchedScreen} top={100} bottomBoundary="#stikyContainer">
                   <div className="scrollbalance-inner">
