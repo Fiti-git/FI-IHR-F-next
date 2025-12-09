@@ -1259,7 +1259,8 @@ export default function JobDetailPage() {
 
               <div className="d-flex justify-content-end">
                 <button
-                  className="btn btn-secondary me-2"
+                  className="ud-btn btn-dark me-2"
+                  style={{ padding: '8px 16px', fontSize: '14px' }}
                   onClick={() => {
                     setShowOfferModal(false);
                     setOfferApplicant(null);
@@ -1271,7 +1272,8 @@ export default function JobDetailPage() {
                 </button>
 
                 <button
-                  className="btn btn-primary"
+                  className="ud-btn btn-thm"
+                  style={{ padding: '8px 16px', fontSize: '14px' }}
                   disabled={offerSaving}
                   onClick={async () => {
                     if (!offerData.salary || !offerData.starting_date) {
