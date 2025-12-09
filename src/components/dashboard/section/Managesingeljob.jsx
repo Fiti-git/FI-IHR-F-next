@@ -597,11 +597,11 @@ export default function JobDetailPage() {
             <p>
               <strong>Status:</strong>{" "}
               <span
-                className={`badge ${job.status?.toLowerCase() === "open"
-                  ? "bg-success"
+                className={`pending-style ${job.status?.toLowerCase() === "open"
+                  ? "style2"
                   : job.status?.toLowerCase() === "closed"
-                    ? "bg-danger"
-                    : "bg-secondary"
+                    ? "style3"
+                    : "style4"
                   }`}
               >
                 {job.status ? job.status.charAt(0).toUpperCase() + job.status.slice(1).toLowerCase() : "Unknown"}
@@ -829,16 +829,15 @@ export default function JobDetailPage() {
                             {(() => {
                               const st = (applicant.status || '').toLowerCase();
                               let label = 'Pending';
-                              // Put badge after the name, so use ms-2 (margin-start) for spacing
-                              let cls = 'badge bg-secondary text-white ms-2';
-                              if (st === 'accepted') { label = 'Accepted'; cls = 'badge bg-success ms-2'; }
-                              else if (st === 'rejected') { label = 'Rejected'; cls = 'badge bg-danger ms-2'; }
+                              let cls = 'pending-style style1 ms-2'; // default: yellow/pending
+                              if (st === 'accepted') { label = 'Accepted'; cls = 'pending-style style2 ms-2'; } // blue
+                              else if (st === 'rejected') { label = 'Rejected'; cls = 'pending-style style3 ms-2'; } // red/pink
                               return (
                                 <>
                                   {applicant.name}
                                   <span className={cls} title={`Status: ${label}`}>{label}</span>
                                   {ratings && ratings[applicant.id] ? (
-                                    <span className="badge bg-warning text-dark ms-2" title={`Rating: ${ratings[applicant.id]}/5`}>
+                                    <span className="pending-style style5 ms-2" title={`Rating: ${ratings[applicant.id]}/5`}>
                                       <i className="fal fa-star me-1" />{ratings[applicant.id]}/5
                                     </span>
                                   ) : null}
@@ -849,12 +848,13 @@ export default function JobDetailPage() {
                                     if (!iv) return null;
                                     const st = String(iv.status || '').toLowerCase();
                                     let label = 'Scheduled';
+                                    let cls = 'pending-style style6 ms-2'; // blue for scheduled
                                     if (st.includes('resched') || st.includes('rescheduled') || st.includes('reschedule')) {
                                       label = 'Rescheduled';
+                                      cls = 'pending-style style2 ms-2'; // also blue
                                     } else if (st.includes('scheduled') || st.includes('confirmed')) {
                                       label = 'Scheduled';
                                     }
-                                    const cls = label === 'Rescheduled' ? 'badge bg-primary text-white ms-2' : 'badge bg-info text-white ms-2';
                                     return (
                                       <span className={cls} title={iv?.interview_link ? `Interview link: ${iv.interview_link}` : `Status: ${iv.status || ''}`}>{label}</span>
                                     );
@@ -1009,10 +1009,11 @@ export default function JobDetailPage() {
                                 if (!iv) return null;
                                 const st = String(iv.status || '').toLowerCase();
                                 let label = 'Scheduled';
+                                let cls = 'pending-style style6 ms-2'; // blue for scheduled
                                 if (st.includes('resched') || st.includes('rescheduled') || st.includes('reschedule')) {
                                   label = 'Rescheduled';
+                                  cls = 'pending-style style2 ms-2'; // also blue
                                 }
-                                const cls = label === 'Rescheduled' ? 'badge bg-primary text-white ms-2' : 'badge bg-info text-white ms-2';
                                 return (
                                   <span className={cls} title={iv?.interview_link ? `Interview link: ${iv.interview_link}` : `Status: ${iv.status || ''}`}>{label}</span>
                                 );
