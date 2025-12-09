@@ -104,8 +104,9 @@ function AppliedJobsRow({ job }) {
         <ApplicantStatusBadge status={job.displayStatus || job.status} />
       </td>
       <td>
-        <Link href={jobLink} className="btn btn-sm btn-outline-primary me-2">
-          View
+        <Link href={jobLink} className="btn btn-sm btn-outline-primary"
+          title="View Details">
+          <i className="fal fa-eye"></i>
         </Link>
       </td>
     </tr>
