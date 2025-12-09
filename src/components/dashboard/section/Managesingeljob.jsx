@@ -1032,7 +1032,8 @@ export default function JobDetailPage() {
                             </td>
                             <td>
                               <button
-                                className="btn btn-sm btn-success me-2"
+                                className="ud-btn btn-thm me-2"
+                                style={{ padding: '10px', fontSize: '14px', transform: 'none', WebkitTransform: 'none', MozTransform: 'none', OTransform: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', lineHeight: '1', minWidth: '38px', minHeight: '38px', textAlign: 'center' }}
                                 title="Offer"
                                 onClick={() => {
                                   // open local offer modal
@@ -1040,12 +1041,13 @@ export default function JobDetailPage() {
                                   setOfferData({ salary: (applicant.offer && applicant.offer.salary) || '', starting_date: (applicant.offer && applicant.offer.starting_date) || '', benefits: (applicant.offer && applicant.offer.benefits) || '' });
                                   setShowOfferModal(true);
                                 }}
-                              >Offer</button>
+                              ><i className="fal fa-file-contract" style={{ transform: 'none', WebkitTransform: 'none', MozTransform: 'none', OTransform: 'none', display: 'block', margin: '0 auto' }} /></button>
                               <button
-                                className="btn btn-sm btn-info me-2"
+                                className="ud-btn btn-thm-border me-2"
+                                style={{ padding: '10px', fontSize: '14px', transform: 'none', WebkitTransform: 'none', MozTransform: 'none', OTransform: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', lineHeight: '1', minWidth: '38px', minHeight: '38px', textAlign: 'center' }}
                                 title="Chat"
                                 onClick={() => handleStartChat(applicant)}
-                              ><i className="fal fa-comments" /></button>
+                              ><i className="fal fa-comments" style={{ transform: 'none', WebkitTransform: 'none', MozTransform: 'none', OTransform: 'none', display: 'block', margin: '0 auto' }} /></button>
                             </td>
                           </tr>
                         ));
