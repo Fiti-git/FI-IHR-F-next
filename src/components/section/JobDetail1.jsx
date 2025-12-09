@@ -64,6 +64,11 @@ export default function JobDetail1() {
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState(null);
   const [submitSuccess, setSubmitSuccess] = useState(false);
+  
+  // Resume selection state
+  const [useExistingResume, setUseExistingResume] = useState(true);
+  const [freelancerProfile, setFreelancerProfile] = useState(null);
+  const [loadingProfile, setLoadingProfile] = useState(false);
 
   // Fetch Job Data
   useEffect(() => {
@@ -108,7 +113,7 @@ export default function JobDetail1() {
     checkRole();
   }, [accessToken]);
 
-  // Check if user has already applied
+  // Check if user has already applied and fetch freelancer profile
   useEffect(() => {
     if (!id || !accessToken) return;
 
@@ -118,6 +123,13 @@ export default function JobDetail1() {
         const profileRes = await api.get('/api/profile/freelancer/');
         const profiles = profileRes.data;
         const currentFreelancerId = (Array.isArray(profiles) ? profiles[0]?.id : null) || localStorage.getItem("user_id");
+
+        // Store the freelancer profile data
+        if (Array.isArray(profiles) && profiles.length > 0) {
+          setFreelancerProfile(profiles[0]);
+        } else if (profiles && !Array.isArray(profiles)) {
+          setFreelancerProfile(profiles);
+        }
 
         if (currentFreelancerId) {
           setFreelancerId(currentFreelancerId); // Store for later use in handleApply
@@ -145,7 +157,15 @@ export default function JobDetail1() {
     setSubmitError(null);
     setSubmitSuccess(false);
 
-    if (!resumeFile) return setSubmitError("Resume is required");
+    // Validate resume
+    if (useExistingResume) {
+      if (!freelancerProfile?.resume && !freelancerProfile?.resume_url) {
+        return setSubmitError("No existing resume found. Please upload a new one.");
+      }
+    } else {
+      if (!resumeFile) return setSubmitError("Resume is required");
+    }
+    
     if (!coverLetter.trim()) return setSubmitError("Cover letter is required");
 
     setSubmitting(true);
@@ -155,7 +175,28 @@ export default function JobDetail1() {
       if (!userId) throw new Error("Could not identify freelancer. Please ensure your profile is complete.");
 
       const fd = new FormData();
-      fd.append("resume", resumeFile);
+      
+      // Handle resume based on user's choice
+      if (useExistingResume) {
+        // If using existing resume, we need to send the resume URL or fetch it
+        const resumeUrl = freelancerProfile?.resume_url || freelancerProfile?.resume;
+        if (resumeUrl) {
+          // Fetch the existing resume file and append it
+          try {
+            const response = await fetch(resumeUrl);
+            const blob = await response.blob();
+            const filename = resumeUrl.split('/').pop() || 'resume.pdf';
+            const file = new File([blob], filename, { type: blob.type });
+            fd.append("resume", file);
+          } catch (fetchErr) {
+            console.error("Failed to fetch existing resume:", fetchErr);
+            return setSubmitError("Failed to load existing resume. Please try uploading a new one.");
+          }
+        }
+      } else {
+        fd.append("resume", resumeFile);
+      }
+      
       fd.append("job", id);
       fd.append("job_id", id);
       fd.append("freelancer_id", userId);
@@ -308,6 +349,8 @@ export default function JobDetail1() {
                           setSubmitSuccess(false);
                           setResumeFile(null);
                           setCoverLetter("");
+                          // Set default based on whether existing resume is available
+                          setUseExistingResume(!!(freelancerProfile?.resume || freelancerProfile?.resume_url));
                           setShowApplyModal(true);
                         }}
                       >
@@ -407,18 +450,66 @@ export default function JobDetail1() {
             <form onSubmit={handleApply}>
               <div className="mb-3">
                 <label className="form-label">
-                  Resume (PDF, DOC, DOCX) <span className="text-danger">*</span>
+                  Resume <span className="text-danger">*</span>
                 </label>
-                <input
-                  type="file"
-                  accept=".pdf,.doc,.docx"
-                  className="form-control"
-                  onChange={(e) => {
-                    setResumeFile(e.target.files?.[0] || null);
-                    setSubmitError(null);
-                  }}
-                  required
-                />
+                
+                {/* Resume option selector */}
+                <div className="mb-3">
+                  {(freelancerProfile?.resume || freelancerProfile?.resume_url) && (
+                    <div className="form-check mb-2">
+                      <input
+                        className="form-check-input"
+                        type="radio"
+                        name="resumeOption"
+                        id="useExisting"
+                        checked={useExistingResume}
+                        onChange={() => {
+                          setUseExistingResume(true);
+                          setResumeFile(null);
+                          setSubmitError(null);
+                        }}
+                      />
+                      <label className="form-check-label" htmlFor="useExisting">
+                        Use my existing resume
+                        <div className="text-muted small mt-1">
+                          <i className="fal fa-file-pdf me-1"></i>
+                          {freelancerProfile?.resume_url?.split('/').pop() || 'resume.pdf'}
+                        </div>
+                      </label>
+                    </div>
+                  )}
+                  
+                  <div className="form-check">
+                    <input
+                      className="form-check-input"
+                      type="radio"
+                      name="resumeOption"
+                      id="uploadNew"
+                      checked={!useExistingResume}
+                      onChange={() => {
+                        setUseExistingResume(false);
+                        setSubmitError(null);
+                      }}
+                    />
+                    <label className="form-check-label" htmlFor="uploadNew">
+                      Upload a new resume
+                    </label>
+                  </div>
+                </div>
+                
+                {/* File upload input - only show when uploading new */}
+                {!useExistingResume && (
+                  <input
+                    type="file"
+                    accept=".pdf,.doc,.docx"
+                    className="form-control"
+                    onChange={(e) => {
+                      setResumeFile(e.target.files?.[0] || null);
+                      setSubmitError(null);
+                    }}
+                    required={!useExistingResume}
+                  />
+                )}
               </div>
               <div className="mb-3">
                 <label className="form-label">

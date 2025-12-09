@@ -323,12 +323,12 @@ export default function JobPostForm({ initialData = null, mode = "create", jobId
               <option value="engineering">Engineering</option>
               <option value="marketing">Marketing</option>
               <option value="sales">Sales</option>
-              <option value="hr">Human Resources</option>
+              <option value="human resources">Human Resources</option>
               <option value="finance">Finance</option>
               <option value="operations">Operations</option>
               <option value="design">Design</option>
               <option value="product">Product</option>
-              <option value="customer-support">Customer Support</option>
+              <option value="customer support">Customer Support</option>
               <option value="other">Other</option>
             </select>
           </div>
