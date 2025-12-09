@@ -4,7 +4,7 @@ import CategoryOption1 from "../option/CategoryOption1";
 import JobTypeOption1 from "../option/JobTypeOption1";
 import LevelOption1 from "../option/LevelOption1";
 
-export default function ListingSidebar3({ availableCategories = [] }) {
+export default function ListingSidebar3({ availableCategories = [], availableJobTypes = [] }) {
   return (
     <>
       <div className="list-sidebar-style1 d-none d-lg-block">
@@ -85,7 +85,7 @@ export default function ListingSidebar3({ availableCategories = [] }) {
               data-parent="#accordionExample"
             >
               <div className="card-body card-body px-0 pt-0">
-                <JobTypeOption1 />
+                <JobTypeOption1 availableJobTypes={availableJobTypes} />
               </div>
             </div>
           </div>

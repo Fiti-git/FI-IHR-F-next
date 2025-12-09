@@ -158,6 +158,20 @@ export default function Listing9({ searchFilters }) {
 
   const categoryList = Object.values(availableCategories);
 
+  // Calculate available job types with counts
+  const availableJobTypes = jobs.reduce((acc, job) => {
+    const jobType = job.jobType;
+    if (jobType) {
+      if (!acc[jobType]) {
+        acc[jobType] = { title: jobType, total: 0 };
+      }
+      acc[jobType].total++;
+    }
+    return acc;
+  }, {});
+
+  const jobTypeList = Object.values(availableJobTypes);
+
   // Apply all filters
   const filteredJobs = jobs
     .filter(breadcrumbSearchFilter)  // NEW: Apply breadcrumb search first
@@ -242,7 +256,7 @@ export default function Listing9({ searchFilters }) {
         <div className="container">
           <div className="row">
             <div className="col-lg-3">
-              <ListingSidebar3 availableCategories={categoryList} />
+              <ListingSidebar3 availableCategories={categoryList} availableJobTypes={jobTypeList} />
             </div>
             <div className="col-lg-9">
               {/* Search Results Info */}

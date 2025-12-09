@@ -2,7 +2,7 @@
 import { jobType } from "@/data/listing";
 import listingStore from "@/store/listingStore";
 
-export default function JobTypeOption1() {
+export default function JobTypeOption1({ availableJobTypes }) {
   const getJobType = listingStore((state) => state.getJobType);
   const setJobType = listingStore((state) => state.setJobType);
 
@@ -11,10 +11,15 @@ export default function JobTypeOption1() {
     setJobType(data);
   };
 
+  // Use availableJobTypes if provided, otherwise fall back to static data
+  const jobTypesToShow = availableJobTypes && availableJobTypes.length > 0 
+    ? availableJobTypes 
+    : jobType;
+
   return (
     <>
       <div className="widget-wrapper pr20">
-        {jobType.map((item,i) => (
+        {jobTypesToShow.map((item,i) => (
           <div key={ i } className="switch-style1">
             <div className="form-check form-switch mb20">
               <input
@@ -35,7 +40,6 @@ export default function JobTypeOption1() {
           </div>
         ))}
       </div>
-      <a className="text-thm">+20 more</a>
     </>
   );
 }
