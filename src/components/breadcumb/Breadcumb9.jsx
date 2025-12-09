@@ -2,7 +2,7 @@
 import { useState } from "react";
 import Image from "next/image";
 
-export default function Breadcumb9({ onSearch }) {
+export default function Breadcumb9({ onSearch, title = "Projects List", description = "Search and discover exciting projects across various categories." }) {
   const [searchKeyword, setSearchKeyword] = useState("");
 
   // Search handler
@@ -50,9 +50,9 @@ export default function Breadcumb9({ onSearch }) {
             <div className="row wow fadeInUp">
               <div className="col-xl-7">
                 <div className="position-relative">
-                  <h2>Projects List</h2>
+                  <h2>{title}</h2>
                   <p className="text mb30">
-                    Search and discover exciting projects across various categories.
+                    {description}
                   </p>
                 </div>
                 <div className="advance-search-tab bgc-white p10 bdrs4 zi1 position-relative">

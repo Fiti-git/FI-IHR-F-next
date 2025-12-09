@@ -1,10 +1,11 @@
 "use client";
 import { useEffect, useState } from "react";
-import ListingOption4 from "../element/ListingOption4";
+import ListingOption2 from "../element/ListingOption2";
 import Pagination1 from "./Pagination1";
 import JobCard4 from "../card/JobCard4";
 import listingStore from "@/store/listingStore";
 import priceStore from "@/store/priceStore";
+import ListingSidebar3 from "../sidebar/ListingSidebar3";
 import ListingSidebarModal3 from "../modal/ListingSidebarModal3";
 import api from "@/lib/axios"; // Import the centralized Axios instance
 
@@ -24,17 +25,22 @@ const parseSalaryRange = (rangeStr) => {
 // Capitalize only the first letter of a string (leave the rest as-is)
 const capitalizeFirst = (s) => (typeof s === 'string' && s.length) ? s.charAt(0).toUpperCase() + s.slice(1) : s;
 
-export default function Listing9() {
+export default function Listing9({ searchFilters }) {
   const [jobs, setJobs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 12;
+  const itemsPerPage = 10;
 
   const getCategory = listingStore((state) => state.getCategory);
   const priceRange = priceStore((state) => state.priceRange);
   const getJobType = listingStore((state) => state.getJobType);
   const getBestSeller = listingStore((state) => state.getBestSeller);
+
+  // Reset to page 1 when search filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchFilters]);
 
   /* --------------------------------------------------------------
      FETCH + TRANSFORM
@@ -98,6 +104,28 @@ export default function Listing9() {
   /* --------------------------------------------------------------
      FILTERS
      -------------------------------------------------------------- */
+  // NEW: Breadcrumb search filter (searches across multiple fields)
+  const breadcrumbSearchFilter = (item) => {
+    if (!searchFilters || !searchFilters.keyword || searchFilters.keyword.trim() === '') {
+      return true;
+    }
+
+    const keyword = searchFilters.keyword.toLowerCase().trim();
+
+    // Search in these fields
+    const searchableFields = [
+      item.title,
+      item.server,
+      item.category,
+      item.jobType,
+      item.benefits?.join(' ')
+    ];
+
+    return searchableFields.some(field =>
+      field && field.toString().toLowerCase().includes(keyword)
+    );
+  };
+
   const categoryFilter = (item) =>
     getCategory?.length ? getCategory.includes(item.category) : true;
 
@@ -116,55 +144,121 @@ export default function Listing9() {
   const sortByFilter = (item) =>
     getBestSeller === "best-seller" ? true : item.sort === getBestSeller;
 
-  /* --------------------------------------------------------------
-     RENDER
-     -------------------------------------------------------------- */
-  if (loading)
-    return (
-      <div className="container d-flex justify-content-center align-items-center" style={{ minHeight: '50vh' }}>
-        <div className="spinner-border" role="status">
-          <span className="visually-hidden">Loading...</span>
-        </div>
-      </div>
-    );
-
-  if (error)
-    return (
-      <div className="container">
-        <div className="alert alert-danger mt-4">Error loading jobs: {error}</div>
-      </div>
-    );
-
-  const filtered = jobs
+  // Apply all filters
+  const filteredJobs = jobs
+    .filter(breadcrumbSearchFilter)  // NEW: Apply breadcrumb search first
     .filter(categoryFilter)
     .filter(salaryFilter)
     .filter(jobTypeFilter)
     .filter(sortByFilter);
 
+  // Pagination
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentItems = filteredJobs.slice(indexOfFirstItem, indexOfLastItem);
+
+  // Render content
+  let content;
+
+  if (loading) {
+    content = (
+      <div className="col-12 text-center py-5">
+        <div className="spinner-border text-primary" role="status">
+          <span className="visually-hidden">Loading...</span>
+        </div>
+        <p className="mt-3">Loading jobs...</p>
+      </div>
+    );
+  } else if (error) {
+    content = (
+      <div className="col-12">
+        <div className="alert alert-danger" role="alert">
+          <strong>Error:</strong> {error}
+          <button
+            className="btn btn-sm btn-outline-danger ms-3"
+            onClick={() => window.location.reload()}
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  } else if (currentItems.length === 0) {
+    const isSearchActive = searchFilters && searchFilters.keyword;
+    content = (
+      <div className="col-12 text-center py-5">
+        <div className="text-muted">
+          {jobs.length === 0 ? (
+            <>
+              <i className="flaticon-folder fz60 mb-3 d-block"></i>
+              <h5>No jobs available at the moment.</h5>
+              <p>Check back later for new opportunities!</p>
+            </>
+          ) : (
+            <>
+              <i className="flaticon-search fz60 mb-3 d-block"></i>
+              <h5>No jobs found</h5>
+              <p>
+                {isSearchActive
+                  ? `No results found for "${searchFilters.keyword}". Try different keywords or adjust your filters.`
+                  : "Try adjusting your filters to see more results."}
+              </p>
+            </>
+          )}
+        </div>
+      </div>
+    );
+  } else {
+    content = currentItems.map((item) => (
+      <div key={item.id} className="col-md-6 col-lg-12">
+        <JobCard4 data={item} />
+      </div>
+    ));
+  }
+
+  // Check if search is active
+  const isSearchActive = searchFilters && searchFilters.keyword;
+
+  /* --------------------------------------------------------------
+     RENDER
+     -------------------------------------------------------------- */
   return (
     <>
-      <section className="pt40 pb90">
+      <section className="pt30 pb90">
         <div className="container">
-          <ListingOption4 itemTytle={"Jobs"} />
           <div className="row">
-            {filtered.length > 0 ? (
-              filtered.map((item, i) => (
-                <div key={i} className="col-sm-6 col-lg-4 col-xl-3">
-                  <JobCard4 data={item} />
-                </div>
-              ))
-            ) : (
-              <div className="col-12 text-center py-5">
-                <p className="text-muted lead">No jobs match your filters.</p>
-              </div>
-            )}
-          </div>
-
-          {filtered.length > itemsPerPage && ( // Only show pagination if there's more than one page
-            <div className="mt30">
-              <Pagination1 />
+            <div className="col-lg-3">
+              <ListingSidebar3 />
             </div>
-          )}
+            <div className="col-lg-9">
+              {/* Search Results Info */}
+              {isSearchActive && (
+                <div className="row mb-3">
+                  <div className="col-12">
+                    <div className="alert alert-info d-flex justify-content-between align-items-center">
+                      <span>
+                        Found <strong>{filteredJobs.length}</strong> job{filteredJobs.length !== 1 ? 's' : ''}
+                        {searchFilters.keyword && ` for "${searchFilters.keyword}"`}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <ListingOption2 itemLength={filteredJobs?.length || 0} />
+              <div className="row">{content}</div>
+              {!loading && !error && filteredJobs.length > itemsPerPage && (
+                <div className="mt30">
+                  <Pagination1
+                    totalItems={filteredJobs.length}
+                    itemsPerPage={itemsPerPage}
+                    currentPage={currentPage}
+                    onPageChange={setCurrentPage}
+                  />
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       </section>
 
