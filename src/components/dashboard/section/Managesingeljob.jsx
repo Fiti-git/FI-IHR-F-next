@@ -1356,8 +1356,6 @@ export default function JobDetailPage() {
               <h5 className="mb-3">Offer Details</h5>
               
               <div className="mb-3">
-                <p><strong>Offer ID:</strong> {viewOfferData.offer_id}</p>
-                <p><strong>Application ID:</strong> {viewOfferData.application_id}</p>
                 <p>
                   <strong>Status:</strong>{' '}
                   {(() => {
@@ -1374,10 +1372,10 @@ export default function JobDetailPage() {
                   })()}
                 </p>
                 <p><strong>Date Offered:</strong> {viewOfferData.date_offered ? new Date(viewOfferData.date_offered).toLocaleString() : 'N/A'}</p>
-                {viewOfferData.date_accepted && (
+                {viewOfferData.offer_status === 'Accepted' && viewOfferData.date_accepted && (
                   <p><strong>Date Accepted:</strong> {new Date(viewOfferData.date_accepted).toLocaleString()}</p>
                 )}
-                {viewOfferData.date_rejected && (
+                {viewOfferData.offer_status === 'Rejected' && viewOfferData.date_rejected && (
                   <p><strong>Date Rejected:</strong> {new Date(viewOfferData.date_rejected).toLocaleString()}</p>
                 )}
               </div>
