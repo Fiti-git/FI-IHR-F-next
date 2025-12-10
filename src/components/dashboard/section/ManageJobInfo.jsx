@@ -90,10 +90,11 @@ function PostedJobsRow({ job }) {
       <td>
         <Link
           href={`/jobs/${job.id}`}
-          className="btn btn-sm btn-outline-primary"
+          className="ud-btn btn-thm"
+          style={{ padding: '10px', fontSize: '14px', transform: 'none', WebkitTransform: 'none', MozTransform: 'none', OTransform: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', lineHeight: '1', minWidth: '38px', minHeight: '38px', textAlign: 'center' }}
           title="View Details"
         >
-          <i className="fal fa-eye"></i>
+          <i className="fal fa-eye" style={{ transform: 'none', WebkitTransform: 'none', MozTransform: 'none', OTransform: 'none', display: 'block', margin: '0 auto' }}></i>
         </Link>
       </td>
     </tr>
