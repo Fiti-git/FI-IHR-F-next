@@ -103,6 +103,19 @@ const convertDatetimeLocalToIso = (localValue) => {
 };
 
 // -------------------------------------------------------------------
+// GET /api/job-offer/all
+// -------------------------------------------------------------------
+const fetchAllJobOffers = async () => {
+  try {
+    const res = await api.get('/api/job-offer/all');
+    return res.data?.offers || [];
+  } catch (error) {
+    console.error('Error fetching job offers:', error.response?.data || error.message);
+    return [];
+  }
+};
+
+// -------------------------------------------------------------------
 // POST /api/job-offer/create
 // -------------------------------------------------------------------
 const createJobOffer = async (applicationId, offerData) => {
@@ -168,6 +181,11 @@ export default function JobDetailPage() {
   const [showChatModal, setShowChatModal] = useState(false);
   const [currentChatApplicant, setCurrentChatApplicant] = useState(null);
   const [conversationId, setConversationId] = useState(null);
+  // Job offers state
+  const [jobOffers, setJobOffers] = useState([]);
+  // View offer modal state
+  const [showViewOfferModal, setShowViewOfferModal] = useState(false);
+  const [viewOfferData, setViewOfferData] = useState(null);
 
 
   // helper to extract application_id from applicant.raw or applicant object
@@ -553,6 +571,14 @@ export default function JobDetailPage() {
             setSchedules(prev => ({ ...prev, ...schedulesFromApi }));
           } catch (e) {
             console.error('Error fetching interviews for applications', e);
+          }
+
+          // Fetch job offers for all applications
+          try {
+            const offers = await fetchAllJobOffers();
+            setJobOffers(offers);
+          } catch (e) {
+            console.error('Error fetching job offers', e);
           }
         }
       }
@@ -1002,23 +1028,52 @@ export default function JobDetailPage() {
                             </tr>
                           );
                         }
-                        return accepted.map((applicant) => (
+                        return accepted.map((applicant) => {
+                          const applicationId = getApplicationIdFromApplicant(applicant) || applicant.id;
+                          const existingOffer = jobOffers.find(offer => offer.application_id === applicationId);
+                          const hasOffer = !!existingOffer;
+                          
+                          return (
                           <tr key={applicant.id}>
                             <td>
                               {applicant.name}
+                              {hasOffer && existingOffer.offer_status && (() => {
+                                const status = existingOffer.offer_status;
+                                let cls = 'pending-style style1 ms-2'; // default: yellow/pending
+                                if (status === 'Accepted') {
+                                  cls = 'pending-style style2 ms-2'; // blue
+                                } else if (status === 'Rejected') {
+                                  cls = 'pending-style style3 ms-2'; // red/pink
+                                } else if (status === 'Pending') {
+                                  cls = 'pending-style style1 ms-2'; // yellow
+                                }
+                                return <span className={cls}>{status}</span>;
+                              })()}
                             </td>
                             <td>
-                              <button
-                                className="ud-btn btn-thm me-2"
-                                style={{ padding: '10px', fontSize: '14px', transform: 'none', WebkitTransform: 'none', MozTransform: 'none', OTransform: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', lineHeight: '1', minWidth: '38px', minHeight: '38px', textAlign: 'center' }}
-                                title="Offer"
-                                onClick={() => {
-                                  // open local offer modal
-                                  setOfferApplicant(applicant);
-                                  setOfferData({ salary: (applicant.offer && applicant.offer.salary) || '', starting_date: (applicant.offer && applicant.offer.starting_date) || '', benefits: (applicant.offer && applicant.offer.benefits) || '' });
-                                  setShowOfferModal(true);
-                                }}
-                              ><i className="fal fa-file-contract" style={{ transform: 'none', WebkitTransform: 'none', MozTransform: 'none', OTransform: 'none', display: 'block', margin: '0 auto' }} /></button>
+                              {hasOffer ? (
+                                <button
+                                  className="ud-btn btn-thm me-2"
+                                  style={{ padding: '10px', fontSize: '14px', transform: 'none', WebkitTransform: 'none', MozTransform: 'none', OTransform: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', lineHeight: '1', minWidth: '38px', minHeight: '38px', textAlign: 'center' }}
+                                  title="View Offer"
+                                  onClick={() => {
+                                    setViewOfferData(existingOffer);
+                                    setShowViewOfferModal(true);
+                                  }}
+                                ><i className="fal fa-eye" style={{ transform: 'none', WebkitTransform: 'none', MozTransform: 'none', OTransform: 'none', display: 'block', margin: '0 auto' }} /></button>
+                              ) : (
+                                <button
+                                  className="ud-btn btn-thm me-2"
+                                  style={{ padding: '10px', fontSize: '14px', transform: 'none', WebkitTransform: 'none', MozTransform: 'none', OTransform: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', lineHeight: '1', minWidth: '38px', minHeight: '38px', textAlign: 'center' }}
+                                  title="Offer"
+                                  onClick={() => {
+                                    // open local offer modal
+                                    setOfferApplicant(applicant);
+                                    setOfferData({ salary: (applicant.offer && applicant.offer.salary) || '', starting_date: (applicant.offer && applicant.offer.starting_date) || '', benefits: (applicant.offer && applicant.offer.benefits) || '' });
+                                    setShowOfferModal(true);
+                                  }}
+                                ><i className="fal fa-file-contract" style={{ transform: 'none', WebkitTransform: 'none', MozTransform: 'none', OTransform: 'none', display: 'block', margin: '0 auto' }} /></button>
+                              )}
                               <button
                                 className="ud-btn btn-thm-border me-2"
                                 style={{ padding: '10px', fontSize: '14px', transform: 'none', WebkitTransform: 'none', MozTransform: 'none', OTransform: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', lineHeight: '1', minWidth: '38px', minHeight: '38px', textAlign: 'center' }}
@@ -1027,7 +1082,7 @@ export default function JobDetailPage() {
                               ><i className="fal fa-comments" style={{ transform: 'none', WebkitTransform: 'none', MozTransform: 'none', OTransform: 'none', display: 'block', margin: '0 auto' }} /></button>
                             </td>
                           </tr>
-                        ));
+                        )});
                       })()
                     )}
                   </tbody>
@@ -1287,6 +1342,155 @@ export default function JobDetailPage() {
                   }}
                 >
                   {offerSaving ? 'Sending...' : 'Send Offer'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* View Offer Modal */}
+      {showViewOfferModal && viewOfferData && (
+        <div className="modal-backdrop" style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1050 }}>          <div className="d-flex justify-content-center align-items-center" style={{ minHeight: '100vh' }}>
+            <div className="bg-white p-4 rounded" style={{ width: 520, maxHeight: '90vh', overflowY: 'auto' }}>
+              <h5 className="mb-3">Offer Details</h5>
+              
+              <div className="mb-3">
+                <p><strong>Offer ID:</strong> {viewOfferData.offer_id}</p>
+                <p><strong>Application ID:</strong> {viewOfferData.application_id}</p>
+                <p>
+                  <strong>Status:</strong>{' '}
+                  {(() => {
+                    const status = viewOfferData.offer_status;
+                    let cls = 'pending-style style1 ms-2'; // default: yellow/pending
+                    if (status === 'Accepted') {
+                      cls = 'pending-style style2 ms-2'; // blue
+                    } else if (status === 'Rejected') {
+                      cls = 'pending-style style3 ms-2'; // red/pink
+                    } else if (status === 'Pending') {
+                      cls = 'pending-style style1 ms-2'; // yellow
+                    }
+                    return <span className={cls}>{status}</span>;
+                  })()}
+                </p>
+                <p><strong>Date Offered:</strong> {viewOfferData.date_offered ? new Date(viewOfferData.date_offered).toLocaleString() : 'N/A'}</p>
+                {viewOfferData.date_accepted && (
+                  <p><strong>Date Accepted:</strong> {new Date(viewOfferData.date_accepted).toLocaleString()}</p>
+                )}
+                {viewOfferData.date_rejected && (
+                  <p><strong>Date Rejected:</strong> {new Date(viewOfferData.date_rejected).toLocaleString()}</p>
+                )}
+              </div>
+
+              {viewOfferData.offer_details && (() => {
+                try {
+                  const details = typeof viewOfferData.offer_details === 'string' 
+                    ? JSON.parse(viewOfferData.offer_details) 
+                    : viewOfferData.offer_details;
+                  return (
+                    <div className="mb-3">
+                      <h6 className="fw-bold">Offer Details:</h6>
+                      {details.salary && <p><strong>Salary:</strong> {details.salary}</p>}
+                      {details.start_date && <p><strong>Start Date:</strong> {details.start_date}</p>}
+                      {details.benefits && Array.isArray(details.benefits) && details.benefits.length > 0 && (
+                        <div>
+                          <strong>Benefits:</strong>
+                          <ul className="mt-2">
+                            {details.benefits.map((benefit, idx) => (
+                              <li key={idx}>{benefit}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                    </div>
+                  );
+                } catch (e) {
+                  return <p className="text-muted">Unable to parse offer details</p>;
+                }
+              })()}
+
+              {/* Documents Section */}
+              <div className="mb-3">
+                <h6 className="fw-bold">Documents:</h6>
+                {(() => {
+                  // Handle null or undefined
+                  if (!viewOfferData.multi_doc || viewOfferData.multi_doc === null || viewOfferData.multi_doc === 'null') {
+                    return <p className="text-muted">No documents attached</p>;
+                  }
+
+                  try {
+                    let docs = viewOfferData.multi_doc;
+                    
+                    // Parse if string
+                    if (typeof docs === 'string') {
+                      // Skip parsing if it's just 'null' or empty
+                      if (docs.trim() === '' || docs.trim() === 'null') {
+                        return <p className="text-muted">No documents attached</p>;
+                      }
+                      try {
+                        docs = JSON.parse(docs);
+                      } catch (parseError) {
+                        // If it's not JSON, treat it as a single document URL
+                        const docUrl = docs.startsWith('http') ? docs : `${API_BASE_URL}${docs.startsWith('/') ? docs : '/' + docs}`;
+                        const docName = docs.split('/').pop() || 'Document';
+                        return (
+                          <a 
+                            href={docUrl} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="text-primary d-block"
+                            style={{ cursor: 'pointer', textDecoration: 'underline' }}
+                          >
+                            {docName}
+                          </a>
+                        );
+                      }
+                    }
+                    
+                    // Handle array of documents
+                    if (Array.isArray(docs) && docs.length > 0) {
+                      return (
+                        <ul className="list-unstyled mt-2">
+                          {docs.map((doc, idx) => {
+                            if (!doc || doc === 'null') return null;
+                            const docUrl = doc.startsWith('http') ? doc : `${API_BASE_URL}${doc.startsWith('/') ? doc : '/' + doc}`;
+                            const docName = doc.split('/').pop() || `Document ${idx + 1}`;
+                            return (
+                              <li key={idx} className="mb-2">
+                                <a 
+                                  href={docUrl} 
+                                  target="_blank" 
+                                  rel="noopener noreferrer"
+                                  className="text-primary"
+                                  style={{ cursor: 'pointer', textDecoration: 'underline' }}
+                                >
+                                  📄 {docName}
+                                </a>
+                              </li>
+                            );
+                          })}
+                        </ul>
+                      );
+                    }
+                    
+                    return <p className="text-muted">No documents attached</p>;
+                  } catch (e) {
+                    console.error('Error processing multi_doc:', e, viewOfferData.multi_doc);
+                    return <p className="text-muted">No documents attached</p>;
+                  }
+                })()}
+              </div>
+
+              <div className="d-flex justify-content-end">
+                <button
+                  className="ud-btn btn-thm"
+                  style={{ padding: '8px 16px', fontSize: '14px' }}
+                  onClick={() => {
+                    setShowViewOfferModal(false);
+                    setViewOfferData(null);
+                  }}
+                >
+                  Close
                 </button>
               </div>
             </div>

@@ -19,6 +19,10 @@ export default function AppliedJobDetailPage() {
   const [isJobOpen, setIsJobOpen] = useState(true);
   const [activeTab, setActiveTab] = useState("overview"); // ← Moved UP
   const [interviewOpen, setInterviewOpen] = useState(true);
+  const [offers, setOffers] = useState([]);
+  const [offersOpen, setOffersOpen] = useState(true);
+  const [editingOffer, setEditingOffer] = useState(null);
+  const [offerFiles, setOfferFiles] = useState([]);
 
 
   const API_BASE_URL = "http://127.0.0.1:8000/api";
@@ -332,6 +336,92 @@ export default function AppliedJobDetailPage() {
   }, [applicationId]);
 
   // -----------------------------------------------------------------
+  // Fetch Offers
+  // -----------------------------------------------------------------
+  useEffect(() => {
+    async function fetchOffers() {
+      try {
+        const token = localStorage.getItem("access_token");
+        if (!token || !applicationId) return;
+
+        const res = await api.get('/api/job-offer/all', {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        if (res.data?.offers) {
+          // Filter offers for this application
+          const appOffers = res.data.offers.filter(
+            (offer) => offer.application_id === applicationId
+          );
+          setOffers(appOffers);
+        }
+      } catch (e) {
+        console.error('Error fetching offers:', e);
+      }
+    }
+    if (applicationId) fetchOffers();
+  }, [applicationId]);
+
+  // -----------------------------------------------------------------
+  // Update Offer
+  // -----------------------------------------------------------------
+  const handleUpdateOffer = async (offerId) => {
+    try {
+      const token = localStorage.getItem("access_token");
+      if (!token) {
+        alert('Not authenticated');
+        return;
+      }
+
+      const formData = new FormData();
+      
+      // Parse offer_details if it's a string
+      let offerDetails = editingOffer.offer_details;
+      if (typeof offerDetails === 'string') {
+        try {
+          offerDetails = JSON.parse(offerDetails);
+        } catch (e) {
+          console.error('Error parsing offer_details:', e);
+        }
+      }
+
+      // Append offer details
+      formData.append('offer_id', offerId);
+      formData.append('offer_status', editingOffer.offer_status);
+      formData.append('offer_details', JSON.stringify(offerDetails));
+      
+      // Append files
+      offerFiles.forEach((file) => {
+        formData.append('multi_doc', file);
+      });
+
+      const res = await api.put('/api/job-offer/update/', formData, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+
+      if (res.data) {
+        // Update local state
+        setOffers((prev) =>
+          prev.map((offer) =>
+            offer.offer_id === offerId ? { ...offer, ...res.data } : offer
+          )
+        );
+        setEditingOffer(null);
+        setOfferFiles([]);
+        alert('Offer updated successfully!');
+      }
+    } catch (e) {
+      console.error('Error updating offer:', e);
+      alert('Failed to update offer: ' + (e.response?.data?.detail || e.message));
+    }
+  };
+
+  // -----------------------------------------------------------------
   // EARLY RETURNS (AFTER ALL HOOKS)
   // -----------------------------------------------------------------
   if (loading) {
@@ -569,6 +659,222 @@ export default function AppliedJobDetailPage() {
                       )}
                     </div>
                   </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Offers Section - styled like Interview Details */}
+      {offers && offers.length > 0 && (
+        <div className="row mt-4">
+          <div className="col-xl-12">
+            <div className="mb-4 border rounded p-3">
+              <div
+                className="d-flex justify-content-between align-items-center cursor-pointer"
+                onClick={() => setOffersOpen(!offersOpen)}
+              >
+                <h5 className="fw500 mb-0">Offers</h5>
+                <span>{offersOpen ? "−" : "+"}</span>
+              </div>
+
+              {offersOpen && (
+                <div className="mt-3" style={{ maxHeight: "500px", overflowY: "auto" }}>
+                  {offers.map((offer) => {
+                    const isEditing = editingOffer?.offer_id === offer.offer_id;
+                    let parsedDetails = {};
+                    
+                    // Parse offer_details
+                    if (offer.offer_details) {
+                      try {
+                        parsedDetails = typeof offer.offer_details === 'string' 
+                          ? JSON.parse(offer.offer_details) 
+                          : offer.offer_details;
+                      } catch (e) {
+                        console.error('Error parsing offer_details:', e);
+                      }
+                    }
+
+                    return (
+                      <div key={offer.offer_id} className="bgc-white p-3 bdrs4 mb-3 border">
+                        <div className="text-muted">
+                          {!isEditing ? (
+                            <>
+                              <p>
+                                <strong>Status:</strong>{' '}
+                                <span className={`pending-style ${
+                                  offer.offer_status?.toLowerCase() === 'pending' ? 'style6' :
+                                  offer.offer_status?.toLowerCase() === 'accepted' ? 'style2' :
+                                  offer.offer_status?.toLowerCase() === 'rejected' ? 'style3' : 'style5'
+                                }`}>
+                                  {offer.offer_status}
+                                </span>
+                              </p>
+                              <p><strong>Date Offered:</strong> {new Date(offer.date_offered).toLocaleString()}</p>
+                              {parsedDetails.salary && <p><strong>Salary:</strong> {parsedDetails.salary}</p>}
+                              {parsedDetails.start_date && <p><strong>Start Date:</strong> {parsedDetails.start_date}</p>}
+                              {parsedDetails.benefits && (
+                                <div>
+                                  <strong>Benefits:</strong>
+                                  <ul className="mt-2">
+                                    {Array.isArray(parsedDetails.benefits) ? (
+                                      parsedDetails.benefits.map((benefit, idx) => (
+                                        <li key={idx}>{benefit}</li>
+                                      ))
+                                    ) : (
+                                      <li>{parsedDetails.benefits}</li>
+                                    )}
+                                  </ul>
+                                </div>
+                              )}
+                              {offer.date_accepted && (
+                                <p><strong>Date Accepted:</strong> {new Date(offer.date_accepted).toLocaleString()}</p>
+                              )}
+                              {offer.date_rejected && (
+                                <p><strong>Date Rejected:</strong> {new Date(offer.date_rejected).toLocaleString()}</p>
+                              )}
+                              {offer.multi_doc && (
+                                <div>
+                                  <strong>Documents:</strong>
+                                  <ul className="mt-2">
+                                    {(() => {
+                                      // Handle both single file path and array of files
+                                      const docs = Array.isArray(offer.multi_doc) ? offer.multi_doc : [offer.multi_doc];
+                                      return docs.map((doc, idx) => {
+                                        const fullUrl = doc.startsWith('http') ? doc : `http://127.0.0.1:8000${doc}`;
+                                        // Extract filename from path
+                                        const filename = doc.split('/').pop() || `Document ${idx + 1}`;
+                                        return (
+                                          <li key={idx}>
+                                            <a 
+                                              href={fullUrl} 
+                                              target="_blank" 
+                                              rel="noopener noreferrer" 
+                                              className="text-primary"
+                                            >
+                                              {decodeURIComponent(filename)}
+                                            </a>
+                                          </li>
+                                        );
+                                      });
+                                    })()}
+                                  </ul>
+                                </div>
+                              )}
+                              <button
+                                className="ud-btn btn-thm mt-2"
+                                style={{ padding: '6px 12px', fontSize: '13px' }}
+                                onClick={() => {
+                                  setEditingOffer({
+                                    offer_id: offer.offer_id,
+                                    offer_status: offer.offer_status,
+                                    offer_details: offer.offer_details,
+                                  });
+                                  setOfferFiles([]);
+                                }}
+                              >
+                                Edit Offer
+                              </button>
+                            </>
+                          ) : (
+                            <>
+                              <div className="mb-3">
+                                <label className="form-label"><strong>Salary:</strong></label>
+                                <input
+                                  type="text"
+                                  className="form-control"
+                                  value={parsedDetails.salary || ''}
+                                  readOnly
+                                  disabled
+                                  style={{ backgroundColor: '#f5f5f5' }}
+                                />
+                              </div>
+
+                              <div className="mb-3">
+                                <label className="form-label"><strong>Start Date:</strong></label>
+                                <input
+                                  type="text"
+                                  className="form-control"
+                                  value={parsedDetails.start_date || ''}
+                                  readOnly
+                                  disabled
+                                  style={{ backgroundColor: '#f5f5f5' }}
+                                />
+                              </div>
+
+                              <div className="mb-3">
+                                <label className="form-label"><strong>Benefits:</strong></label>
+                                <textarea
+                                  className="form-control"
+                                  rows="3"
+                                  value={
+                                    Array.isArray(parsedDetails.benefits) 
+                                      ? parsedDetails.benefits.join(', ') 
+                                      : parsedDetails.benefits || ''
+                                  }
+                                  readOnly
+                                  disabled
+                                  style={{ backgroundColor: '#f5f5f5' }}
+                                />
+                              </div>
+
+                              <div className="mb-3">
+                                <label className="form-label"><strong>Status:</strong></label>
+                                <select
+                                  className="form-select"
+                                  value={editingOffer.offer_status}
+                                  onChange={(e) => setEditingOffer({
+                                    ...editingOffer,
+                                    offer_status: e.target.value
+                                  })}
+                                >
+                                  <option value="Pending">Pending</option>
+                                  <option value="Accepted">Accepted</option>
+                                  <option value="Rejected">Rejected</option>
+                                </select>
+                              </div>
+
+                              <div className="mb-3">
+                                <label className="form-label"><strong>Upload Documents:</strong></label>
+                                <input
+                                  type="file"
+                                  multiple
+                                  className="form-control"
+                                  onChange={(e) => setOfferFiles(Array.from(e.target.files))}
+                                />
+                                {offerFiles.length > 0 && (
+                                  <small className="text-muted d-block mt-1">
+                                    {offerFiles.length} file(s) selected
+                                  </small>
+                                )}
+                              </div>
+
+                              <div className="d-flex gap-2">
+                                <button
+                                  className="ud-btn btn-thm"
+                                  style={{ padding: '6px 12px', fontSize: '13px' }}
+                                  onClick={() => handleUpdateOffer(offer.offer_id)}
+                                >
+                                  Save Changes
+                                </button>
+                                <button
+                                  className="ud-btn btn-dark"
+                                  style={{ padding: '6px 12px', fontSize: '13px' }}
+                                  onClick={() => {
+                                    setEditingOffer(null);
+                                    setOfferFiles([]);
+                                  }}
+                                >
+                                  Cancel
+                                </button>
+                              </div>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </div>
