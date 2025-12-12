@@ -29,7 +29,7 @@ export default function CreateProjectInfo() {
         <div className="row">
           <div className="col-xl-12">
             <BasicInformation2 />
-            <UploadAttachment />
+            {/* <UploadAttachment /> */}
           </div>
         </div>
       </div>

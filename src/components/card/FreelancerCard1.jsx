@@ -38,13 +38,13 @@ export default function FreelancerCard1({ data }) {
             {data.professional_title || data.profession || "Professional"}
           </p>
           <div className="review">
-            <p>
+            {/* <p>
               <i className="fas fa-star fz10 review-color pr10" />
               <span className="dark-color fw500">{data.rating || "5.0"}</span> (
               {data.reviews || "0"} reviews)
-            </p>
+            </p> */}
           </div>
-          <div className="skill-tags d-flex align-items-center justify-content-center mb5">
+          {/* <div className="skill-tags d-flex align-items-center justify-content-center mb5">
             {skillsList && skillsList.length > 0 ? (
               skillsList.slice(0, 3).map((skill, index) => (
                 <span key={index} className={`tag ${index > 0 ? 'mx10' : ''}`}>
@@ -58,7 +58,7 @@ export default function FreelancerCard1({ data }) {
                 <span className="tag">Skill 3</span>
               </>
             )}
-          </div>
+          </div> */}
           <hr className="opacity-100 mt20 mb15" />
           <div className="fl-meta d-flex align-items-center justify-content-between">
             <a className="meta fw500 text-start">

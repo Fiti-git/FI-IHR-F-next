@@ -45,37 +45,37 @@ export default function UploadAttachment() {
     </div>
   ));
 
-  return (
-    <>
-      <div className="ps-widget bgc-white bdrs12 p30 mb30 overflow-hidden position-relative">
-        <div className="bdrb1 pb15 mb25">
-          <h5 className="list-title">Upload Attachments</h5>
-        </div>
-        <div className="row">
-          {content}
-          <div className="col-6 col-xl-3">
-            <label>
-              <a className="upload-img">
-                Upload Files
-                <input
-                  type="file"
-                  accept="application/pdf"
-                  className="d-none"
-                  onChange={handleFileUpload}
-                  multiple
-                />
-              </a>
-            </label>
-          </div>
-        </div>
-        <p className="text">Maximum file size: 10 MB</p>
-        <div className="text-start">
-          <Link className="ud-btn btn-thm" href="/contact">
-            Save &amp; Publish
-            <i className="fal fa-arrow-right-long" />
-          </Link>
-        </div>
-      </div>
-    </>
-  );
+  // return (
+  //   <>
+  //     <div className="ps-widget bgc-white bdrs12 p30 mb30 overflow-hidden position-relative">
+  //       <div className="bdrb1 pb15 mb25">
+  //         <h5 className="list-title">Upload Attachments</h5>
+  //       </div>
+  //       <div className="row">
+  //         {content}
+  //         <div className="col-6 col-xl-3">
+  //           <label>
+  //             <a className="upload-img">
+  //               Upload Files
+  //               <input
+  //                 type="file"
+  //                 accept="application/pdf"
+  //                 className="d-none"
+  //                 onChange={handleFileUpload}
+  //                 multiple
+  //               />
+  //             </a>
+  //           </label>
+  //         </div>
+  //       </div>
+  //       <p className="text">Maximum file size: 10 MB</p>
+  //       <div className="text-start">
+  //         <Link className="ud-btn btn-thm" href="/contact">
+  //           Save &amp; Publish
+  //           <i className="fal fa-arrow-right-long" />
+  //         </Link>
+  //       </div>
+  //     </div>
+  //   </>
+  // );
 }

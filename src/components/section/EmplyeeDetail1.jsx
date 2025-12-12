@@ -141,7 +141,7 @@ export default function EmployeeDetail1() {
                   </>
                 ) : (
                   <>
-                    <p className="text mb30">
+                    {/* <p className="text mb30">
                       Welcome to {jobProvider.company_name || "our company"}. We are committed to
                       providing excellent opportunities and fostering a great work environment for
                       talented professionals.
@@ -150,7 +150,7 @@ export default function EmployeeDetail1() {
                       Our team is dedicated to innovation and excellence in the {industryDisplay} sector.
                       We offer {jobTypeDisplay.toLowerCase()} positions and are always looking for
                       passionate individuals to join our growing team.
-                    </p>
+                    </p> */}
                   </>
                 )}
 
@@ -191,7 +191,7 @@ export default function EmployeeDetail1() {
                   </div>
                 </div>
 
-                <h5 className="mb20 mt60">Who are we?</h5>
+                {/* <h5 className="mb20 mt60">Who are we?</h5>
                 <p className="text mb30">
                   {jobProvider.company_name || "Our company"} is a leading organization in the {industryDisplay} industry. We specialize in providing quality services and creating opportunities for talented professionals to grow and succeed in their careers.
                 </p>
@@ -202,7 +202,7 @@ export default function EmployeeDetail1() {
                   is committed to excellence and innovation, providing a dynamic work environment
                   where employees can thrive and develop their skills. We believe in fostering a
                   culture of collaboration and continuous improvement.
-                </p>
+                </p> */}
 
                 <EmployeeDetailSlider1 />
 
@@ -218,8 +218,8 @@ export default function EmployeeDetail1() {
                   ))}
                 </div>
 
-                <ServiceDetailReviewInfo1 />
-                <ServiceDetailComment1 />
+                {/* <ServiceDetailReviewInfo1 />
+                <ServiceDetailComment1 /> */}
               </div>
             </div>
             <div className="col-lg-4">
