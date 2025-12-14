@@ -177,7 +177,7 @@ export default function Footer8() {
                         <div className="col-sm-6">
                             <div className="text-center text-lg-start">
                                 <p className="copyright-text mb-2 mb-md-0 text-white-light ff-heading">
-                                    © Freeio. 2023{" "}
+                                    © FITI. 2025{" "}
                                     <Link
                                         href="https://themeforest.net/user/ib-themes/portfolio"
                                         target="_blank"

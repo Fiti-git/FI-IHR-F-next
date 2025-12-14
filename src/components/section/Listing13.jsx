@@ -87,10 +87,17 @@ export default function Listing13({ searchFilters }) {
       : freelancer.city || freelancer.country || "Location";
 
     // Parse skills from skills_list (serializer method) or skills field
-    const skillsArray = freelancer.skills_list
+    let skillsArray = freelancer.skills_list
       || (freelancer.skills
         ? freelancer.skills.split(',').map(s => s.trim())
         : []);
+
+    // --- START CHANGE: Remove specific placeholder skills ---
+    skillsArray = skillsArray.filter(skill => {
+        const s = skill.toLowerCase();
+        return s !== 'skill1' && s !== 'skill2' && s !== 'skill3';
+    });
+    // --- END CHANGE ---
 
     // Format specialization for display
     const specializationDisplay = {

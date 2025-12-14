@@ -172,7 +172,7 @@ export default function ProjectContactWidget1({ projectData }) {
         {projectData.user.id && (
           <div className="d-grid mt-2">
             <Link 
-              href={`/freelancer/${projectData.user.id}`}
+              href={`/employee-single/${projectData.user.id}`}
               className="ud-btn btn-white"
             >
               View Profile

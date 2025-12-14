@@ -275,17 +275,36 @@ export default function BasicInformation2() {
 
       const response = await api.post('/api/project/projects/', formData);
 
-      if (response.statusText != "OK") {
-        let errorData;
-        try {
-          errorData = await response.json();
-          console.log("API Error Response:", errorData);
-        } catch (parseError) {
-          console.error("Error parsing response:", parseError);
-          errorData = { message: "Failed to parse error response" };
-        }
+      // With axios, successful responses (2xx) are returned directly
+      // Errors (4xx, 5xx) are thrown and caught in the catch block
+      const data = response.data;
+      console.log("Project created successfully:", data);
 
-        if (response.status === 401) {
+      // Log the image URL if available
+      if (data.image_url) {
+        console.log("Project image URL:", data.image_url);
+      }
+
+      setSuccess(true);
+      setCreatedProject(data); // Store the created project data
+
+      // Scroll to top to show success message
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+
+      // DON'T auto-redirect - let user decide what to do next
+      // User can click "View Project" or "Create Another" buttons
+
+    } catch (err) {
+      console.error("Error creating project:", err);
+      
+      // Handle axios errors (4xx, 5xx status codes)
+      if (err.response) {
+        const errorData = err.response.data;
+        const status = err.response.status;
+
+        console.log("API Error Response:", errorData);
+
+        if (status === 401) {
           localStorage.removeItem('access_token');
           localStorage.removeItem('refresh_token');
           setError("Session expired. Please log in again.");
@@ -293,11 +312,10 @@ export default function BasicInformation2() {
           setTimeout(() => {
             window.location.href = '/login';
           }, 2000);
-          return;
-        } else if (response.status === 403) {
+        } else if (status === 403) {
           setError("Access Denied: You don't have permission to create projects. Only job providers can create projects.");
-          return;
-        } else if (response.status === 400) {
+        } else if (status === 400) {
+          // Handle validation errors
           if (errorData.user_role || errorData.role || errorData.user_type) {
             setError("Access Denied: Freelancers cannot create projects. Only job providers can create projects.");
           } else if (errorData.budget) {
@@ -323,37 +341,16 @@ export default function BasicInformation2() {
           } else {
             setError("Invalid project data. Please check your input.");
           }
-          return;
-        } else if (response.status >= 500) {
+        } else if (status >= 500) {
           setError("Server error. Please try again later.");
-          return;
+        } else {
+          setError(errorData.detail || errorData.message || "Failed to create project");
         }
-
-        throw new Error(errorData.detail || errorData.message || "Failed to create project");
-      }
-
-      const data = await response.data;
-      console.log("Project created successfully:", data);
-
-      // Log the image URL if available
-      if (data.image_url) {
-        console.log("Project image URL:", data.image_url);
-      }
-
-      setSuccess(true);
-      setCreatedProject(data); // Store the created project data
-
-      // Scroll to top to show success message
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-
-      // DON'T auto-redirect - let user decide what to do next
-      // User can click "View Project" or "Create Another" buttons
-
-    } catch (err) {
-      console.error("Error creating project:", err);
-      if (err.name === 'TypeError' && err.message === 'Failed to fetch') {
+      } else if (err.request) {
+        // Request was made but no response received (network error)
         setError("Network error. Please check your internet connection and try again.");
       } else {
+        // Something else happened
         setError(err.message || "An unexpected error occurred while creating the project");
       }
     } finally {
@@ -525,7 +522,7 @@ export default function BasicInformation2() {
           </div>
         )}
 
-        {isAuthenticated && userRole === 'job-provider' && !success && (
+        {/* {isAuthenticated && userRole === 'job-provider' && !success && (
           <div className="alert alert-success mb20 d-flex align-items-center" role="alert">
             <i className="fal fa-check-circle me-2"></i>
             <div>
@@ -533,7 +530,7 @@ export default function BasicInformation2() {
               You can create and manage projects to hire freelancers.
             </div>
           </div>
-        )}
+        )} */}
 
         {/* SUCCESS MESSAGE - Enhanced with project details and action buttons */}
         {success && createdProject && (
@@ -682,7 +679,7 @@ export default function BasicInformation2() {
                 <small className="text-muted">{description.length}/5000 characters</small>
               </div>
 
-              <div className="col-sm-12 mb20">
+              {/* <div className="col-sm-12 mb20">
                 <label className="heading-color ff-heading fw500 mb10">
                   Project Image
                 </label>
@@ -727,7 +724,7 @@ export default function BasicInformation2() {
                     )}
                   </div>
                 )}
-              </div>
+              </div> */}
 
               <div className="col-sm-6 mb20">
                 <div className={loading || userRole === 'freelancer' || !isAuthenticated ? 'opacity-50' : ''}>
@@ -824,13 +821,11 @@ export default function BasicInformation2() {
               </div>
 
               <div className="col-sm-12 mb20">
-                <div className="alert alert-info">
-                  <small>
-                    <i className="fal fa-info-circle me-2"></i>
-                    <strong>Note:</strong> Fields marked with <span className="text-danger">*</span> are required.
-                    {image && " Your project image will be uploaded with the form."}
-                  </small>
-                </div>
+                <p className="text-muted mb-0 fz14">
+                  <i className="fal fa-info-circle me-2"></i>
+                  <span className="fw600 text-dark">Note:</span> Fields marked with <span className="text-danger">*</span> are required.
+                  {image && " Your project image will be uploaded with the form."}
+                </p>
               </div>
 
               <div className="col-md-12 mt-3">

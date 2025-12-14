@@ -8,7 +8,6 @@ import listingStore from "@/store/listingStore";
 import api from '@/lib/axios';
 import { API_BASE_URL } from '@/lib/config';
 
-
 export default function Listing11({ searchFilters }) {
   const [jobProviders, setJobProviders] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -16,27 +15,26 @@ export default function Listing11({ searchFilters }) {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 16;
 
+  // Get filter states from the store
   const getCategory = listingStore((state) => state.getCategory);
   const getNoOfEmployee = listingStore((state) => state.getNoOfEmployee);
   const getBestSeller = listingStore((state) => state.getBestSeller);
 
-  // Reset to page 1 when search filters change
+  // Reset to page 1 when any filter changes
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchFilters]);
+  }, [searchFilters, getCategory, getNoOfEmployee, getBestSeller]);
 
-  // Fetch all job provider profiles from public API
+  // Fetch all job provider profiles
   useEffect(() => {
     const fetchJobProviders = async () => {
       try {
         setLoading(true);
         const response = await api.get("/api/profile/job-providers/");
-        console.log("Fetched job providers:", response.data);
         setJobProviders(response.data);
         setError(null);
       } catch (err) {
         console.error("Error fetching job providers:", err);
-
         if (err.response?.status === 404) {
           setJobProviders([]);
           setError("No job provider profiles found");
@@ -52,150 +50,151 @@ export default function Listing11({ searchFilters }) {
     fetchJobProviders();
   }, []);
 
-  // Transform API data to match the format expected by EmployeeCard1
+  // --- Helpers ---
+
+  // Capitalize words for display
+  const formatText = (text) => {
+    if (!text) return "";
+    return text
+      .split(/[-_ ]+/)
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+      .join(" ");
+  };
+
+  // Normalize strings for comparison (removes case, spaces, and dashes)
+  // Example: "Full-Time" becomes "fulltime", "part time" becomes "parttime"
+  const normalize = (text) => {
+    if (!text) return "";
+    return text.toLowerCase().replace(/[-_ ]/g, "");
+  };
+
+  // --- Transformation ---
+
   const transformJobProvider = (provider) => {
-    // Handle profile_image_url first (from serializer), fallback to profile_image, then default
-    const imageUrl = provider.profile_image_url
-      || (provider.profile_image
-        ? (provider.profile_image.startsWith('http')
-          ? provider.profile_image
-          : `${API_BASE_URL}${provider.profile_image}`)
-        : "/images/team/client-1.png");
+    // 1. Handle Image
+    let imageUrl = "/images/team/client-1.png";
+    if (provider.profile_image_url) {
+      imageUrl = provider.profile_image_url;
+    } else if (provider.profile_image) {
+      imageUrl = provider.profile_image.startsWith('http') 
+        ? provider.profile_image 
+        : `${API_BASE_URL}${provider.profile_image}`;
+    }
 
-    // Extract user data from nested user object
-    const user = provider.user || {};
-    const userId = user.id;
+    // 2. Data Preparation
+    const displayName = provider.company_name || "Confidential Company";
+    const industryRaw = provider.industry || "";
+    const jobTypeRaw = provider.job_type || "";
+    const countryRaw = provider.country || "";
 
-    // Create display name from available user data
-    const displayName = user.first_name && user.last_name
-      ? `${user.first_name} ${user.last_name}`.trim()
-      : user.first_name || user.last_name || user.username || provider.company_name || "User";
-
-    // Format country name for display
-    const countryDisplay = {
+    // 3. Formatted Displays
+    const countryMap = {
       'usa': 'United States',
-      'canada': 'Canada',
-      'uk': 'United Kingdom'
-    }[provider.country] || provider.country || "Location";
+      'uk': 'United Kingdom',
+      'uae': 'United Arab Emirates'
+    };
+    const locationDisplay = countryMap[countryRaw.toLowerCase()] || formatText(countryRaw) || "Location N/A";
+    const industryDisplay = formatText(industryRaw) || "General";
 
-    // Format industry for display
-    const industryDisplay = {
-      'technology': 'Technology',
-      'healthcare': 'Healthcare',
-      'finance': 'Finance',
-      'education': 'Education'
-    }[provider.industry] || provider.industry || "Industry";
-
-    // Format job type for display
-    const jobTypeDisplay = {
-      'full-time': 'Full-time',
-      'part-time': 'Part-time',
-      'remote': 'Remote'
-    }[provider.job_type] || provider.job_type || "Full-time";
+    const userId = provider.user?.id || provider.id;
 
     return {
-      // Fields that EmployeeCard1 expects
+      // Data for Card Component
       id: userId,
       img: imageUrl,
-      server: displayName,
-      rating: "5.0",
-      review: "0",
-      location: countryDisplay,
-
-      // Additional fields for reference and search
+      server: displayName,      
+      jobs: industryDisplay,    
+      location: locationDisplay,
+      
+      // Data for Filtering
       providerId: provider.id,
-      userId: userId,
-      username: user.username || '',
-      firstName: user.first_name || '',
-      lastName: user.last_name || '',
-      companyName: provider.company_name || "Company",
-      category: provider.industry || "technology",
-      categoryDisplay: industryDisplay,
-      jobs: provider.job_type || "full-time",
-      jobsDisplay: jobTypeDisplay,
-      email: provider.email_address || user.email || "",
-      phone: provider.phone_number || "",
-      description: provider.company_overview || "",
-      country: provider.country || "usa",
-      countryRaw: provider.country || "usa",
+      categoryRaw: industryRaw,     // e.g. "technology"
+      jobTypeRaw: jobTypeRaw,       // e.g. "full-time" or "part-time"
+      
+      // Sort key (Default to ID descending if no specific sort field exists)
+      sort: "best-seller", // Placeholder to allow default sort to pass
+      
+      // Search Data
+      searchableText: `
+        ${displayName} 
+        ${industryDisplay} 
+        ${locationDisplay} 
+        ${provider.company_overview || ""}
+      `.toLowerCase()
     };
   };
 
-  // Search filter - searches across multiple fields
+  // --- Filter Logic ---
+
+  // 1. Search Bar Filter
   const searchFilter = (item) => {
     if (!searchFilters || !searchFilters.keyword || searchFilters.keyword.trim() === '') {
       return true;
     }
-
     const keyword = searchFilters.keyword.toLowerCase().trim();
-
-    // Search in these fields
-    const searchableFields = [
-      item.companyName,
-      item.server,
-      item.categoryDisplay,
-      item.jobsDisplay,
-      item.description,
-      item.location,
-      item.username,
-      item.firstName,
-      item.lastName,
-      item.email
-    ];
-
-    return searchableFields.some(field =>
-      field && field.toLowerCase().includes(keyword)
-    );
+    return item.searchableText.includes(keyword);
   };
 
-  // Location filter
+  // 2. Location Search Filter
   const locationFilter = (item) => {
     if (!searchFilters || !searchFilters.location) {
       return true;
     }
-
     const searchLocation = searchFilters.location.toLowerCase();
-    const itemCountry = (item.countryRaw || '').toLowerCase();
-    const itemLocation = (item.location || '').toLowerCase();
-
-    // Match against country code or display name
-    return itemCountry.includes(searchLocation) || itemLocation.includes(searchLocation);
+    return item.location.toLowerCase().includes(searchLocation);
   };
 
-  // Category filter (based on industry)
-  const categoryFilter = (item) =>
-    getCategory?.length !== 0 ? getCategory.includes(item.category) : true;
+  // 3. Category Filter (Industry)
+  const categoryFilter = (item) => {
+    // If no category selected, show all
+    if (!getCategory || getCategory.length === 0) return true;
+    
+    // Check if item category matches ANY of the selected categories
+    // Uses normalize to match "Technology" (sidebar) with "technology" (api)
+    return getCategory.some(selectedCat => 
+      normalize(selectedCat) === normalize(item.categoryRaw)
+    );
+  };
 
-  // Job type filter
-  const jobTypeFilter = (item) =>
-    getNoOfEmployee?.length !== 0 ? getNoOfEmployee.includes(item.jobs) : true;
+  // 4. Job Type / No of Employee Filter
+  // Note: Mapping "No of Employee" variable to "Job Type" data as requested
+  const jobTypeFilter = (item) => {
+    if (!getNoOfEmployee || getNoOfEmployee.length === 0) return true;
 
-  // Sort by filter
-  const sortByFilter = (item) =>
-    getBestSeller === "best-seller" ? true : item.sort === getBestSeller;
+    // Check if item job type matches ANY selected filter
+    return getNoOfEmployee.some(selectedType => 
+      normalize(selectedType) === normalize(item.jobTypeRaw)
+    );
+  };
 
-  // Apply all filters
+  // 5. Sort Filter
+  const sortByFilter = (item) => {
+    if (!getBestSeller || getBestSeller === "best-seller") return true;
+    // If you have specific sort logic (like 'newest'), add it here. 
+    // Currently defaulting to true to prevent empty results on sort change.
+    return true; 
+  };
+
+  // --- Apply Filters ---
   const filteredProviders = jobProviders
     .map(transformJobProvider)
-    .filter(searchFilter)        // NEW: Search keyword filter
-    .filter(locationFilter)      // NEW: Location filter
+    .filter(searchFilter)
+    .filter(locationFilter)
     .filter(categoryFilter)
     .filter(jobTypeFilter)
     .filter(sortByFilter);
 
-  // Pagination
+  // Pagination Logic
   const indexOfLastItem = currentPage * itemsPerPage;
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
   const currentItems = filteredProviders.slice(indexOfFirstItem, indexOfLastItem);
 
-  // Content rendering with unique keys
   const content = currentItems.map((item) => (
     <div key={`job-provider-${item.providerId}`} className="col-sm-6 col-lg-4 col-xl-3">
       <EmployeeCard1 data={item} />
     </div>
   ));
 
-  // Loading state
   if (loading) {
     return (
       <section className="pt30 pb90">
@@ -205,53 +204,12 @@ export default function Listing11({ searchFilters }) {
               <div className="spinner-border text-primary" role="status">
                 <span className="visually-hidden">Loading...</span>
               </div>
-              <p className="mt-3">Loading job providers...</p>
             </div>
           </div>
         </div>
       </section>
     );
   }
-
-  // Error state
-  if (error && jobProviders.length === 0) {
-    return (
-      <section className="pt30 pb90">
-        <div className="container">
-          <ListingOption5 />
-          <div className="row">
-            <div className="col-12 text-center py-5">
-              <div className="alert alert-warning" role="alert">
-                <h4>No Job Providers Found</h4>
-                <p>{error}</p>
-              </div>
-            </div>
-          </div>
-        </div>
-        <ListingSidebarModal4 />
-      </section>
-    );
-  }
-
-  // Empty state
-  if (jobProviders.length === 0) {
-    return (
-      <section className="pt30 pb90">
-        <div className="container">
-          <ListingOption5 />
-          <div className="row">
-            <div className="col-12 text-center py-5">
-              <p>No job providers available at the moment.</p>
-            </div>
-          </div>
-        </div>
-        <ListingSidebarModal4 />
-      </section>
-    );
-  }
-
-  // Check if search is active
-  const isSearchActive = searchFilters && (searchFilters.keyword || searchFilters.location);
 
   return (
     <>
@@ -259,37 +217,35 @@ export default function Listing11({ searchFilters }) {
         <div className="container">
           <ListingOption5 />
 
-          {/* Search Results Info */}
-          {isSearchActive && (
-            <div className="row mb-3">
-              <div className="col-12">
-                <div className="alert alert-info d-flex justify-content-between align-items-center">
-                  <span>
-                    Found <strong>{filteredProviders.length}</strong> result{filteredProviders.length !== 1 ? 's' : ''}
-                    {searchFilters.keyword && ` for "${searchFilters.keyword}"`}
-                    {searchFilters.location && ` in ${searchFilters.location}`}
-                  </span>
-                </div>
-              </div>
+          {/* Results Count */}
+          <div className="row mb-3">
+            <div className="col-12">
+               <p className="text-muted">
+                 Showing {filteredProviders.length} result{filteredProviders.length !== 1 ? 's' : ''}
+               </p>
             </div>
-          )}
+          </div>
 
           <div className="row">
             {content.length > 0 ? (
               content
             ) : (
               <div className="col-12 text-center py-5">
-                <div className="alert alert-warning">
+                <div className="alert alert-light">
                   <h5>No Results Found</h5>
-                  <p>
-                    {isSearchActive
-                      ? "Try adjusting your search criteria or clearing filters."
-                      : "No job providers match your current filters."}
-                  </p>
+                  <p>Try adjusting your filters to find what you are looking for.</p>
+                  {(getCategory?.length > 0 || getNoOfEmployee?.length > 0) && (
+                     <small className="text-muted">
+                       Current Filters: 
+                       {getCategory?.length > 0 && ` Category (${getCategory.join(', ')})`}
+                       {getNoOfEmployee?.length > 0 && ` Job Type (${getNoOfEmployee.join(', ')})`}
+                     </small>
+                  )}
                 </div>
               </div>
             )}
           </div>
+          
           {filteredProviders.length > itemsPerPage && (
             <div className="row">
               <div className="mt30">

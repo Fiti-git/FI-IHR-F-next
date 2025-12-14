@@ -1,11 +1,115 @@
 "use client";
-import { employee } from "@/data/product";
+import { useEffect, useState } from "react";
 import Image from "next/image";
 import { useParams } from "next/navigation";
+import api from "@/lib/axios";
+import { API_BASE_URL } from "@/lib/config";
 
 export default function Breadcumb15() {
   const { id } = useParams();
-  const data = employee.find((item) => item.id == id);
+  const [provider, setProvider] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  // Helper to format text
+  const formatText = (text) => {
+    if (!text) return "";
+    return text
+      .split(/[-_ ]+/)
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+      .join(" ");
+  };
+
+  useEffect(() => {
+    const fetchProviderDetails = async () => {
+      if (!id) return;
+
+      try {
+        setLoading(true);
+        // FIX: The backend doesn't support /15/, so we fetch the LIST
+        // and filter it using JavaScript to find the specific person.
+        const response = await api.get("/api/profile/job-providers/");
+        
+        const allProviders = response.data;
+        
+        // Find the provider where the User ID matches the URL param
+        const foundProvider = allProviders.find(item => {
+           // Check User ID (preferred) or Profile ID
+           const userId = item.user?.id || item.id;
+           return String(userId) === String(id);
+        });
+
+        if (foundProvider) {
+          setProvider(foundProvider);
+        } else {
+          console.error("Provider not found in list");
+        }
+
+      } catch (err) {
+        console.error("Error fetching provider details:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProviderDetails();
+  }, [id]);
+
+  // Image Logic
+  const getImageUrl = () => {
+    if (!provider) return "/images/team/employee-single.png";
+
+    if (provider.profile_image_url) {
+      return provider.profile_image_url;
+    } else if (provider.profile_image) {
+      return provider.profile_image.startsWith("http")
+        ? provider.profile_image
+        : `${API_BASE_URL}${provider.profile_image}`;
+    }
+    return "/images/team/employee-single.png";
+  };
+
+  // Country/Location Logic
+  const getLocation = () => {
+    if (!provider || !provider.country) return "Location N/A";
+    const countryMap = {
+      usa: "United States",
+      uk: "United Kingdom",
+      uae: "United Arab Emirates",
+    };
+    return (
+      countryMap[provider.country.toLowerCase()] || formatText(provider.country)
+    );
+  };
+
+  if (loading) {
+    return (
+      <section className="breadcumb-section pt-0">
+        <div className="container">
+          <div className="row">
+            <div className="col-12 text-center pt50 pb50">
+              <span>Loading...</span>
+            </div>
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+  // If no data found after loading
+  if (!provider) {
+    return (
+      <section className="breadcumb-section pt-0">
+        <div className="container">
+          <div className="row">
+            <div className="col-12 text-center pt50 pb50">
+              <span>Provider not found</span>
+            </div>
+          </div>
+        </div>
+      </section>
+    );
+  }
+
   return (
     <>
       <section className="breadcumb-section pt-0">
@@ -30,45 +134,40 @@ export default function Breadcumb15() {
                 <div className="position-relative">
                   <div className="list-meta d-sm-flex align-items-center">
                     <a className="position-relative freelancer-single-style">
-                      {data ? (
-                        <Image
-                          height={120}
-                          width={120}
-                          className="rounded-circle w-100 wa-sm mb15-sm"
-                          src={data.img}
-                          alt="Freelancer Photo"
-                        />
-                      ) : (
-                        <Image
-                          height={120}
-                          width={120}
-                          className="rounded-circle w-100 wa-sm mb15-sm"
-                          src="/images/team/employee-single.png"
-                          alt="Freelancer Photo"
-                        />
-                      )}
+                      <Image
+                        height={120}
+                        width={120}
+                        className="rounded-circle w-100 wa-sm mb15-sm"
+                        src={getImageUrl()}
+                        alt={provider.company_name || "Company"}
+                        style={{ objectFit: "cover" }}
+                        onError={(e) => {
+                          e.target.src = "/images/team/employee-single.png";
+                        }}
+                      />
                       <span className="online2" />
                     </a>
                     <div className="ml20 ml0-xs">
-                      {data ? (
-                        <h5 className="title mb-1">{data.server}</h5>
-                      ) : (
-                        <h5 className="title mb-1">Invision</h5>
-                      )}
-                      <p className="text fz14 mb-2">
-                        Lorem Ipsum Dolar Sit Amet
-                      </p>
-                      <p className="mb-0 dark-color fz15 fw500 list-inline-item mb5-sm">
-                        <i className="fas fa-star vam fz10 review-color me-2" />{" "}
-                        4.82 94 reviews
-                      </p>
+                      <h5 className="title mb-1">
+                        {provider.company_name || "Company Name"}
+                      </h5>
+                      {/* <p className="text fz14 mb-2">
+                        {provider.company_overview
+                          ? provider.company_overview.substring(0, 150) +
+                            (provider.company_overview.length > 150 ? "..." : "")
+                          : formatText(provider.industry) || "Company Overview"}
+                      </p> */}
+
+                      {/* Location */}
                       <p className="mb-0 dark-color fz15 fw500 list-inline-item ml15 mb5-sm ml0-xs">
-                        <i className="flaticon-place vam fz20 me-2" /> London,
-                        UK
+                        <i className="flaticon-place vam fz20 me-2" />
+                        {getLocation()}
                       </p>
+
+                      {/* Job Type or Industry as secondary info */}
                       <p className="mb-0 dark-color fz15 fw500 list-inline-item ml15 mb5-sm ml0-xs">
-                        <i className="flaticon-30-days vam fz20 me-2" /> Since
-                        April 1, 2022
+                        <i className="flaticon-30-days vam fz20 me-2" />
+                        {formatText(provider.industry) || "Industry"}
                       </p>
                     </div>
                   </div>

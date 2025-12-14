@@ -9,19 +9,24 @@ import api from '@/lib/axios';
 
 // Status badge component for consistency
 const StatusBadge = ({ status }) => {
+  // Define sizing classes: 
+  // px-3 = horizontal padding (wider)
+  // py-2 = vertical padding (taller) 
+  // fs-6 = increases font size slightly
+  const sizeClasses = "badge px-3 py-2 fs-6";
   const getStatusClass = (status) => {
     switch (status?.toLowerCase()) {
       case "open":
-        return "badge bg-success";
+        return `${sizeClasses} badge bg-success`;
       case "in_progress":
-        return "badge bg-primary";
+        return `${sizeClasses} badge bg-primary`;
       case "completed":
-        return "badge bg-info";
+        return `${sizeClasses} badge bg-info`;
       case "cancelled":
       case "closed":
-        return "badge bg-danger";
+        return `${sizeClasses} badge bg-danger`;
       default:
-        return "badge bg-secondary";
+        return `${sizeClasses} badge bg-secondary`;
     }
   };
 
@@ -69,27 +74,27 @@ function ProjectRow({ project, onDelete }) {
         </small>
       </td>
       <td>
-        <div className="d-flex gap-2">
+        <div className="d-flex align-items-center gap-3">
           <Link
             href={`/projects/${project.id}`}
-            className="btn btn-sm btn-outline-primary"
+            className="text-primary p-1"
             title="View Details"
           >
-            <i className="fal fa-eye"></i>
+            <i className="fal fa-eye fa-lg"></i>
           </Link>
           <Link
             href={`/edit-project/${project.id}`}
-            className="btn btn-sm btn-outline-secondary"
+            className="text-secondary p-1"
             title="Edit Project"
           >
-            <i className="fal fa-edit"></i>
+            <i className="fal fa-edit fa-lg"></i>
           </Link>
           <button
-            className="btn btn-sm btn-outline-danger"
+            className="text-danger border-0 bg-transparent p-1"
             onClick={() => onDelete(project.id)}
             title="Delete Project"
           >
-            <i className="fal fa-trash"></i>
+            <i className="fal fa-trash fa-lg"></i>
           </button>
         </div>
       </td>
@@ -295,7 +300,7 @@ export default function ManageProjectInfo() {
                     <option value="cancelled">Cancelled</option>
                   </select>
                   <button
-                    className="btn btn-sm btn-outline-primary"
+                    className="btn btn-sm bg-light border text-secondary"
                     onClick={fetchProjects}
                     title="Refresh"
                   >

@@ -148,7 +148,7 @@ export default function Footer12() {
           <div className="col-sm-6">
             <div className="text-center text-lg-start">
               <p className="copyright-text mb-2 mb-md-0 text-white ff-heading">
-                © Freeio. 2023{" "}
+                © FITI. 2025{" "}
                 <Link
                   style={{ color: "inherit" }}
                   href="https://themeforest.net/user/ib-themes/portfolio"

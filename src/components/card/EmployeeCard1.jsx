@@ -25,14 +25,14 @@ export default function EmployeeCard1({ data }) {
               {companyName}
             </Link>
           </h6>
-          <span className="fav-icon flaticon-star" />
+          {/* <span className="fav-icon flaticon-star" /> */}
         </div>
         <div className="details">
-          <p>
+          {/* <p>
             <i className="fas fa-star fz10 review-color pr10" />
             <span className="dark-color">{data.rating || "5.0"}</span> (
             {data.review || data.reviews || "0"} reviews)
-          </p>
+          </p> */}
           <p className="list-inline-item mb-3">
             {data.country || data.location || "Location"}
           </p>

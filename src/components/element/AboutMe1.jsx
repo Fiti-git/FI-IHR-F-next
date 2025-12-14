@@ -31,7 +31,7 @@ export default function AboutMe1({ data }) {
               </span>
               <span>{companyData.jobType || "N/A"}</span>
             </a>
-            {companyData.founded && (
+            {/* {companyData.founded && (
               <a className="d-flex align-items-center justify-content-between bdrb1 pb-2">
                 <span className="text">
                   <i className="flaticon-calendar text-thm2 pe-2 vam" />
@@ -39,7 +39,7 @@ export default function AboutMe1({ data }) {
                 </span>
                 <span>{companyData.founded}</span>
               </a>
-            )}
+            )} */}
             <a className="d-flex align-items-center justify-content-between bdrb1 pb-2">
               <span className="text">
                 <i className="flaticon-call text-thm2 pe-2 vam" />
@@ -61,7 +61,7 @@ export default function AboutMe1({ data }) {
               </span>
               <span>{companyData.location || "N/A"}</span>
             </a>
-            {companyData.username && (
+            {/* {companyData.username && (
               <a className="d-flex align-items-center justify-content-between mb-3">
                 <span className="text">
                   <i className="flaticon-user text-thm2 pe-2 vam" />
@@ -69,7 +69,7 @@ export default function AboutMe1({ data }) {
                 </span>
                 <span>{companyData.name || companyData.username}</span>
               </a>
-            )}
+            )} */}
           </div>
           <div className="d-grid">
             {companyData.email && companyData.email !== "N/A" ? (
