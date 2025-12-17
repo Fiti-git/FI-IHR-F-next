@@ -99,15 +99,27 @@ export default function Breadcumb17() {
 
                   <div className="list-meta d-sm-flex align-items-center mt30">
                     <a className="position-relative freelancer-single-style">
-                      <span className="online" />
-                      <Image
-                        height={90}
-                        width={90}
-                        className="rounded-circle w-100 wa-sm mb15-sm"
-                        src={getImageUrl(freelancer)}
-                        alt={getName(freelancer)}
-                        style={{ objectFit: "cover" }} // Ensure image isn't distorted
-                      />
+                      {/* <span className="online" /> */}
+                      <div
+  style={{
+    width: "90px",
+    height: "90px",
+    borderRadius: "50%",
+    overflow: "hidden",
+    margin: "0 auto"
+  }}
+>
+  <Image
+    src={getImageUrl(freelancer)}
+    alt={getName(freelancer)}
+    fill
+    style={{
+      objectFit: "cover",
+      borderRadius: "50%"
+    }}
+  />
+</div>
+
                     </a>
                     <div className="ml20 ml0-xs">
                       <h5 className="title mb-1">

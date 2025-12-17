@@ -18,16 +18,29 @@ export default function FreelancerCard1({ data }) {
     <>
       <div className="freelancer-style1 text-center bdr1 hover-box-shadow">
         <div className="thumb w90 mb25 mx-auto position-relative rounded-circle">
-          <Image
-            height={90}
-            width={90}
-            className="rounded-circle mx-auto"
-            src={imageUrl}
-            alt={data.full_name || data.name || "Freelancer"}
-            onError={(e) => {
-              e.target.src = "/images/team/fl-1.png";
-            }}
-          />
+          <div
+  style={{
+    width: "90px",
+    height: "90px",
+    borderRadius: "50%",   // makes it round
+    overflow: "hidden",
+    margin: "0 auto"
+  }}
+>
+  <Image
+    src={imageUrl}
+    alt={data.full_name || data.name || "Freelancer"}
+    fill
+    style={{
+      objectFit: "cover",
+      borderRadius: "50%"  // extra safety
+    }}
+    onError={(e) => {
+      e.target.src = "/images/team/fl-1.png";
+    }}
+  />
+</div>
+
           <span className="online" />
         </div>
         <div className="details">
