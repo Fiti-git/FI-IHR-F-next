@@ -66,8 +66,9 @@ export default function JobProviderProjects({ providerId }) {
       <div className="col-lg-12 mb30">
         <h4 className="mb-2">Posted Projects</h4>
         <p className="text-muted">
-           Explore current job openings from {companyName || "this company"}.
-        </p>
+  View ongoing and upcoming projects from {companyName || "this company"}.
+</p>
+
       </div>
       
       {projects.map((item) => (
@@ -77,11 +78,11 @@ export default function JobProviderProjects({ providerId }) {
             
             {/* Project Details */}
             <div className="details flex-grow-1">
-              <div className="mb-2">
+              {/* <div className="mb-2">
                  <span className="badge bg-light text-primary">
                    {item.category}
                  </span>
-              </div>
+              </div> */}
               
               <h5 className="mb-2">
                 <Link href={`/project/${item.id}`}>{item.title}</Link>
@@ -100,14 +101,15 @@ export default function JobProviderProjects({ providerId }) {
 
               {/* Budget & Button moved nicely below for compact view */}
               <div className="d-flex justify-content-between align-items-center border-top pt-3">
-                 <p className="mb-0 text-dark fw600">
-                    ${item.budget} 
-                    <span className="fw400 text-muted fz14">
-                      {item.project_type === 'hourly' ? '/hr' : ' fixed'}
-                    </span>
-                 </p>
+                <p className="mb-0 text-dark fw600">
+  ${item.budget}
+  <span className="fw400 text-muted fz14 text-uppercase ms-2">
+    {item.project_type === 'hourly' ? '/hr' : 'fixed'}
+  </span>
+</p>
+
                  <Link 
-                    href={`/project/${item.id}`} 
+                    href={`/project-single/${item.id}`} 
                     className="ud-btn btn-light-thm btn-sm"
                   >
                     Details <i className="fal fa-arrow-right-long" />

@@ -22,7 +22,7 @@ export default function Listing13({ searchFilters }) {
   const getSearch = listingStore((state) => state.getSearch);
   const getLevel = listingStore((state) => state.getLevel);
   const getSpeak = listingStore((state) => state.getSpeak);
-  const getBestSeller = listingStore((state) => state.getBestSeller);
+  // const getBestSeller = listingStore((state) => state.getBestSeller);
 
   // Reset to page 1 when search filters change
   useEffect(() => {
@@ -217,8 +217,8 @@ export default function Listing13({ searchFilters }) {
       : true;
 
   // Sort by filter
-  const sortByFilter = (item) =>
-    getBestSeller === "best-seller" ? true : item.sort === getBestSeller;
+  // const sortByFilter = (item) =>
+  //   getBestSeller === "best-seller" ? true : item.sort === getBestSeller;
 
   // Apply all filters
   const filteredFreelancers = freelancers
@@ -230,7 +230,7 @@ export default function Listing13({ searchFilters }) {
     .filter(searchFilter)
     .filter(levelFilter)
     .filter(languageFilter)
-    .filter(sortByFilter);
+   // .filter(sortByFilter);
 
   // Pagination
   const indexOfLastItem = currentPage * itemsPerPage;

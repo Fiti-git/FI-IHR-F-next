@@ -114,7 +114,7 @@ export default function ListingOption6() {
         </div>
         <div className="col-sm-6 col-lg-3">
           <div className="page_control_shorting mb10 d-flex align-items-center justify-content-center justify-content-sm-end">
-            <SortOption1 />
+            
           </div>
         </div>
       </div>
