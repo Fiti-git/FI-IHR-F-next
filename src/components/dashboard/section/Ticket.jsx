@@ -13,6 +13,7 @@ export default function TicketDetailPage() {
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [sending, setSending] = useState(false);
 
   // Fetch ticket details from API
   useEffect(() => {
@@ -57,19 +58,61 @@ export default function TicketDetailPage() {
 
   const titleText = ticket ? `${ticket.referenceTitle} ticket` : "Support Center";
 
-  const handleSendMessage = () => {
-    if (!messageInput.trim()) return;
+  const handleSendMessage = async () => {
+    if (!messageInput.trim() || sending) return;
 
-    // TODO: Implement API call to send message
-    const newMessage = {
-      sender: "user",
-      sender_id: user?.id,
-      message: messageInput.trim(),
-      timestamp: new Date().toISOString(),
-    };
+    try {
+      setSending(true);
+      const userId = localStorage.getItem("user_id");
+      if (!userId) {
+        alert("User ID not found. Please log in again.");
+        setSending(false);
+        return;
+      }
 
-    setMessages([...messages, newMessage]);
-    setMessageInput("");
+      const payload = {
+        sender: "user",
+        sender_id: parseInt(userId),
+        message: messageInput.trim(),
+      };
+
+      // Call API to send message
+      const response = await api.post(`/support/tickets/${ticketId}/message/`, payload);
+      const data = response.data;
+
+      console.log("Message sent:", data);
+
+      // Add the new message to the messages list
+      const newMessage = {
+        sender: data.last_message.sender,
+        sender_id: data.last_message.sender_id,
+        message: data.last_message.message,
+        timestamp: data.last_message.timestamp,
+      };
+
+      setMessages([...messages, newMessage]);
+
+      // Update ticket status if it changed
+      if (data.current_status && ticket) {
+        const updatedStatus = data.current_status.replace("_", " ").split(" ").map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(" ");
+        setTicket({ ...ticket, status: updatedStatus });
+      }
+
+      setMessageInput("");
+      setSending(false);
+    } catch (err) {
+      console.error("Error sending message:", err);
+      const errorMsg = err.response?.data?.message || err.response?.data?.detail || "Failed to send message.";
+      alert(errorMsg);
+      setSending(false);
+    }
+  };
+
+  const handleKeyPress = (e) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      handleSendMessage();
+    }
   };
 
   if (loading) {
@@ -194,12 +237,18 @@ export default function TicketDetailPage() {
                   type="text"
                   value={messageInput}
                   onChange={(e) => setMessageInput(e.target.value)}
+                  onKeyPress={handleKeyPress}
                   className="form-control"
                   placeholder="Type your message..."
+                  disabled={sending}
                 />
-                <button className="btn btn-success" onClick={handleSendMessage}>
-  Send
-</button>
+                <button 
+                  className="btn btn-success" 
+                  onClick={handleSendMessage}
+                  disabled={sending || !messageInput.trim()}
+                >
+                  {sending ? "Sending..." : "Send"}
+                </button>
               </div>
             </div>
           </div>
