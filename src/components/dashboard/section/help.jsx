@@ -1,16 +1,11 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import DashboardNavigation from "../header/DashboardNavigation";
 import Pagination1 from "@/components/section/Pagination1";
 import ProposalModal1 from "../modal/ProposalModal1";
 import DeleteModal from "../modal/DeleteModal";
-
-const userProjects = [
-  { id: 1, type: "Project", name: "Mobile App Development" },
-  { id: 2, type: "Job", name: "Logo Design Job" },
-  { id: 3, type: "Project", name: "Website Redesign" },
-];
+import api from "@/lib/axios";
 
 const dummyTickets = [
   {
@@ -35,14 +30,69 @@ const dummyTickets = [
 
 export default function SupportCenter() {
   const [tickets, setTickets] = useState(dummyTickets);
+  const [userProjects, setUserProjects] = useState([]);
+  const [loading, setLoading] = useState(true);
 
+  const [ticketType, setTicketType] = useState("Project");
   const [subject, setSubject] = useState("");
   const [description, setDescription] = useState("");
   const [priority, setPriority] = useState("Low");
-  const [relatedProjectId, setRelatedProjectId] = useState(userProjects[0]?.id || "");
+  const [relatedProjectId, setRelatedProjectId] = useState("");
+  const [referenceTitle, setReferenceTitle] = useState("");
   const [error, setError] = useState("");
 
-  const handleAddTicket = (e) => {
+  // Fetch user engagement data
+  useEffect(() => {
+    const fetchUserEngagement = async () => {
+      try {
+        const userId = localStorage.getItem("user_id");
+        if (!userId) {
+          setError("User ID not found. Please log in again.");
+          setLoading(false);
+          return;
+        }
+
+        const response = await api.get(`/support/user-engagement/${userId}/`);
+        const data = response.data;
+
+        // Transform projects and jobs into a unified array
+        const projectsList = (data.projects || []).map(project => ({
+          id: project.id,
+          type: "Project",
+          name: project.title,
+          status: project.status
+        }));
+
+        const jobsList = (data.jobs || []).map(job => ({
+          id: job.id,
+          type: "Job",
+          name: job.job_title,
+          status: job.job_status
+        }));
+
+        const allEngagements = [...projectsList, ...jobsList];
+        setUserProjects(allEngagements);
+        
+        // Set default selection to first project item
+        if (projectsList.length > 0) {
+          setRelatedProjectId(`${projectsList[0].type}-${projectsList[0].id}`);
+        } else if (jobsList.length > 0) {
+          setTicketType("Job");
+          setRelatedProjectId(`${jobsList[0].type}-${jobsList[0].id}`);
+        }
+
+        setLoading(false);
+      } catch (err) {
+        console.error("Error fetching user engagement:", err);
+        setError("Failed to load projects and jobs. Please try again later.");
+        setLoading(false);
+      }
+    };
+
+    fetchUserEngagement();
+  }, []);
+
+  const handleAddTicket = async (e) => {
     e.preventDefault();
     setError("");
 
@@ -58,23 +108,82 @@ export default function SupportCenter() {
       setError("Please select a related project or job.");
       return;
     }
+    if (!referenceTitle.trim()) {
+      setError("Please enter reference title.");
+      return;
+    }
 
-    const newTicket = {
-      id: tickets.length + 1,
-      subject: subject.trim(),
-      description: description.trim(),
-      priority,
-      status: "Open",
-      relatedProject: userProjects.find((p) => p.id === Number(relatedProjectId)),
-      createdAt: new Date().toISOString(),
-    };
+    try {
+      // Parse the relatedProjectId (format: "Type-ID")
+      const [type, id] = relatedProjectId.split("-");
+      const relatedProject = userProjects.find(
+        (p) => p.type === type && p.id === Number(id)
+      );
 
-    setTickets([...tickets, newTicket]);
+      if (!relatedProject) {
+        setError("Invalid project or job selection.");
+        return;
+      }
 
-    setSubject("");
-    setDescription("");
-    setPriority("Low");
-    setRelatedProjectId(userProjects[0]?.id || "");
+      const userId = localStorage.getItem("user_id");
+      if (!userId) {
+        setError("User ID not found. Please log in again.");
+        return;
+      }
+
+      // Prepare request payload according to API spec
+      const payload = {
+        user_id: parseInt(userId),
+        ticket_type: type.toLowerCase(), // "project" or "job"
+        reference_id: relatedProject.id,
+        reference_title: referenceTitle.trim(),
+        category: type.toLowerCase(), // "project" or "job"
+        subject: subject.trim(),
+        description: description.trim(),
+        priority: priority.toLowerCase(), // "low", "medium", "high"
+      };
+
+      // Call API to create ticket
+      const response = await api.post("/support/tickets/create/", payload);
+      const data = response.data;
+
+      // Create ticket object for UI
+      const newTicket = {
+        id: data.ticket_id,
+        subject: subject.trim(),
+        description: description.trim(),
+        priority: priority,
+        status: data.status.charAt(0).toUpperCase() + data.status.slice(1), // Capitalize first letter
+        relatedProject,
+        createdAt: data.created_at,
+      };
+
+      setTickets([...tickets, newTicket]);
+
+      // Reset form
+      setSubject("");
+      setDescription("");
+      setPriority("Low");
+      setReferenceTitle("");
+      setTicketType("Project");
+      const projectsList = userProjects.filter(p => p.type === "Project");
+      if (projectsList.length > 0) {
+        setRelatedProjectId(`${projectsList[0].type}-${projectsList[0].id}`);
+      } else {
+        const jobsList = userProjects.filter(p => p.type === "Job");
+        if (jobsList.length > 0) {
+          setTicketType("Job");
+          setRelatedProjectId(`${jobsList[0].type}-${jobsList[0].id}`);
+        }
+      }
+
+      // Show success message
+      alert(data.message || "Ticket created successfully");
+    } catch (err) {
+      console.error("Error creating ticket:", err);
+      const errorMsg = err.response?.data?.message || err.response?.data?.detail || "Failed to create ticket. Please try again.";
+      setError(errorMsg);
+    }
   };
 
   return (
@@ -138,6 +247,30 @@ export default function SupportCenter() {
               <h4 className="mb-3">Submit a Ticket</h4>
               <form onSubmit={handleAddTicket}>
                 <div className="mb-3">
+                  <label htmlFor="ticketType" className="form-label">Ticket Type</label>
+                  <select
+                    id="ticketType"
+                    className="form-select"
+                    value={ticketType}
+                    onChange={(e) => {
+                      const newType = e.target.value;
+                      setTicketType(newType);
+                      // Reset category selection when ticket type changes
+                      const filtered = userProjects.filter(p => p.type === newType);
+                      if (filtered.length > 0) {
+                        setRelatedProjectId(`${filtered[0].type}-${filtered[0].id}`);
+                      } else {
+                        setRelatedProjectId("");
+                      }
+                    }}
+                    disabled={loading}
+                  >
+                    <option value="Project">Project</option>
+                    <option value="Job">Job</option>
+                  </select>
+                </div>
+
+                <div className="mb-3">
                   <label htmlFor="subject" className="form-label">Subject</label>
                   <input
                     id="subject"
@@ -145,6 +278,18 @@ export default function SupportCenter() {
                     className="form-control"
                     value={subject}
                     onChange={(e) => setSubject(e.target.value)}
+                  />
+                </div>
+
+                <div className="mb-3">
+                  <label htmlFor="referenceTitle" className="form-label">Reference Title</label>
+                  <input
+                    id="referenceTitle"
+                    type="text"
+                    className="form-control"
+                    value={referenceTitle}
+                    onChange={(e) => setReferenceTitle(e.target.value)}
+                    placeholder="Enter reference title"
                   />
                 </div>
 
@@ -160,18 +305,23 @@ export default function SupportCenter() {
                 </div>
 
                 <div className="mb-3">
-                  <label htmlFor="relatedProject" className="form-label">Project / Job</label>
+                  <label htmlFor="relatedProject" className="form-label">Category</label>
                   <select
                     id="relatedProject"
                     className="form-select"
                     value={relatedProjectId}
                     onChange={(e) => setRelatedProjectId(e.target.value)}
+                    disabled={loading || userProjects.filter(p => p.type === ticketType).length === 0}
                   >
-                    {userProjects.map((p) => (
-                      <option key={p.id} value={p.id}>
-                        {p.type} - {p.name}
-                      </option>
-                    ))}
+                    {userProjects.filter(p => p.type === ticketType).length === 0 && !loading ? (
+                      <option value="">No {ticketType.toLowerCase()}s available</option>
+                    ) : (
+                      userProjects.filter(p => p.type === ticketType).map((p) => (
+                        <option key={`${p.type}-${p.id}`} value={`${p.type}-${p.id}`}>
+                          {p.name}
+                        </option>
+                      ))
+                    )}
                   </select>
                 </div>
 
@@ -193,8 +343,9 @@ export default function SupportCenter() {
                   type="submit"
                   className="btn btn-success"
                   style={{ width: "100%" }}
+                  disabled={loading || userProjects.filter(p => p.type === ticketType).length === 0}
                 >
-                  Submit Ticket
+                  {loading ? "Loading..." : "Submit Ticket"}
                 </button>
 
                 {error && <div className="alert alert-danger mt-3">{error}</div>}

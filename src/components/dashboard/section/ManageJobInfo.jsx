@@ -15,10 +15,18 @@ const fetchJobs = async (access_token) => {
   }
 
   try {
-    const response = await api.get("/api/job-manage/");
+    const response = await api.get("/api/job-posting/");
 
-    const jobsData = response.data.jobs.map((job) => ({
-      id: job.job_id,
+    // Handle different response formats
+    const data = response.data;
+    const jobsArray =
+      Array.isArray(data) ? data :
+        data.jobs ? data.jobs :
+          data.results ? data.results :
+            data.data ? data.data : [];
+
+    const jobsData = jobsArray.map((job) => ({
+      id: job.job_id || job.id,
       title: job.job_title,
       category: job.job_category,
       date: job.date_posted,
