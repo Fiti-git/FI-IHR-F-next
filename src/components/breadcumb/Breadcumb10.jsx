@@ -10,25 +10,25 @@ export default function Breadcumb10({ path }) {
   const [shareToggle, setShareToggle] = useState(false);
   const [project, setProject] = useState(null);
 
-  useEffect(() => {
-    const fetchProject = async () => {
-      if (!id) return;
+  // useEffect(() => {
+  //   const fetchProject = async () => {
+  //     if (!id) return;
 
-      try {
-        const response = await api.get(`/api/project/projects/${id}/`);
-        setProject(response.data);
-      } catch (err) {
-        console.error("Error fetching project:", err);
-      }
-    };
+  //     try {
+  //       const response = await api.get(`/api/project/projects/${id}/`);
+  //       setProject(response.data);
+  //     } catch (err) {
+  //       console.error("Error fetching project:", err);
+  //     }
+  //   };
 
-    fetchProject();
-  }, [id]);
+  //   fetchProject();
+  // }, [id]);
 
   // Build dynamic breadcrumb path
-  const dynamicPath = project
-    ? ["Home", "Projects", project.category, project.title]
-    : path || ["Home", "Projects"];
+  // const dynamicPath = project
+  //   ? ["Home", "Projects", project.category, project.title]
+  //   : path || ["Home", "Projects"];
 
   // Share project URL
   const shareUrl = typeof window !== 'undefined' ? window.location.href : '';
@@ -78,7 +78,7 @@ export default function Breadcumb10({ path }) {
             <div className="col-sm-8 col-lg-10">
               <div className="breadcumb-style1 mb10-xs">
                 <div className="breadcumb-list">
-                  {dynamicPath?.map((item, i) => (
+                  {/* {dynamicPath?.map((item, i) => (
                     <span key={i}>
                       {i === 0 ? (
                         <Link href="/">{item}</Link>
@@ -93,7 +93,7 @@ export default function Breadcumb10({ path }) {
                         <span className="mx-2">/</span>
                       )}
                     </span>
-                  ))}
+                  ))} */}
                 </div>
               </div>
             </div>
