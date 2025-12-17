@@ -7,29 +7,9 @@ import ProposalModal1 from "../modal/ProposalModal1";
 import DeleteModal from "../modal/DeleteModal";
 import api from "@/lib/axios";
 
-const dummyTickets = [
-  {
-    id: 1,
-    subject: "Issue with payment processing",
-    description: "I am unable to receive payment for my last completed project.",
-    priority: "High",
-    status: "Open",
-    relatedProject: { id: 1, type: "Project", name: "Mobile App Development" },
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: 2,
-    subject: "Bug in job application",
-    description: "The job application form crashes when I upload my resume.",
-    priority: "Medium",
-    status: "In Progress",
-    relatedProject: { id: 2, type: "Job", name: "Logo Design Job" },
-    createdAt: new Date().toISOString(),
-  },
-];
-
 export default function SupportCenter() {
-  const [tickets, setTickets] = useState(dummyTickets);
+  const [tickets, setTickets] = useState([]);
+  const [ticketsLoading, setTicketsLoading] = useState(true);
   const [userProjects, setUserProjects] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -40,6 +20,48 @@ export default function SupportCenter() {
   const [relatedProjectId, setRelatedProjectId] = useState("");
   const [referenceTitle, setReferenceTitle] = useState("");
   const [error, setError] = useState("");
+
+  // Fetch user tickets
+  useEffect(() => {
+    const fetchTickets = async () => {
+      try {
+        const userId = localStorage.getItem("user_id");
+        if (!userId) {
+          setTicketsLoading(false);
+          return;
+        }
+
+        const response = await api.get(`/support/tickets/user/${userId}/`);
+        const data = response.data;
+
+        console.log("Fetched tickets data:", data);
+
+        // Transform tickets from API response
+        const transformedTickets = (data.tickets || []).map(ticket => ({
+          id: ticket.id,
+          subject: ticket.subject,
+          description: ticket.description || "",
+          priority: ticket.priority ? ticket.priority.charAt(0).toUpperCase() + ticket.priority.slice(1) : "Low",
+          status: ticket.status ? ticket.status.replace("_", " ").split(" ").map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(" ") : "Open",
+          category: ticket.category,
+          ticketType: ticket.ticket_type,
+          referenceId: ticket.reference_id,
+          referenceTitle: ticket.reference_title,
+          createdAt: ticket.created_at,
+          updatedAt: ticket.updated_at,
+        }));
+
+        console.log("Transformed tickets:", transformedTickets);
+        setTickets(transformedTickets);
+        setTicketsLoading(false);
+      } catch (err) {
+        console.error("Error fetching tickets:", err);
+        setTicketsLoading(false);
+      }
+    };
+
+    fetchTickets();
+  }, []);
 
   // Fetch user engagement data
   useEffect(() => {
@@ -147,18 +169,24 @@ export default function SupportCenter() {
       const response = await api.post("/support/tickets/create/", payload);
       const data = response.data;
 
-      // Create ticket object for UI
-      const newTicket = {
-        id: data.ticket_id,
-        subject: subject.trim(),
-        description: description.trim(),
-        priority: priority,
-        status: data.status.charAt(0).toUpperCase() + data.status.slice(1), // Capitalize first letter
-        relatedProject,
-        createdAt: data.created_at,
-      };
-
-      setTickets([...tickets, newTicket]);
+      // Refresh tickets list
+      const ticketsResponse = await api.get(`/support/tickets/user/${userId}/`);
+      const ticketsData = ticketsResponse.data;
+      console.log("Refreshed tickets after submission:", ticketsData);
+      const transformedTickets = (ticketsData.tickets || []).map(ticket => ({
+        id: ticket.id,
+        subject: ticket.subject,
+        description: ticket.description || "",
+        priority: ticket.priority ? ticket.priority.charAt(0).toUpperCase() + ticket.priority.slice(1) : "Low",
+        status: ticket.status ? ticket.status.replace("_", " ").split(" ").map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(" ") : "Open",
+        category: ticket.category,
+        ticketType: ticket.ticket_type,
+        referenceId: ticket.reference_id,
+        referenceTitle: ticket.reference_title,
+        createdAt: ticket.created_at,
+        updatedAt: ticket.updated_at,
+      }));
+      setTickets(transformedTickets);
 
       // Reset form
       setSubject("");
@@ -208,7 +236,9 @@ export default function SupportCenter() {
             <div className="ps-widget bgc-white bdrs4 p30 overflow-hidden position-relative">
               <h4 className="mb-3">Your Support Tickets</h4>
 
-              {tickets.length > 0 ? (
+              {ticketsLoading ? (
+                <p className="text-center">Loading tickets...</p>
+              ) : tickets.length > 0 ? (
                 <div className="support-ticket-list">
                   {tickets.map((ticket) => (
                     <div
@@ -217,12 +247,19 @@ export default function SupportCenter() {
                       style={{ backgroundColor: "#f9f9f9" }}
                     >
                       <h5>{ticket.subject}</h5>
-                      <p>{ticket.description.length > 80 ? ticket.description.substring(0, 80) + "..." : ticket.description}</p>
+                      {ticket.description && (
+                        <p>{ticket.description.length > 80 ? ticket.description.substring(0, 80) + "..." : ticket.description}</p>
+                      )}
                       <p>
-                        <strong>Project/Job:</strong> {ticket.relatedProject?.type} - {ticket.relatedProject?.name}
+                        <strong>Reference:</strong> {ticket.referenceTitle || "N/A"}
                       </p>
                       <p>
-                        <strong>Priority:</strong> {ticket.priority} &nbsp;|&nbsp; <strong>Status:</strong> {ticket.status}
+                        <strong>Category:</strong> {ticket.category ? ticket.category.charAt(0).toUpperCase() + ticket.category.slice(1) : "N/A"} &nbsp;|&nbsp;
+                        <strong>Priority:</strong> {ticket.priority} &nbsp;|&nbsp;
+                        <strong>Status:</strong> {ticket.status}
+                      </p>
+                      <p className="text-muted" style={{ fontSize: "0.875rem" }}>
+                        <strong>Created:</strong> {new Date(ticket.createdAt).toLocaleString()}
                       </p>
                       {/* Updated: View button links to ticket detail page */}
                       <Link href={`/support/${ticket.id}`}>
