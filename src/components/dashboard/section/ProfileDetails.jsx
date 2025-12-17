@@ -81,6 +81,7 @@ function SelectInput({
 export default function ProfileDetails() {
   const [isEditMode, setIsEditMode] = useState(false);
   const [hasProfile, setHasProfile] = useState(false);
+  const EXCLUDED_FIELDS = ["education", "work_experience"];
   const [profileData, setProfileData] = useState({
     full_name: "",
     phone_number: "",
@@ -217,14 +218,16 @@ export default function ProfileDetails() {
     const dataToSend = new FormData();
 
     for (const key in profileData) {
-      const value = profileData[key];
-      if (value === null || value === undefined) continue;
+      if (EXCLUDED_FIELDS.includes(key)) continue;
 
-      if (key === 'skills') {
-        dataToSend.append(key, Array.isArray(value) ? value.join(',') : '');
+      const value = profileData[key];
+      if (value === null || value === undefined || value === "") continue;
+
+      if (key === "skills") {
+        dataToSend.append(key, Array.isArray(value) ? value.join(",") : "");
       } else if (value instanceof File) {
         dataToSend.append(key, value);
-      } else if (key !== 'profile_image' && key !== 'resume') {
+      } else {
         dataToSend.append(key, value);
       }
     }

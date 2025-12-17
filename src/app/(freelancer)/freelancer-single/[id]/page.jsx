@@ -17,7 +17,7 @@ export default function Page({ params }) {
     return (
         <>
             <Header20 />
-            <Breadcumb10 path={["Home", "Services", "Design & Creative"]} />
+            <Breadcumb10/>
             {/* We can pass the ID to Breadcumb17 if it needs to fetch basic header info */}
             <Breadcumb17 />
             {/* Pass the ID to the detail component to fetch full data */}

@@ -17,7 +17,7 @@ export default function DashboardJobProvider() {
         <div className="col-lg-12">
           <div className="dashboard_title_area">
             <h2>Job Provider Dashboard</h2>
-            <p className="text">Manage your posted jobs and projects.</p>
+            <p className="text">Manage your posted jobs and projecssts.</p>
           </div>
         </div>
       </div>
@@ -61,7 +61,7 @@ export default function DashboardJobProvider() {
         <div className="col-md-6">
           <div className="ps-widget bgc-white bdrs4 p30 mb30 text-center">
             <h5 className="title">Post a New Project</h5>
-            <p>Hire freelancers to complete your projects.</p>
+            <p>Hire freelancers to complete your projects11.</p>
             <a href="/create-projects" className="btn btn-thm btn-sm mt15">
               Post Project
             </a>

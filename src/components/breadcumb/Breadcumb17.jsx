@@ -92,10 +92,10 @@ export default function Breadcumb17() {
                 <div className="position-relative">
                   {/* Since API doesn't have a 'Gig Title', we display a welcome message or the Professional Title */}
                   <h2>
-                    {freelancer 
-                      ? `Hire ${getName(freelancer)} for your project` 
-                      : "Hire Expert Freelancers"}
-                  </h2>
+  {freelancer 
+    ? `Work with "${getName(freelancer)}"`
+    : "Discover Skilled Professionals"}
+</h2>
 
                   <div className="list-meta d-sm-flex align-items-center mt30">
                     <a className="position-relative freelancer-single-style">
