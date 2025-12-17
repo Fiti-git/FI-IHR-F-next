@@ -381,7 +381,7 @@ export default function SupportCenter() {
 
                 <button
                   type="submit"
-                  className="btn btn-success"
+                  className="ud-btn btn-thm"
                   style={{ width: "100%" }}
                   disabled={loading || userProjects.filter(p => p.type === ticketType).length === 0}
                 >
