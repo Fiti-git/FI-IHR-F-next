@@ -20,7 +20,7 @@ export default function Page() {
     return (
         <>
             <Header20 />
-            <Breadcumb3 path={["Home", "Services", "Design & Creative"]} />
+            <Breadcumb3/>
             <Breadcumb14 onSearch={handleSearch} />
             <Listing11 searchFilters={searchFilters} />
             <Footer />
