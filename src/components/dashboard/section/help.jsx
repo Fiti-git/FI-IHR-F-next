@@ -263,8 +263,11 @@ export default function SupportCenter() {
                       </p>
                       {/* Updated: View button links to ticket detail page */}
                       <Link href={`/support/${ticket.id}`}>
-                        <button className="btn btn-sm btn-primary">
-                          View
+                        <button 
+                          className="ud-btn btn-thm"
+                          style={{ padding: '10px', fontSize: '14px', transform: 'none', WebkitTransform: 'none', MozTransform: 'none', OTransform: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', lineHeight: '1', minWidth: '38px', minHeight: '38px', textAlign: 'center' }}
+                        >
+                          <i className="fal fa-eye" style={{ transform: 'none', WebkitTransform: 'none', MozTransform: 'none', OTransform: 'none', display: 'block', margin: '0 auto' }}></i>
                         </button>
                       </Link>
                     </div>
