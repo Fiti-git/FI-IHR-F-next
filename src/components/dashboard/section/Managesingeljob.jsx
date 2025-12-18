@@ -46,7 +46,7 @@ const fetchJobDetails = async (jobId) => {
 
 const fetchJobApplications = async (jobId) => {
   try {
-    const res = await api.get(`/api/job-application/job/${jobId}/`);
+    const res = await api.get(`/api/job-application/job/${jobId}`);
     const data = res.data;
     // API may return { applications: [...] } or an array directly
     const arr = data && Array.isArray(data.applications) ? data.applications : data;

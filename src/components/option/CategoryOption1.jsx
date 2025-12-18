@@ -1,42 +1,70 @@
 "use client";
-import { category } from "@/data/listing";
 import listingStore from "@/store/listingStore";
+import { useEffect, useState } from "react";
+import api from '@/lib/axios';
 
-export default function CategoryOption1({ availableCategories }) {
+export default function CategoryOption1() {
+  const [categories, setCategories] = useState([]);
+  const [loading, setLoading] = useState(true);
+
   const getCategory = listingStore((state) => state.getCategory);
   const setCategory = listingStore((state) => state.setCategory);
 
-  // handler
+  // Fetch unique categories from API
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const response = await api.get('/api/project/projects/');
+        const data = response.data;
+
+        // Get unique categories and count them
+        const categoryCounts = data.reduce((acc, project) => {
+          const cat = project.category || "Uncategorized";
+          acc[cat] = (acc[cat] || 0) + 1;
+          return acc;
+        }, {});
+
+        const categoryList = Object.entries(categoryCounts).map(([title, total]) => ({
+          title,
+          total
+        }));
+
+        setCategories(categoryList);
+      } catch (err) {
+        console.error("Error fetching categories:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchCategories();
+  }, []);
+
   const categoryHandler = (data) => {
     setCategory(data);
   };
 
-  // Capitalize first letter of category
-  const capitalizeFirstLetter = (str) => {
-    if (!str) return str;
-    return str.charAt(0).toUpperCase() + str.slice(1);
-  };
-
-  // Use availableCategories if provided, otherwise fall back to static data
-  const categoriesToShow = availableCategories && availableCategories.length > 0 
-    ? availableCategories 
-    : category;
+  if (loading) return <p className="text-muted small">Loading categories...</p>;
 
   return (
     <>
       <div className="checkbox-style1 mb15">
-        {categoriesToShow.map((item,i) => (
-          <label key={ i } className="custom_checkbox">
-            {capitalizeFirstLetter(item.title)}
-            <input
-              type="checkbox"
-              onChange={() => categoryHandler(item.title)}
-              checked={getCategory.includes(item.title)}
-            />
-            <span className="checkmark" />
-            <span className="right-tags">({item.total})</span>
-          </label>
-        ))}
+        {categories.length === 0 ? (
+           <p className="text-muted small">No categories found</p>
+        ) : (
+          categories.map((item, i) => (
+            <label key={i} className="custom_checkbox">
+              {item.title}
+              <input
+                type="checkbox"
+                onChange={() => categoryHandler(item.title)}
+                checked={getCategory.includes(item.title)}
+              />
+              <span className="checkmark" />
+              <span className="right-tags">({item.total})</span>
+            </label>
+          ))
+        )}
       </div>
     </>
   );

@@ -1,48 +1,120 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import DashboardNavigation from "../header/DashboardNavigation";
 import Pagination1 from "@/components/section/Pagination1";
 import ProposalModal1 from "../modal/ProposalModal1";
 import DeleteModal from "../modal/DeleteModal";
-
-const userProjects = [
-  { id: 1, type: "Project", name: "Mobile App Development" },
-  { id: 2, type: "Job", name: "Logo Design Job" },
-  { id: 3, type: "Project", name: "Website Redesign" },
-];
-
-const dummyTickets = [
-  {
-    id: 1,
-    subject: "Issue with payment processing",
-    description: "I am unable to receive payment for my last completed project.",
-    priority: "High",
-    status: "Open",
-    relatedProject: { id: 1, type: "Project", name: "Mobile App Development" },
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: 2,
-    subject: "Bug in job application",
-    description: "The job application form crashes when I upload my resume.",
-    priority: "Medium",
-    status: "In Progress",
-    relatedProject: { id: 2, type: "Job", name: "Logo Design Job" },
-    createdAt: new Date().toISOString(),
-  },
-];
+import api from "@/lib/axios";
 
 export default function SupportCenter() {
-  const [tickets, setTickets] = useState(dummyTickets);
+  const [tickets, setTickets] = useState([]);
+  const [ticketsLoading, setTicketsLoading] = useState(true);
+  const [userProjects, setUserProjects] = useState([]);
+  const [loading, setLoading] = useState(true);
 
+  const [ticketType, setTicketType] = useState("Project");
   const [subject, setSubject] = useState("");
   const [description, setDescription] = useState("");
   const [priority, setPriority] = useState("Low");
-  const [relatedProjectId, setRelatedProjectId] = useState(userProjects[0]?.id || "");
+  const [relatedProjectId, setRelatedProjectId] = useState("");
+  const [referenceTitle, setReferenceTitle] = useState("");
   const [error, setError] = useState("");
 
-  const handleAddTicket = (e) => {
+  // Fetch user tickets
+  useEffect(() => {
+    const fetchTickets = async () => {
+      try {
+        const userId = localStorage.getItem("user_id");
+        if (!userId) {
+          setTicketsLoading(false);
+          return;
+        }
+
+        const response = await api.get(`/support/tickets/user/${userId}/`);
+        const data = response.data;
+
+        console.log("Fetched tickets data:", data);
+
+        // Transform tickets from API response
+        const transformedTickets = (data.tickets || []).map(ticket => ({
+          id: ticket.id,
+          subject: ticket.subject,
+          description: ticket.description || "",
+          priority: ticket.priority ? ticket.priority.charAt(0).toUpperCase() + ticket.priority.slice(1) : "Low",
+          status: ticket.status ? ticket.status.replace("_", " ").split(" ").map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(" ") : "Open",
+          category: ticket.category,
+          ticketType: ticket.ticket_type,
+          referenceId: ticket.reference_id,
+          referenceTitle: ticket.reference_title,
+          createdAt: ticket.created_at,
+          updatedAt: ticket.updated_at,
+        }));
+
+        console.log("Transformed tickets:", transformedTickets);
+        setTickets(transformedTickets);
+        setTicketsLoading(false);
+      } catch (err) {
+        console.error("Error fetching tickets:", err);
+        setTicketsLoading(false);
+      }
+    };
+
+    fetchTickets();
+  }, []);
+
+  // Fetch user engagement data
+  useEffect(() => {
+    const fetchUserEngagement = async () => {
+      try {
+        const userId = localStorage.getItem("user_id");
+        if (!userId) {
+          setError("User ID not found. Please log in again.");
+          setLoading(false);
+          return;
+        }
+
+        const response = await api.get(`/support/user-engagement/${userId}/`);
+        const data = response.data;
+
+        // Transform projects and jobs into a unified array
+        const projectsList = (data.projects || []).map(project => ({
+          id: project.id,
+          type: "Project",
+          name: project.title,
+          status: project.status
+        }));
+
+        const jobsList = (data.jobs || []).map(job => ({
+          id: job.id,
+          type: "Job",
+          name: job.job_title,
+          status: job.job_status
+        }));
+
+        const allEngagements = [...projectsList, ...jobsList];
+        setUserProjects(allEngagements);
+        
+        // Set default selection to first project item
+        if (projectsList.length > 0) {
+          setRelatedProjectId(`${projectsList[0].type}-${projectsList[0].id}`);
+        } else if (jobsList.length > 0) {
+          setTicketType("Job");
+          setRelatedProjectId(`${jobsList[0].type}-${jobsList[0].id}`);
+        }
+
+        setLoading(false);
+      } catch (err) {
+        console.error("Error fetching user engagement:", err);
+        setError("Failed to load projects and jobs. Please try again later.");
+        setLoading(false);
+      }
+    };
+
+    fetchUserEngagement();
+  }, []);
+
+  const handleAddTicket = async (e) => {
     e.preventDefault();
     setError("");
 
@@ -58,23 +130,88 @@ export default function SupportCenter() {
       setError("Please select a related project or job.");
       return;
     }
+    if (!referenceTitle.trim()) {
+      setError("Please enter reference title.");
+      return;
+    }
 
-    const newTicket = {
-      id: tickets.length + 1,
-      subject: subject.trim(),
-      description: description.trim(),
-      priority,
-      status: "Open",
-      relatedProject: userProjects.find((p) => p.id === Number(relatedProjectId)),
-      createdAt: new Date().toISOString(),
-    };
+    try {
+      // Parse the relatedProjectId (format: "Type-ID")
+      const [type, id] = relatedProjectId.split("-");
+      const relatedProject = userProjects.find(
+        (p) => p.type === type && p.id === Number(id)
+      );
 
-    setTickets([...tickets, newTicket]);
+      if (!relatedProject) {
+        setError("Invalid project or job selection.");
+        return;
+      }
 
-    setSubject("");
-    setDescription("");
-    setPriority("Low");
-    setRelatedProjectId(userProjects[0]?.id || "");
+      const userId = localStorage.getItem("user_id");
+      if (!userId) {
+        setError("User ID not found. Please log in again.");
+        return;
+      }
+
+      // Prepare request payload according to API spec
+      const payload = {
+        user_id: parseInt(userId),
+        ticket_type: type.toLowerCase(), // "project" or "job"
+        reference_id: relatedProject.id,
+        reference_title: referenceTitle.trim(),
+        category: type.toLowerCase(), // "project" or "job"
+        subject: subject.trim(),
+        description: description.trim(),
+        priority: priority.toLowerCase(), // "low", "medium", "high"
+      };
+
+      // Call API to create ticket
+      const response = await api.post("/support/tickets/create/", payload);
+      const data = response.data;
+
+      // Refresh tickets list
+      const ticketsResponse = await api.get(`/support/tickets/user/${userId}/`);
+      const ticketsData = ticketsResponse.data;
+      console.log("Refreshed tickets after submission:", ticketsData);
+      const transformedTickets = (ticketsData.tickets || []).map(ticket => ({
+        id: ticket.id,
+        subject: ticket.subject,
+        description: ticket.description || "",
+        priority: ticket.priority ? ticket.priority.charAt(0).toUpperCase() + ticket.priority.slice(1) : "Low",
+        status: ticket.status ? ticket.status.replace("_", " ").split(" ").map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(" ") : "Open",
+        category: ticket.category,
+        ticketType: ticket.ticket_type,
+        referenceId: ticket.reference_id,
+        referenceTitle: ticket.reference_title,
+        createdAt: ticket.created_at,
+        updatedAt: ticket.updated_at,
+      }));
+      setTickets(transformedTickets);
+
+      // Reset form
+      setSubject("");
+      setDescription("");
+      setPriority("Low");
+      setReferenceTitle("");
+      setTicketType("Project");
+      const projectsList = userProjects.filter(p => p.type === "Project");
+      if (projectsList.length > 0) {
+        setRelatedProjectId(`${projectsList[0].type}-${projectsList[0].id}`);
+      } else {
+        const jobsList = userProjects.filter(p => p.type === "Job");
+        if (jobsList.length > 0) {
+          setTicketType("Job");
+          setRelatedProjectId(`${jobsList[0].type}-${jobsList[0].id}`);
+        }
+      }
+
+      // Show success message
+      alert(data.message || "Ticket created successfully");
+    } catch (err) {
+      console.error("Error creating ticket:", err);
+      const errorMsg = err.response?.data?.message || err.response?.data?.detail || "Failed to create ticket. Please try again.";
+      setError(errorMsg);
+    }
   };
 
   return (
@@ -99,7 +236,9 @@ export default function SupportCenter() {
             <div className="ps-widget bgc-white bdrs4 p30 overflow-hidden position-relative">
               <h4 className="mb-3">Your Support Tickets</h4>
 
-              {tickets.length > 0 ? (
+              {ticketsLoading ? (
+                <p className="text-center">Loading tickets...</p>
+              ) : tickets.length > 0 ? (
                 <div className="support-ticket-list">
                   {tickets.map((ticket) => (
                     <div
@@ -108,17 +247,27 @@ export default function SupportCenter() {
                       style={{ backgroundColor: "#f9f9f9" }}
                     >
                       <h5>{ticket.subject}</h5>
-                      <p>{ticket.description.length > 80 ? ticket.description.substring(0, 80) + "..." : ticket.description}</p>
+                      {ticket.description && (
+                        <p>{ticket.description.length > 80 ? ticket.description.substring(0, 80) + "..." : ticket.description}</p>
+                      )}
                       <p>
-                        <strong>Project/Job:</strong> {ticket.relatedProject?.type} - {ticket.relatedProject?.name}
+                        <strong>Reference:</strong> {ticket.referenceTitle || "N/A"}
                       </p>
                       <p>
-                        <strong>Priority:</strong> {ticket.priority} &nbsp;|&nbsp; <strong>Status:</strong> {ticket.status}
+                        <strong>Category:</strong> {ticket.category ? ticket.category.charAt(0).toUpperCase() + ticket.category.slice(1) : "N/A"} &nbsp;|&nbsp;
+                        <strong>Priority:</strong> {ticket.priority} &nbsp;|&nbsp;
+                        <strong>Status:</strong> {ticket.status}
+                      </p>
+                      <p className="text-muted" style={{ fontSize: "0.875rem" }}>
+                        <strong>Created:</strong> {new Date(ticket.createdAt).toLocaleString()}
                       </p>
                       {/* Updated: View button links to ticket detail page */}
                       <Link href={`/support/${ticket.id}`}>
-                        <button className="btn btn-sm btn-primary">
-                          View
+                        <button 
+                          className="ud-btn btn-thm"
+                          style={{ padding: '10px', fontSize: '14px', transform: 'none', WebkitTransform: 'none', MozTransform: 'none', OTransform: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', lineHeight: '1', minWidth: '38px', minHeight: '38px', textAlign: 'center' }}
+                        >
+                          <i className="fal fa-eye" style={{ transform: 'none', WebkitTransform: 'none', MozTransform: 'none', OTransform: 'none', display: 'block', margin: '0 auto' }}></i>
                         </button>
                       </Link>
                     </div>
@@ -138,6 +287,30 @@ export default function SupportCenter() {
               <h4 className="mb-3">Submit a Ticket</h4>
               <form onSubmit={handleAddTicket}>
                 <div className="mb-3">
+                  <label htmlFor="ticketType" className="form-label">Ticket Type</label>
+                  <select
+                    id="ticketType"
+                    className="form-select"
+                    value={ticketType}
+                    onChange={(e) => {
+                      const newType = e.target.value;
+                      setTicketType(newType);
+                      // Reset category selection when ticket type changes
+                      const filtered = userProjects.filter(p => p.type === newType);
+                      if (filtered.length > 0) {
+                        setRelatedProjectId(`${filtered[0].type}-${filtered[0].id}`);
+                      } else {
+                        setRelatedProjectId("");
+                      }
+                    }}
+                    disabled={loading}
+                  >
+                    <option value="Project">Project</option>
+                    <option value="Job">Job</option>
+                  </select>
+                </div>
+
+                <div className="mb-3">
                   <label htmlFor="subject" className="form-label">Subject</label>
                   <input
                     id="subject"
@@ -145,6 +318,18 @@ export default function SupportCenter() {
                     className="form-control"
                     value={subject}
                     onChange={(e) => setSubject(e.target.value)}
+                  />
+                </div>
+
+                <div className="mb-3">
+                  <label htmlFor="referenceTitle" className="form-label">Reference Title</label>
+                  <input
+                    id="referenceTitle"
+                    type="text"
+                    className="form-control"
+                    value={referenceTitle}
+                    onChange={(e) => setReferenceTitle(e.target.value)}
+                    placeholder="Enter reference title"
                   />
                 </div>
 
@@ -160,18 +345,23 @@ export default function SupportCenter() {
                 </div>
 
                 <div className="mb-3">
-                  <label htmlFor="relatedProject" className="form-label">Project / Job</label>
+                  <label htmlFor="relatedProject" className="form-label">Category</label>
                   <select
                     id="relatedProject"
                     className="form-select"
                     value={relatedProjectId}
                     onChange={(e) => setRelatedProjectId(e.target.value)}
+                    disabled={loading || userProjects.filter(p => p.type === ticketType).length === 0}
                   >
-                    {userProjects.map((p) => (
-                      <option key={p.id} value={p.id}>
-                        {p.type} - {p.name}
-                      </option>
-                    ))}
+                    {userProjects.filter(p => p.type === ticketType).length === 0 && !loading ? (
+                      <option value="">No {ticketType.toLowerCase()}s available</option>
+                    ) : (
+                      userProjects.filter(p => p.type === ticketType).map((p) => (
+                        <option key={`${p.type}-${p.id}`} value={`${p.type}-${p.id}`}>
+                          {p.name}
+                        </option>
+                      ))
+                    )}
                   </select>
                 </div>
 
@@ -191,10 +381,11 @@ export default function SupportCenter() {
 
                 <button
                   type="submit"
-                  className="btn btn-success"
+                  className="ud-btn btn-thm"
                   style={{ width: "100%" }}
+                  disabled={loading || userProjects.filter(p => p.type === ticketType).length === 0}
                 >
-                  Submit Ticket
+                  {loading ? "Loading..." : "Submit Ticket"}
                 </button>
 
                 {error && <div className="alert alert-danger mt-3">{error}</div>}

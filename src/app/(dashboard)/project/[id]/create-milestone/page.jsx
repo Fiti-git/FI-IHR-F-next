@@ -1,11 +1,11 @@
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
-import CretaeMilestone from "@/components/dashboard/section/CretaeMilestone";
+import CreateMilestone from "@/components/dashboard/section/CreateMilestone";
 
 import MobileNavigation2 from "@/components/header/MobileNavigation2";
 
 export const metadata = {
   title:
-    "IHRHUB | Cretae Milestone",
+    "IHRHUB | Create Milestone",
 };
 
 export default function page() {
@@ -14,7 +14,7 @@ export default function page() {
     
     <MobileNavigation2 />
       <DashboardLayout>
-        <CretaeMilestone />
+        <CreateMilestone />
       </DashboardLayout>
     </>
   );
