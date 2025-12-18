@@ -5,6 +5,7 @@ import Breadcumb9 from "@/components/breadcumb/Breadcumb9";
 import Header20 from "@/components/header/Header20";
 import Listing9 from "@/components/section/Listing9";
 
+
 export default function Page() {
     const [searchFilters, setSearchFilters] = useState({
         keyword: ""
@@ -18,6 +19,7 @@ export default function Page() {
     return (
         <>
             <Header20 />
+            <Breadcumb3/>
             <Breadcumb9 
                 onSearch={handleSearch}
                 title="Jobs List"

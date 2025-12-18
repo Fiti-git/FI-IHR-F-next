@@ -21,8 +21,8 @@ export default function TrendingService14() {
     const fetchData = async () => {
       try {
         const [catRes, serviceRes] = await Promise.all([
-          axios.get(`${process.env.NEXT_PUBLIC_API_URL}/service-categories/`),
-          axios.get(`${process.env.NEXT_PUBLIC_API_URL}/services/`),
+          axios.get(`${process.env.NEXT_PUBLIC_API_URL}/api/service-categories/`),
+          axios.get(`${process.env.NEXT_PUBLIC_API_URL}/api/services/`),
         ]);
 
         setCategories(catRes.data); // [{id, name}]

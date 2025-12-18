@@ -23,7 +23,7 @@ export default function ServiceDetail1() {
 
     const fetchHeader = async () => {
       try {
-        const res = await api.get(`/services/${id}/header/`);
+        const res = await api.get(`/api/services/${id}/header/`);
         setHeaderText(res.data.header_text || "");
       } catch (err) {
         console.error("Error fetching service header:", err);

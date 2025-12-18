@@ -14,7 +14,7 @@ export default function ServiceDetailFaq1() {
 
     const fetchContent = async () => {
       try {
-        const res = await api.get(`/services/${id}/content/`);
+        const res = await api.get(`/api/services/${id}/content/`);
         const sorted = res.data.sub_headings.sort((a, b) => a.order - b.order);
         setSubHeadings(sorted);
       } catch (err) {

@@ -18,7 +18,7 @@ export default function Breadcumb11() {
     const fetchService = async () => {
       try {
         setLoading(true);
-        const res = await api.get(`/services/${id}`);
+        const res = await api.get(`/api/services/${id}`);
         setService(res.data);
         setError(null);
       } catch (err) {

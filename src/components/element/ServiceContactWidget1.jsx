@@ -3,7 +3,7 @@
 export default function CompanyCard() {
   const company = {
     logo: "https://jobdaddy.lk/storage/company_profiles/1f85ad375dc4f25e207f74e9a09d0b71.jpeg",
-    name: "ABC Solutions",
+    name: "IHR HUB",
     services: [
       "Outsourcing Services",
       "Recruitment Services",
