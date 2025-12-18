@@ -1,78 +1,61 @@
 "use client";
-
-import Slider from "rc-slider";
-import { useEffect, useState } from "react";
 import priceStore from "@/store/priceStore";
+import { useEffect, useState } from "react";
+import Slider from "rc-slider";
+import api from '@/lib/axios';
+import 'rc-slider/assets/index.css'; 
 
 export default function BudgetOption2() {
-  const setPriceRange = priceStore((state) => state.priceRangeHandler);
+  const [maxPrice, setMaxPrice] = useState(10000); // Default fallback
+  
   const priceRange = priceStore((state) => state.priceRange);
-
-  const [getPrice, setPrice] = useState(priceRange);
-
-  useEffect(() => {
-    setPriceRange(getPrice.min, getPrice.max);
-  }, [getPrice.min, getPrice.max, setPriceRange]);
+  const setPriceRange = priceStore((state) => state.priceRangeHandler);
 
   useEffect(() => {
-    setPrice({
-      min: priceRange.min,
-      max: priceRange.max,
-    });
-  }, [priceRange.min, priceRange.max, setPrice]);
+    const fetchBudgets = async () => {
+      try {
+        const response = await api.get('/api/project/projects/');
+        const data = response.data;
+        
+        // Find max budget
+        const budgets = data.map(p => parseFloat(p.budget)).filter(b => !isNaN(b));
+        if (budgets.length > 0) {
+          const max = Math.ceil(Math.max(...budgets));
+          // Add buffer
+          setMaxPrice(max + 100);
+        }
+      } catch (err) {
+        console.error(err);
+      }
+    };
+    fetchBudgets();
+  }, []);
 
-  const priceHandler = (data) => {
-    setPrice({
-      min: data[0],
-      max: data[1],
-    });
+  const handleSliderChange = (value) => {
+    setPriceRange(value[0], value[1]);
   };
 
   return (
     <>
-      <div className="card-body card-body px-0 pt-0">
-        <div className="range-slider-style2">
-          <div className="range-wrapper">
-            <div className="price__range__box">
-              <Slider
-                className="horizontal-slider"
-                value={[getPrice.min, getPrice.max]}
-                min={0}
-                range
-                max={100000}
-                onChange={priceHandler}
-              />
-            </div>
-            <div className="d-flex gap-1 align-items-center pt-4">
-              <input
-                type="number"
-                className="amount w-100"
-                placeholder="$20"
-                min={0}
-                value={getPrice.min}
-                onChange={(e) =>
-                  setPrice({
-                    ...getPrice,
-                    min: e.target.value,
-                  })
-                }
-              />
-              <span className="fa-sharp fa-solid fa-minus mx-1 dark-color" />
-              <input
-                type="number"
-                className="amount2 w-100"
-                placeholder="$100000"
-                min={0}
-                max={100000}
-                value={getPrice.max}
-                onChange={(e) =>
-                  setPrice({
-                    ...getPrice,
-                    max: e.target.value,
-                  })
-                }
-              />
-            </div>
+      <div className="range-slider-style2">
+        <div className="range-wrapper">
+          <Slider
+            range
+            min={0}
+            max={maxPrice}
+            value={[priceRange.min, priceRange.max > maxPrice ? maxPrice : priceRange.max]}
+            onChange={handleSliderChange}
+            trackStyle={[{ backgroundColor: "#5BBB7B" }]}
+            handleStyle={[
+              { borderColor: "#5BBB7B", backgroundColor: "#fff" },
+              { borderColor: "#5BBB7B", backgroundColor: "#fff" }
+            ]}
+            railStyle={{ backgroundColor: "#E9ECEF" }}
+          />
+          <div className="d-flex align-items-center justify-content-center pt-3">
+            <span id="slider-range-value1">${priceRange.min}</span>
+            <i className="fa-sharp fa-solid fa-minus mx-2 dark-color icon" />
+            <span id="slider-range-value2">${priceRange.max > maxPrice ? maxPrice : priceRange.max}</span>
           </div>
         </div>
       </div>
