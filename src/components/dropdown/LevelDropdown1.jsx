@@ -1,16 +1,15 @@
 "use client";
-
-import { level } from "@/data/listing";
 import listingStore from "@/store/listingStore";
 import { useEffect, useState } from "react";
+import api from "@/lib/axios";
 
 export default function LevelDropdown1() {
   const [getLevel, setLevel] = useState([]);
+  const [availableLevels, setAvailableLevels] = useState([]);
 
   const setOurLevel = listingStore((state) => state.setLevel);
   const getOurLevel = listingStore((state) => state.getLevel);
 
-  // handler
   const levelHandler = (data) => {
     const isExist = getLevel.includes(data);
     if (!isExist) {
@@ -24,17 +23,39 @@ export default function LevelDropdown1() {
     setLevel(getOurLevel);
   }, [getOurLevel]);
 
+  // Fetch Levels
+  useEffect(() => {
+    const fetchLevels = async () => {
+      try {
+        const response = await api.get("/api/profile/freelancers/");
+        const data = Array.isArray(response.data) ? response.data : (response.data.results || []);
+        
+        const uniqueLevels = [...new Set(
+          data.map(item => item.experience_level).filter(Boolean)
+        )];
+        setAvailableLevels(uniqueLevels.sort());
+      } catch (err) {
+        console.error(err);
+      }
+    };
+    fetchLevels();
+  }, []);
+
+  const formatLevel = (str) => str.charAt(0).toUpperCase() + str.slice(1);
+
   return (
     <>
       <div className="widget-wrapper pb25 mb0">
         <div className="checkbox-style1">
-          {level.map((item,i) => (
-            <label key={ i } className="custom_checkbox">
-              {item.title}
+          {availableLevels.length === 0 ? <p className="text-muted text-sm">No levels found</p> : null}
+          
+          {availableLevels.map((lvl, i) => (
+            <label key={i} className="custom_checkbox">
+              {formatLevel(lvl)}
               <input
                 type="checkbox"
-                onChange={() => levelHandler(item.value)}
-                checked={getLevel.includes(item.value)}
+                onChange={() => levelHandler(lvl)}
+                checked={getLevel.includes(lvl)}
               />
               <span className="checkmark" />
             </label>

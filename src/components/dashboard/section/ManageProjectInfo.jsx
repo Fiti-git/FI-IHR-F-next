@@ -7,39 +7,34 @@ import ProposalModal1 from "../modal/ProposalModal1";
 import DeleteModal from "../modal/DeleteModal";
 import api from '@/lib/axios';
 
-// Status badge component for consistency
+// Status badge component matched to ManageJobInfo.jsx style
 const StatusBadge = ({ status }) => {
-  // Define sizing classes: 
-  // px-3 = horizontal padding (wider)
-  // py-2 = vertical padding (taller) 
-  // fs-6 = increases font size slightly
-  const sizeClasses = "badge px-3 py-2 fs-6";
-  const getStatusClass = (status) => {
-    switch (status?.toLowerCase()) {
+  const raw = (status ?? "").toString().trim();
+  const key = raw.toLowerCase();
+
+  const colorClass = (() => {
+    switch (key) {
       case "open":
-        return `${sizeClasses} badge bg-success`;
+        return "pending-style style1"; // Yellow/Orange background
       case "in_progress":
-        return `${sizeClasses} badge bg-primary`;
+      case "in progress":
+        return "pending-style style2"; // Light blue background
       case "completed":
-        return `${sizeClasses} badge bg-info`;
+        return "pending-style style4"; // Success/Green/Dark background (Style 4 often denotes complete/dark) or Style 2
       case "cancelled":
       case "closed":
-        return `${sizeClasses} badge bg-danger`;
+        return "pending-style style3"; // Pink/Red background
       default:
-        return `${sizeClasses} badge bg-secondary`;
+        return "pending-style style5"; // Light orange/Default background
     }
-  };
+  })();
 
-  const getStatusLabel = (status) => {
-    switch (status?.toLowerCase()) {
-      case "in_progress":
-        return "In Progress";
-      default:
-        return status?.charAt(0).toUpperCase() + status?.slice(1);
-    }
-  };
+  // Format label: replace underscores with spaces and capitalize words
+  const label = raw
+    ? raw.toLowerCase().replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
+    : "Unknown";
 
-  return <span className={getStatusClass(status)}>{getStatusLabel(status)}</span>;
+  return <span className={colorClass}>{label}</span>;
 };
 
 // Row for a project

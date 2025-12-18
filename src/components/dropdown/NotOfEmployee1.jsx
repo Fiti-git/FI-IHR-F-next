@@ -1,54 +1,92 @@
 "use client";
-import { noOfEmployee } from "@/data/listing";
 import listingStore from "@/store/listingStore";
 import { useEffect, useState } from "react";
+import api from '@/lib/axios';
 
 export default function NotOfEmployee1() {
-  const [getNoOfEmployee, setNoOfEmployee] = useState([]);
+  const [getJobTypes, setJobTypes] = useState([]);
+  const [availableJobTypes, setAvailableJobTypes] = useState([]);
+  const [loading, setLoading] = useState(true);
 
+  // We are reusing the 'NoOfEmployee' store state to hold 'Job Type' data
+  // to avoid breaking the global store structure.
   const setNoOfEmployeeState = listingStore((state) => state.setNoOfEmployee);
   const getNoOfEmployeeState = listingStore((state) => state.getNoOfEmployee);
 
-  // handler
-  const noOfEmployeeHandler = (data) => {
-    if (!getNoOfEmployee.includes(data)) {
-      return setNoOfEmployee([...getNoOfEmployee, data]);
+  const jobTypeHandler = (data) => {
+    if (!getJobTypes.includes(data)) {
+      return setJobTypes([...getJobTypes, data]);
     }
-    const deleted = getNoOfEmployee.filter((item) => item !== data);
-    setNoOfEmployee(deleted);
+    const deleted = getJobTypes.filter((item) => item !== data);
+    setJobTypes(deleted);
   };
 
-  const noOfEmployeeSumitHandler = () => {
+  const jobTypeSubmitHandler = () => {
     setNoOfEmployeeState([]);
-    getNoOfEmployee.forEach((item) => {
+    getJobTypes.forEach((item) => {
       setNoOfEmployeeState(item);
     });
   };
 
   useEffect(() => {
-    setNoOfEmployee(getNoOfEmployeeState);
+    setJobTypes(getNoOfEmployeeState);
   }, [getNoOfEmployeeState]);
+
+  // Fetch Job Types from API
+  useEffect(() => {
+    const fetchJobTypes = async () => {
+      try {
+        setLoading(true);
+        const response = await api.get("/api/profile/job-providers/");
+        const data = Array.isArray(response.data) ? response.data : (response.data.results || []);
+
+        // Extract unique job types
+        const uniqueTypes = [...new Set(
+          data
+            .map(item => item.job_type)
+            .filter(type => type) // remove null
+        )];
+        
+        setAvailableJobTypes(uniqueTypes.sort());
+      } catch (err) {
+        console.error("Failed to load job types", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchJobTypes();
+  }, []);
+
+  const formatName = (str) => {
+    return str.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+  };
 
   return (
     <>
       <div className="widget-wrapper pb25 mb0">
         <div className="checkbox-style1">
-          {noOfEmployee.map((item,i) => (
-            <label key={ i } className="custom_checkbox">
-              {item.totalEmployee}
+          {loading && <p className="text-muted small">Loading types...</p>}
+          
+          {!loading && availableJobTypes.length === 0 && (
+             <p className="text-muted small">No job types found</p>
+          )}
+
+          {availableJobTypes.map((item, i) => (
+            <label key={i} className="custom_checkbox">
+              {formatName(item)}
               <input
                 type="checkbox"
-                onChange={() => noOfEmployeeHandler(item.totalEmployee)}
-                checked={getNoOfEmployee.includes(item.totalEmployee)}
+                onChange={() => jobTypeHandler(item)}
+                checked={getJobTypes.includes(item)}
               />
               <span className="checkmark" />
-              <span className="right-tags">({item.total})</span>
             </label>
           ))}
         </div>
       </div>
       <button
-        onClick={noOfEmployeeSumitHandler}
+        onClick={jobTypeSubmitHandler}
         className="done-btn ud-btn btn-thm dropdown-toggle"
       >
         Apply

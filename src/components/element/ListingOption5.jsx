@@ -32,6 +32,8 @@ export default function ListingOption5() {
                     All Filter
                   </button>
                 </li>
+                
+                {/* Industry / Category Dropdown */}
                 <li className="list-inline-item position-relative d-none d-xl-inline-block">
                   <button
                     className="open-btn mb10 dropdown-toggle"
@@ -39,13 +41,15 @@ export default function ListingOption5() {
                     data-bs-toggle="dropdown"
                     data-bs-auto-close="outside"
                   >
-                    Category
+                    Industry
                     <i className="fa fa-angle-down ms-2" />
                   </button>
                   <div className="dropdown-menu dd4 pb20">
                     <CategoryDropdown2 />
                   </div>
                 </li>
+
+                {/* Job Type Dropdown (Formerly Employee No) */}
                 <li className="list-inline-item position-relative d-none d-xl-inline-block">
                   <button
                     className="open-btn mb10 dropdown-toggle"
@@ -53,13 +57,14 @@ export default function ListingOption5() {
                     data-bs-toggle="dropdown"
                     data-bs-auto-close="outside"
                   >
-                    No of Employees
+                    Job Type
                     <i className="fa fa-angle-down ms-2" />
                   </button>
                   <div className="dropdown-menu">
                     <NotOfEmployee1 />
                   </div>
                 </li>
+
                 <li className="list-inline-item position-relative d-none d-xl-inline-block">
                   <ClearButton />
                 </li>

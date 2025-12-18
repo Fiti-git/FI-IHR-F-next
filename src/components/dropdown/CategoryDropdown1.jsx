@@ -1,19 +1,17 @@
 "use client";
-
 import listingStore from "@/store/listingStore";
 import { useEffect, useState } from "react";
-
-// Fetch unique job_category values from API and present them as category filter options
-const BASE_API_URL = "http://127.0.0.1:8000";
+import api from "@/lib/axios";
 
 export default function CategoryDropdown1() {
   const [getCategory, setCategory] = useState([]);
   const [availableCategories, setAvailableCategories] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   const setCategoryState = listingStore((state) => state.setCategory);
   const getCategoryState = listingStore((state) => state.getCategory);
 
-  // handler
+  // Toggle selection
   const categoryHandler = (data) => {
     if (!getCategory.includes(data)) {
       return setCategory([...getCategory, data]);
@@ -22,6 +20,7 @@ export default function CategoryDropdown1() {
     setCategory(deleted);
   };
 
+  // Apply to global store
   const categorySumitHandler = () => {
     setCategoryState([]);
     getCategory.forEach((item) => {
@@ -29,54 +28,63 @@ export default function CategoryDropdown1() {
     });
   };
 
+  // Sync local state with global store
   useEffect(() => {
     setCategory(getCategoryState);
   }, [getCategoryState]);
 
-  // load categories from API on mount
+  // Fetch Specializations from API
   useEffect(() => {
-    let mounted = true;
     const fetchCategories = async () => {
       try {
-        const res = await fetch(`${BASE_API_URL}/api/job-posting/`);
-        if (!res.ok) return;
-        const data = await res.json();
-        const jobsArray = Array.isArray(data) ? data : data.results || data.jobs || data.data || [];
-        const cats = new Set();
-        jobsArray.forEach((j) => {
-          const c = j.job_category || j.category || null;
-          if (typeof c === 'string' && c.trim().length > 0) {
-            cats.add(c.trim());
-          }
-        });
-        if (mounted) setAvailableCategories(Array.from(cats));
-      } catch (e) {
-        console.error('Failed to load job categories', e);
+        setLoading(true);
+        const response = await api.get("/api/profile/freelancers/");
+        const data = Array.isArray(response.data) ? response.data : (response.data.results || []);
+        
+        // Extract unique specializations
+        const uniqueSpecs = [...new Set(
+          data
+            .map(item => item.specialization)
+            .filter(spec => spec) // remove null/undefined
+        )];
+        
+        setAvailableCategories(uniqueSpecs.sort());
+      } catch (err) {
+        console.error("Failed to load categories", err);
+      } finally {
+        setLoading(false);
       }
     };
+
     fetchCategories();
-    return () => { mounted = false; };
   }, []);
+
+  // Formatter for display (e.g. "web-dev" -> "Web Dev")
+  const formatName = (str) => {
+    return str.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+  };
 
   return (
     <>
       <div className="widget-wrapper pr20">
         <div className="checkbox-style1">
-          {availableCategories.length === 0 ? (
-            <div className="p-2">No categories available</div>
-          ) : (
-            availableCategories.map((cat, i) => (
-              <label key={cat + i} className="custom_checkbox">
-                {cat[0]?.toUpperCase() + cat.slice(1)}
-                <input
-                  type="checkbox"
-                  onChange={() => categoryHandler(cat)}
-                  checked={getCategory.includes(cat)}
-                />
-                <span className="checkmark" />
-              </label>
-            ))
+          {loading && <p className="text-muted text-sm">Loading categories...</p>}
+          
+          {!loading && availableCategories.length === 0 && (
+            <p className="text-muted text-sm">No categories found</p>
           )}
+
+          {!loading && availableCategories.map((cat, i) => (
+            <label key={i} className="custom_checkbox">
+              {formatName(cat)}
+              <input
+                type="checkbox"
+                onChange={() => categoryHandler(cat)}
+                checked={getCategory.includes(cat)}
+              />
+              <span className="checkmark" />
+            </label>
+          ))}
         </div>
       </div>
       <button

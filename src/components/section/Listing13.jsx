@@ -16,6 +16,7 @@ export default function Listing13({ searchFilters }) {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 12;
 
+  // Global Filter States (usually coming from Sidebar)
   const getCategory = listingStore((state) => state.getCategory);
   const priceRange = priceStore((state) => state.priceRange);
   const getLocation = listingStore((state) => state.getLocation);
@@ -27,27 +28,25 @@ export default function Listing13({ searchFilters }) {
   // Reset to page 1 when search filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchFilters]);
+  }, [searchFilters, getCategory, getLocation, getLevel, getSpeak]);
 
-  // Fetch all freelancer profiles from public API
+  // Fetch all freelancer profiles from API
   useEffect(() => {
     const fetchFreelancers = async () => {
       try {
         setLoading(true);
+        // Using the API endpoint you provided
         const response = await api.get("/api/profile/freelancers/");
-        console.log("Fetched freelancers:", response.data);
-        setFreelancers(response.data);
+        
+        // Handle response whether it is an array or a paginated object
+        const data = Array.isArray(response.data) ? response.data : (response.data.results || []);
+        
+        setFreelancers(data);
         setError(null);
       } catch (err) {
         console.error("Error fetching freelancers:", err);
-
-        if (err.response?.status === 404) {
-          setFreelancers([]);
-          setError("No freelancer profiles found");
-        } else {
-          setError(err.response?.data?.message || err.message);
-          setFreelancers([]);
-        }
+        setFreelancers([]);
+        setError(err.response?.data?.message || "Failed to load freelancers");
       } finally {
         setLoading(false);
       }
@@ -56,174 +55,157 @@ export default function Listing13({ searchFilters }) {
     fetchFreelancers();
   }, []);
 
-  // Transform API data to match the format expected by FreelancerCard1
+  // --- DATA TRANSFORMATION ---
+  // Maps your specific API fields to the format the UI and Filters expect
   const transformFreelancer = (freelancer) => {
-    // Handle profile_image_url first (from serializer), fallback to profile_image, then default
+    const user = freelancer.user || {};
+
+    // 1. Image Handling
     const imageUrl = freelancer.profile_image_url
       || (freelancer.profile_image
-        ? (freelancer.profile_image.startsWith('http')
-          ? freelancer.profile_image
-          : `${API_BASE_URL}${freelancer.profile_image}`)
+        ? (freelancer.profile_image.startsWith('http') ? freelancer.profile_image : `${API_BASE_URL}${freelancer.profile_image}`)
         : "/images/team/fl-1.png");
 
-    // Extract user data from nested user object
-    const user = freelancer.user || {};
-    const userId = user.id;
+    // 2. Name Handling
+    const displayName = freelancer.full_name || 
+      (user.first_name ? `${user.first_name} ${user.last_name}` : user.username) || 
+      "Freelancer";
 
-    // Create display name from available user data
-    const displayName = freelancer.full_name ||
-      (user.first_name && user.last_name
-        ? `${user.first_name} ${user.last_name}`.trim()
-        : user.first_name || user.last_name || user.username || "Freelancer");
+    // 3. Skills Handling
+    // API returns 'skills_list' (array) and 'skills' (string)
+    let skillsArray = [];
+    if (freelancer.skills_list && freelancer.skills_list.length > 0) {
+      skillsArray = freelancer.skills_list;
+    } else if (freelancer.skills && typeof freelancer.skills === 'string') {
+      skillsArray = freelancer.skills.split(',').map(s => s.trim());
+    }
 
-    // Parse hourly rate (remove $ and /hr)
-    const hourlyRateValue = freelancer.hourly_rate
-      ? parseInt(freelancer.hourly_rate)
-      : 0;
+    // 4. Specialization Display
+    const specializationDisplay = freelancer.specialization 
+      ? freelancer.specialization.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase()) // "web-dev" -> "Web Dev"
+      : 'General';
 
-    // Format location
-    const locationDisplay = freelancer.city && freelancer.country
-      ? `${freelancer.city}, ${freelancer.country}`
-      : freelancer.city || freelancer.country || "Location";
-
-    // Parse skills from skills_list (serializer method) or skills field
-    let skillsArray = freelancer.skills_list
-      || (freelancer.skills
-        ? freelancer.skills.split(',').map(s => s.trim())
-        : []);
-
-    // --- START CHANGE: Remove specific placeholder skills ---
-    skillsArray = skillsArray.filter(skill => {
-        const s = skill.toLowerCase();
-        return s !== 'skill1' && s !== 'skill2' && s !== 'skill3';
-    });
-    // --- END CHANGE ---
-
-    // Format specialization for display
-    const specializationDisplay = {
-      'web-dev': 'Web Development',
-      'design': 'Design',
-      'marketing': 'Marketing'
-    }[freelancer.specialization] || freelancer.specialization || 'General';
-
-    // Format experience level
-    const experienceLevelDisplay = {
-      'beginner': 'Beginner',
-      'mid': 'Mid',
-      'senior': 'Senior'
-    }[freelancer.experience_level] || freelancer.experience_level || 'Mid';
+    // 5. Level Display
+    const levelDisplay = freelancer.experience_level 
+      ? freelancer.experience_level.charAt(0).toUpperCase() + freelancer.experience_level.slice(1) // "mid" -> "Mid"
+      : 'Mid Level';
 
     return {
-      // Fields that FreelancerCard1 expects
-      id: userId,
-      img: imageUrl,
-      name: displayName,
-      profession: freelancer.professional_title || "Professional",
-      rating: "5.0",
-      reviews: "0",
-      price: hourlyRateValue,
-      skill: freelancer.specialization || "general",
-      skillDisplay: specializationDisplay,
-      location: locationDisplay,
+      // --- Core Fields for Filtering ---
+      id: user.id || freelancer.id,
+      freelancerId: freelancer.id,
+      
+      // Price Filter: API returns string "30", convert to Number
+      price: parseFloat(freelancer.hourly_rate) || 0,
+      
+      // Category Filter: maps to 'specialization' (e.g., "web-dev")
+      skill: freelancer.specialization || "web development", 
+      
+      // Location Filter: maps to 'city' (e.g., "london")
+      location: freelancer.city || freelancer.country || "london",
+      
+      // Level Filter: maps to 'experience_level' (e.g., "mid")
       level: freelancer.experience_level || "mid",
-      levelDisplay: experienceLevelDisplay,
+      
+      // Language Filter: maps to 'language' (e.g., "english")
       language: freelancer.language || "english",
 
-      // Additional fields for reference and search
-      freelancerId: freelancer.id,
-      userId: userId,
-      username: user.username || '',
-      firstName: user.first_name || '',
-      lastName: user.last_name || '',
-      fullName: freelancer.full_name || displayName,
-      email: user.email || "",
-      phone: freelancer.phone_number || "",
-      bio: freelancer.bio || "",
-      skills: skillsArray,
+      // --- Fields for Display Card ---
+      img: imageUrl,
+      name: displayName,
+      profession: freelancer.professional_title || "Freelancer",
+      rating: "5.0", // Hardcoded as API doesn't have rating yet
+      reviews: "0",  // Hardcoded as API doesn't have reviews yet
+      hourlyRate: freelancer.hourly_rate || "0",
+      
+      // Searchable text fields
+      skillDisplay: specializationDisplay,
+      levelDisplay: levelDisplay,
       skillsString: skillsArray.join(', '),
-      hourlyRate: freelancer.hourly_rate,
-      gender: freelancer.gender,
+      bio: freelancer.bio || "",
       city: freelancer.city,
       country: freelancer.country,
-      languageProficiency: freelancer.language_proficiency,
-      linkedinOrGithub: freelancer.linkedin_or_github,
+      sort: "best-seller" // Default sort key
     };
   };
 
-  // NEW: Breadcrumb search filter (searches across multiple fields)
+  // --- FILTERS ---
+
+  // 1. Breadcrumb Search (Keyword Search)
   const breadcrumbSearchFilter = (item) => {
     if (!searchFilters || !searchFilters.keyword || searchFilters.keyword.trim() === '') {
       return true;
     }
-
     const keyword = searchFilters.keyword.toLowerCase().trim();
-
-    // Search in these fields
-    const searchableFields = [
-      item.name,
-      item.fullName,
-      item.profession,
-      item.bio,
-      item.skillsString,
-      item.skillDisplay,
+    
+    // Fields to search in
+    const searchFields = [
+      item.name, 
+      item.profession, 
+      item.skillsString, 
+      item.skillDisplay, 
       item.location,
       item.city,
-      item.country,
-      item.levelDisplay,
-      item.language,
-      item.username,
-      item.firstName,
-      item.lastName,
-      item.email,
-      // Search in individual skills
-      ...item.skills
+      item.country
     ];
 
-    return searchableFields.some(field =>
+    return searchFields.some(field => 
       field && field.toString().toLowerCase().includes(keyword)
     );
   };
 
-  // Category filter (based on specialization/skill)
-  const categoryFilter = (item) =>
-    getCategory?.length !== 0 ? getCategory.includes(item.skill) : true;
+  // 2. Category Filter (Matches API 'specialization')
+  // Sidebar usually sends keys like "web-dev", "design".
+  const categoryFilter = (item) => {
+    if (!getCategory || getCategory.length === 0) return true;
+    // We lowercase both to ensure "Web-Dev" matches "web-dev"
+    return getCategory.some(cat => cat.toLowerCase() === item.skill.toLowerCase());
+  };
 
-  // Price filter
+  // 3. Price Filter (Matches API 'hourly_rate')
   const priceFilter = (item) =>
     priceRange.min <= item.price && priceRange.max >= item.price;
 
-  // Location filter
-  const locationFilter = (item) =>
-    getLocation?.length !== 0
-      ? getLocation.includes(item.location.split(" ").join("-").toLowerCase())
-      : true;
+  // 4. Location Filter (Matches API 'city')
+  // Note: Sidebar usually sends slugified cities (e.g., "london", "new-york")
+  const locationFilter = (item) => {
+    if (!getLocation || getLocation.length === 0) return true;
+    
+    // Normalize item location to match sidebar format (lowercase, dashes for spaces)
+    const itemLocationSlug = item.location.toLowerCase().split(" ").join("-");
+    
+    return getLocation.includes(itemLocationSlug);
+  };
 
-  // Search filter (from sidebar)
+  // 5. Sidebar Search Input Filter
   const searchFilter = (item) =>
     getSearch !== ""
       ? item.location.toLowerCase().includes(getSearch.toLowerCase()) ||
-      item.name.toLowerCase().includes(getSearch.toLowerCase()) ||
-      item.profession.toLowerCase().includes(getSearch.toLowerCase())
+        item.name.toLowerCase().includes(getSearch.toLowerCase()) ||
+        item.profession.toLowerCase().includes(getSearch.toLowerCase())
       : true;
 
-  // Level filter
-  const levelFilter = (item) =>
-    getLevel?.length !== 0 ? getLevel.includes(item.level) : true;
+  // 6. Level Filter (Matches API 'experience_level')
+  const levelFilter = (item) => {
+    if (!getLevel || getLevel.length === 0) return true;
+    // Compare "mid" with ["mid", "senior"]
+    return getLevel.some(l => l.toLowerCase() === item.level.toLowerCase());
+  };
 
-  // Language filter
-  const languageFilter = (item) =>
-    getSpeak?.length !== 0
-      ? getSpeak.includes(item.language.toLowerCase())
-      : true;
+  // 7. Language Filter (Matches API 'language')
+  const languageFilter = (item) => {
+    if (!getSpeak || getSpeak.length === 0) return true;
+    return getSpeak.some(lang => lang.toLowerCase() === item.language.toLowerCase());
+  };
 
-  // Sort by filter
+  // 8. Sort Filter
   const sortByFilter = (item) =>
     getBestSeller === "best-seller" ? true : item.sort === getBestSeller;
 
-  // Apply all filters
+  // --- APPLY FILTERS ---
   const filteredFreelancers = freelancers
     .map(transformFreelancer)
-    .filter(breadcrumbSearchFilter)  // NEW: Apply breadcrumb search first
+    .filter(breadcrumbSearchFilter)
     .filter(categoryFilter)
     .filter(priceFilter)
     .filter(locationFilter)
@@ -232,19 +214,18 @@ export default function Listing13({ searchFilters }) {
     .filter(languageFilter)
     .filter(sortByFilter);
 
-  // Pagination
+  // Pagination Logic
   const indexOfLastItem = currentPage * itemsPerPage;
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
   const currentItems = filteredFreelancers.slice(indexOfFirstItem, indexOfLastItem);
 
-  // Content rendering
   const content = currentItems.map((item) => (
     <div key={`freelancer-${item.freelancerId}`} className="col-md-6 col-lg-4 col-xl-3">
       <FreelancerCard1 data={item} />
     </div>
   ));
 
-  // Loading state
+  // Loading View
   if (loading) {
     return (
       <section className="pt30 pb90">
@@ -254,7 +235,6 @@ export default function Listing13({ searchFilters }) {
               <div className="spinner-border text-primary" role="status">
                 <span className="visually-hidden">Loading...</span>
               </div>
-              <p className="mt-3">Loading freelancers...</p>
             </div>
           </div>
         </div>
@@ -262,81 +242,46 @@ export default function Listing13({ searchFilters }) {
     );
   }
 
-  // Error state
-  if (error && freelancers.length === 0) {
-    return (
-      <section className="pt30 pb90">
-        <div className="container">
-          <ListingOption6 />
-          <div className="row">
-            <div className="col-12 text-center py-5">
-              <div className="alert alert-warning" role="alert">
-                <h4>No Freelancers Found</h4>
-                <p>{error}</p>
-              </div>
-            </div>
-          </div>
-        </div>
-        <ListingSidebarModal5 />
-      </section>
-    );
-  }
-
-  // Empty state
-  if (freelancers.length === 0) {
-    return (
-      <section className="pt30 pb90">
-        <div className="container">
-          <ListingOption6 />
-          <div className="row">
-            <div className="col-12 text-center py-5">
-              <p>No freelancers available at the moment.</p>
-            </div>
-          </div>
-        </div>
-        <ListingSidebarModal5 />
-      </section>
-    );
-  }
-
-  // Check if search is active
-  const isSearchActive = searchFilters && searchFilters.keyword;
+  // Check if search/filter is active
+  const isSearchActive = (searchFilters && searchFilters.keyword) || 
+                         (getCategory.length > 0) || 
+                         (getLocation.length > 0) || 
+                         (getSearch !== "");
 
   return (
     <>
       <section className="pt30 pb90">
         <div className="container">
-          {/* Search Results Info */}
-          {isSearchActive && (
-            <div className="row mb-3">
-              <div className="col-12">
-                <div className="alert alert-info d-flex justify-content-between align-items-center">
-                  <span>
-                    Found <strong>{filteredFreelancers.length}</strong> freelancer{filteredFreelancers.length !== 1 ? 's' : ''}
-                    {searchFilters.keyword && ` for "${searchFilters.keyword}"`}
-                  </span>
-                </div>
-              </div>
-            </div>
-          )}
+          {/* Result Count Info */}
+          <div className="row mb-3">
+             <div className="col-12">
+               {isSearchActive && (
+                 <p className="text-muted">
+                   Found <strong>{filteredFreelancers.length}</strong> freelancer{filteredFreelancers.length !== 1 ? 's' : ''} matching your criteria.
+                 </p>
+               )}
+             </div>
+          </div>
 
           <ListingOption6 />
+          
           <div className="row">
             {content.length > 0 ? (
               content
             ) : (
               <div className="col-12 text-center py-5">
                 <div className="alert alert-warning">
-                  <h5>No Results Found</h5>
+                  <h5>No Freelancers Found</h5>
                   <p>
                     {isSearchActive
-                      ? `No freelancers found for "${searchFilters.keyword}". Try different keywords or adjust your filters.`
-                      : "No freelancers match your current filters."}
+                      ? "No freelancers match your current filters. Try removing some filters."
+                      : "No freelancer profiles available at the moment."}
                   </p>
                 </div>
               </div>
             )}
           </div>
+
           {filteredFreelancers.length > itemsPerPage && (
             <div className="row mt30">
               <Pagination1

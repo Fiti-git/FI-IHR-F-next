@@ -74,7 +74,7 @@ export default function CreateMilestone() {
       const response = await api.get(`/api/project/milestones/verify_freelancer_access/?project_id=${project.id}`);
       const data = response.data;
 
-      if (res.statusText == "OK" && data.has_access) {
+      if (response.statusText == "OK" && data.has_access) {
         setHasAccess(true);
         setProject(prev => ({
           ...prev,

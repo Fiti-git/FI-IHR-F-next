@@ -1,17 +1,45 @@
 "use client";
 import priceStore from "@/store/priceStore";
 import { useEffect, useState } from "react";
-
 import Slider from "rc-slider";
+import api from "@/lib/axios";
 
 export default function PriceDropdown1() {
+  const [maxPrice, setMaxPrice] = useState(1000); // Default fallback
   const [getPrice, setPrice] = useState({
     min: 0,
-    max: 100000,
+    max: 1000,
   });
 
   const priceRange = priceStore((state) => state.priceRange);
   const setPriceRange = priceStore((state) => state.priceRangeHandler);
+
+  // Fetch max hourly rate from API
+  useEffect(() => {
+    const fetchPrices = async () => {
+      try {
+        const response = await api.get("/api/profile/freelancers/");
+        const data = Array.isArray(response.data) ? response.data : (response.data.results || []);
+        
+        // Find highest hourly rate
+        const rates = data.map(item => parseFloat(item.hourly_rate)).filter(r => !isNaN(r));
+        if (rates.length > 0) {
+          const highest = Math.ceil(Math.max(...rates));
+          // Add a buffer to the max range (e.g., if max is 80, set slider max to 100)
+          const newMax = highest < 100 ? 100 : highest + 50;
+          setMaxPrice(newMax);
+          
+          // Only update local state max if it hasn't been set by user
+          if (getPrice.max === 100000 || getPrice.max === 1000) {
+              setPrice(prev => ({ ...prev, max: newMax }));
+          }
+        }
+      } catch (err) {
+        console.error(err);
+      }
+    };
+    fetchPrices();
+  }, []);
 
   const priceHandler = (data) => {
     setPrice({
@@ -35,7 +63,7 @@ export default function PriceDropdown1() {
                 value={[getPrice.min, getPrice.max]}
                 min={0}
                 range
-                max={100000}
+                max={maxPrice}
                 onChange={priceHandler}
               />
             </div>
@@ -43,13 +71,13 @@ export default function PriceDropdown1() {
               <input
                 type="number"
                 className="amount w-100"
-                placeholder="$20"
+                placeholder="$0"
                 min={0}
                 value={getPrice.min}
                 onChange={(e) =>
                   setPrice({
                     ...getPrice,
-                    min: e.target.value,
+                    min: Number(e.target.value),
                   })
                 }
               />
@@ -57,14 +85,14 @@ export default function PriceDropdown1() {
               <input
                 type="number"
                 className="amount2 w-100"
-                placeholder="$100000"
+                placeholder={`$${maxPrice}`}
                 min={0}
-                max={100000}
+                max={maxPrice}
                 value={getPrice.max}
                 onChange={(e) =>
                   setPrice({
                     ...getPrice,
-                    max: e.target.value,
+                    max: Number(e.target.value),
                   })
                 }
               />

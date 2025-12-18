@@ -6,6 +6,32 @@ import { useState, useEffect } from "react";
 import DashboardNavigation from "../header/DashboardNavigation";
 import api from '@/lib/axios'; // Import the centralized Axios instance
 
+// Common button styles to match Managesingeljob.jsx
+const btnStyle = {
+  padding: '10px',
+  fontSize: '14px',
+  transform: 'none',
+  WebkitTransform: 'none',
+  MozTransform: 'none',
+  OTransform: 'none',
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  lineHeight: '1',
+  minWidth: '38px',
+  minHeight: '38px',
+  textAlign: 'center'
+};
+
+const iconStyle = {
+  transform: 'none',
+  WebkitTransform: 'none',
+  MozTransform: 'none',
+  OTransform: 'none',
+  display: 'block',
+  margin: '0 auto'
+};
+
 export default function ManageSingleProject() {
   const params = useParams();
   const projectId = params.id;
@@ -88,6 +114,25 @@ export default function ManageSingleProject() {
     } finally {
       setLoading(false);
     }
+  };
+
+  // Helper for freelancer chat in selected view
+  const handleChat = async (freelancerId, freelancerName) => {
+      // Need a proposal object or direct user ID logic similar to handleStartChat
+      // Assuming freelancerId represents the user ID for chat in this context
+      if (loading) return;
+      setLoading(true);
+      try {
+        const conversation = await startChat(freelancerId);
+        if (conversation?.id) {
+            router.push(`/message?conversation_id=${conversation.id}`);
+        }
+      } catch (error) {
+          console.error("Failed to start chat:", error);
+          alert("Could not start chat: " + error.message);
+      } finally {
+          setLoading(false);
+      }
   };
 
   // Fetch project details
@@ -419,9 +464,7 @@ export default function ManageSingleProject() {
           <div className="col-lg-12">
             <div className="dashboard_title_area d-flex justify-content-between align-items-center flex-wrap gap-3">
               <div>
-                {/* <h2>{project.title}</h2> */}
                 <h2>{project?.title}</h2>
-
                 <p className="text">Manage project details, proposals, and milestones</p>
               </div>
               <div className="d-flex gap-2">
@@ -447,7 +490,6 @@ export default function ManageSingleProject() {
         {project ? (
           <>
             <h5 className="fw500 mb-3">Project Details</h5>
-
             <div className="row">
               <div className="col-md-6 mb-3">
                 <p className="mb-2"><strong>Description:</strong></p>
@@ -489,7 +531,6 @@ export default function ManageSingleProject() {
           <div>Loading project details...</div>
         )}
 
-
         {/* Proposal List (if project is OPEN or has proposals) */}
         {proposals.length > 0 && (
           <div className="row">
@@ -529,18 +570,19 @@ export default function ManageSingleProject() {
                                   <div className="thumb w40 position-relative rounded-circle me-2">
                                     <img
                                       src={proposal.freelancer?.profile_image || "/images/team/default-avatar.png"}
-                                      alt={proposal.freelancer?.username}
+                                      // alt={proposal.freelancer?.username}
                                       className="rounded-circle"
                                       style={{ width: '40px', height: '40px', objectFit: 'cover' }}
                                     />
                                   </div>
                                   <div>
                                     <h6 className="mb-0">
-                                      {proposal.freelancer?.first_name && proposal.freelancer?.last_name
+                                      {proposal.freelancer?.first_name?.trim() &&
+                                      proposal.freelancer?.last_name?.trim()
                                         ? `${proposal.freelancer.first_name} ${proposal.freelancer.last_name}`
-                                        : proposal.freelancer?.username}
+                                        : "Anonymous"}
                                     </h6>
-                                    <small className="text-muted">{proposal.freelancer?.email}</small>
+                                    {/* <small className="text-muted">{proposal.freelancer?.email}</small> */}
                                   </div>
                                 </div>
                               </td>
@@ -558,11 +600,12 @@ export default function ManageSingleProject() {
                                   </div>
                                   {proposal.cover_letter && (
                                     <button
-                                      className="btn btn-sm btn-outline-primary"
+                                      className="ud-btn btn-thm-border"
+                                      style={btnStyle}
                                       onClick={() => openCoverLetterModal(proposal)}
                                       title="View full cover letter"
                                     >
-                                      <i className="fal fa-eye"></i>
+                                      <i className="fal fa-eye" style={iconStyle}></i>
                                     </button>
                                   )}
                                 </div>
@@ -573,7 +616,8 @@ export default function ManageSingleProject() {
                                   {proposal.status === 'submitted' && project.status === 'open' && (
                                     <>
                                       <button
-                                        className="btn btn-sm btn-success"
+                                        className="ud-btn btn-thm"
+                                        style={btnStyle}
                                         onClick={() => handleAcceptProposal(
                                           proposal.id,
                                           proposal.freelancer?.first_name || proposal.freelancer?.username
@@ -584,14 +628,12 @@ export default function ManageSingleProject() {
                                         {processingProposal === proposal.id ? (
                                           <span className="spinner-border spinner-border-sm"></span>
                                         ) : (
-                                          <>
-                                            <i className="fal fa-check me-1"></i>
-                                            Accept
-                                          </>
+                                          <i className="fal fa-check" style={iconStyle}></i>
                                         )}
                                       </button>
                                       <button
-                                        className="btn btn-sm btn-danger"
+                                        className="ud-btn btn-dark"
+                                        style={btnStyle}
                                         onClick={() => handleRejectProposal(
                                           proposal.id,
                                           proposal.freelancer?.first_name || proposal.freelancer?.username
@@ -599,26 +641,25 @@ export default function ManageSingleProject() {
                                         disabled={processingProposal === proposal.id}
                                         title="Reject Proposal"
                                       >
-                                        <i className="fal fa-times me-1"></i>
-                                        Reject
+                                        <i className="fal fa-times" style={iconStyle}></i>
                                       </button>
                                     </>
                                   )}
                                   <button
-                                    className="btn btn-sm btn-info"
+                                    className="ud-btn btn-thm-border"
+                                    style={btnStyle}
                                     onClick={() => handleStartChat(proposal)}
                                     title="Chat with Freelancer"
                                   >
-                                    <i className="fal fa-comment me-1"></i>
-                                    Chat
+                                    <i className="fal fa-comments" style={iconStyle}></i>
                                   </button>
                                   <Link
                                     href={`/freelancer/${proposal.freelancer?.id}`}
-                                    className="btn btn-sm btn-outline-primary"
+                                    className="ud-btn btn-thm-border"
+                                    style={btnStyle}
                                     title="View Profile"
                                   >
-                                    <i className="fal fa-user me-1"></i>
-                                    Profile
+                                    <i className="fal fa-user" style={iconStyle}></i>
                                   </Link>
                                 </div>
                               </td>
@@ -658,38 +699,37 @@ export default function ManageSingleProject() {
                         <div className="thumb w60 position-relative rounded-circle me-3">
                           <img
                             src={acceptedProposal.freelancer?.profile_image || "/images/team/default-avatar.png"}
-                            alt={acceptedProposal.freelancer?.username}
+                            // alt={acceptedProposal.freelancer?.username}
                             className="rounded-circle"
                             style={{ width: '60px', height: '60px', objectFit: 'cover' }}
                           />
                         </div>
                         <div>
                           <h5 className="mb-1">
-                            {acceptedProposal.freelancer?.first_name && acceptedProposal.freelancer?.last_name
+                            {acceptedProposal.freelancer?.first_name?.trim() &&
+                            acceptedProposal.freelancer?.last_name?.trim()
                               ? `${acceptedProposal.freelancer.first_name} ${acceptedProposal.freelancer.last_name}`
-                              : acceptedProposal.freelancer?.username}
+                              : "Anonymous"}
                           </h5>
-                          <p className="mb-0 text-muted">{acceptedProposal.freelancer?.email}</p>
+                          {/* <p className="mb-0 text-muted">{acceptedProposal.freelancer?.email}</p> */}
                           <p className="mb-0 fw-bold text-success">Contract Budget: ${formatBudget(acceptedProposal.budget)}</p>
                         </div>
                       </div>
                       <div className="d-flex gap-2">
                         <button
-                          className="btn btn-primary"
+                          className="ud-btn btn-thm"
                           onClick={() => handleChat(
                             acceptedProposal.freelancer?.id,
                             acceptedProposal.freelancer?.first_name || acceptedProposal.freelancer?.username
                           )}
                         >
-                          <i className="fal fa-comment me-2"></i>
-                          Chat
+                          Chat <i className="fal fa-comment-dots" />
                         </button>
                         <Link
                           href={`/freelancer/${acceptedProposal.freelancer?.id}`}
-                          className="btn btn-outline-primary"
+                          className="ud-btn btn-dark"
                         >
-                          <i className="fal fa-user me-2"></i>
-                          View Profile
+                          View Profile <i className="fal fa-user" />
                         </Link>
                       </div>
                     </div>
@@ -775,33 +815,30 @@ export default function ManageSingleProject() {
                                   {getStatusBadge(milestone.status)}
                                 </td>
                                 <td>
-                                  <div className="d-flex flex-column gap-2">
+                                  <div className="d-flex gap-2">
                                     {/* PENDING - Client needs to approve or modify */}
                                     {milestone.status === 'pending' && (
                                       <>
                                         <button
-                                          className="btn btn-sm btn-success"
+                                          className="ud-btn btn-thm"
+                                          style={btnStyle}
+                                          title="Approve Milestone"
                                           onClick={() => handleApproveMilestone(milestone.id, milestone.name)}
                                           disabled={processingMilestone === milestone.id}
                                         >
                                           {processingMilestone === milestone.id ? (
-                                            <>
-                                              <span className="spinner-border spinner-border-sm me-1"></span>
-                                              Approving...
-                                            </>
+                                            <span className="spinner-border spinner-border-sm"></span>
                                           ) : (
-                                            <>
-                                              <i className="fal fa-check me-1"></i>
-                                              Approve
-                                            </>
+                                            <i className="fal fa-check" style={iconStyle}></i>
                                           )}
                                         </button>
                                         <button
-                                          className="btn btn-sm btn-warning"
+                                          className="ud-btn btn-dark"
+                                          style={btnStyle}
+                                          title="Request Changes"
                                           onClick={() => openRevisionModal(milestone)}
                                         >
-                                          <i className="fal fa-edit me-1"></i>
-                                          Request Changes
+                                          <i className="fal fa-edit" style={iconStyle}></i>
                                         </button>
                                       </>
                                     )}
@@ -810,7 +847,7 @@ export default function ManageSingleProject() {
                                     {milestone.status === 'approved' && (
                                       <span className="text-success small">
                                         <i className="fal fa-check-circle me-1"></i>
-                                        Approved - Freelancer can start
+                                        Approved
                                       </span>
                                     )}
 
@@ -818,7 +855,7 @@ export default function ManageSingleProject() {
                                     {milestone.status === 'in_progress' && (
                                       <span className="text-primary small">
                                         <i className="fal fa-spinner fa-spin me-1"></i>
-                                        Work in progress
+                                        Working
                                       </span>
                                     )}
 
@@ -828,7 +865,9 @@ export default function ManageSingleProject() {
                                         {!milestonePayment ? (
                                           <>
                                             <button
-                                              className="btn btn-sm btn-success"
+                                              className="ud-btn btn-thm"
+                                              style={btnStyle}
+                                              title="Approve & Create Payment"
                                               onClick={() => handleCreatePayment(
                                                 milestone.id,
                                                 milestone.name,
@@ -837,29 +876,24 @@ export default function ManageSingleProject() {
                                               disabled={processingMilestone === milestone.id}
                                             >
                                               {processingMilestone === milestone.id ? (
-                                                <>
-                                                  <span className="spinner-border spinner-border-sm me-1"></span>
-                                                  Processing...
-                                                </>
+                                                <span className="spinner-border spinner-border-sm"></span>
                                               ) : (
-                                                <>
-                                                  <i className="fal fa-check-double me-1"></i>
-                                                  Approve & Create Payment
-                                                </>
+                                                <i className="fal fa-check-double" style={iconStyle}></i>
                                               )}
                                             </button>
                                             <button
-                                              className="btn btn-sm btn-danger"
+                                              className="ud-btn btn-dark"
+                                              style={btnStyle}
+                                              title="Request Revision"
                                               onClick={() => openRevisionModal(milestone)}
                                             >
-                                              <i className="fal fa-redo me-1"></i>
-                                              Request Revision
+                                              <i className="fal fa-redo" style={iconStyle}></i>
                                             </button>
                                           </>
                                         ) : (
                                           <span className="text-info small">
                                             <i className="fal fa-money-bill-wave me-1"></i>
-                                            Payment created - check payments section
+                                            Payment created
                                           </span>
                                         )}
                                       </>
@@ -869,7 +903,7 @@ export default function ManageSingleProject() {
                                     {milestone.status === 'revision_requested' && (
                                       <span className="text-danger small">
                                         <i className="fal fa-redo me-1"></i>
-                                        Awaiting freelancer revision
+                                        Revision
                                       </span>
                                     )}
 
@@ -877,7 +911,7 @@ export default function ManageSingleProject() {
                                     {milestone.status === 'paid' && (
                                       <span className="text-success small">
                                         <i className="fal fa-check-double me-1"></i>
-                                        Payment released
+                                        Paid
                                       </span>
                                     )}
                                   </div>
@@ -981,20 +1015,16 @@ export default function ManageSingleProject() {
                               <td>
                                 {payment.payment_status === 'pending' && (
                                   <button
-                                    className="btn btn-sm btn-success"
+                                    className="ud-btn btn-thm"
+                                    style={btnStyle}
+                                    title="Release Payment"
                                     onClick={() => handlePayout(payment.id, payment.payment_amount)}
                                     disabled={processingPayment === payment.id}
                                   >
                                     {processingPayment === payment.id ? (
-                                      <>
-                                        <span className="spinner-border spinner-border-sm me-1"></span>
-                                        Releasing...
-                                      </>
+                                      <span className="spinner-border spinner-border-sm"></span>
                                     ) : (
-                                      <>
-                                        <i className="fal fa-money-bill-wave me-1"></i>
-                                        Release Payment
-                                      </>
+                                      <i className="fal fa-money-bill-wave" style={iconStyle}></i>
                                     )}
                                   </button>
                                 )}

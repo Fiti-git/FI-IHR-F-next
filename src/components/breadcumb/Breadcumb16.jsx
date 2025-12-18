@@ -39,13 +39,13 @@ export default function Breadcumb16({ onSearch }) {
             src="/images/vector-img/right-bottom.png"
             alt="vector"
           />
-          <Image
+          {/* <Image
             height={300}
             width={532}
             className="service-v1-vector bounce-y d-none d-lg-block"
             src="/images/vector-img/vector-service-v1.png"
             alt="vector"
-          />
+          /> */}
           <div className="container">
             <div className="row wow fadeInUp">
               <div className="col-xl-7">
