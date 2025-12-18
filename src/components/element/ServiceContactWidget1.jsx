@@ -1,59 +1,82 @@
-import Image from "next/image";
-import Link from "next/link";
+"use client";
 
-export default function ServiceContactWidget1() {
+export default function CompanyCard() {
+  const company = {
+    logo: "https://jobdaddy.lk/storage/company_profiles/1f85ad375dc4f25e207f74e9a09d0b71.jpeg",
+    name: "ABC Solutions",
+    services: [
+      "Outsourcing Services",
+      "Recruitment Services",
+      "IT Technical Support & Maintenance",
+      "Website & System Development",
+      "3D Design & Architectural Drawing",
+    ],
+  };
+
   return (
-    <>
-      <div className="freelancer-style1 service-single mb-0">
-        <div className="wrapper d-flex align-items-center">
-          <div className="thumb position-relative mb25">
-            <Image
-              height={90}
-              width={90}
-              className="rounded-circle mx-auto"
-              src="/images/team/fl-1.png"
-              alt="rounded-circle"
-            />
-            <span className="online" />
-          </div>
-          <div className="ml20">
-            <h5 className="title mb-1">Kristin Watson</h5>
-            <p className="mb-0">Dog Trainer</p>
-            <div className="review">
-              <p>
-                <i className="fas fa-star fz10 review-color pr10" />
-                <span className="dark-color">4.9</span> (595 reviews)
-              </p>
-            </div>
-          </div>
-        </div>
-        <hr className="opacity-100" />
-        <div className="details">
-          <div className="fl-meta d-flex align-items-center justify-content-between">
-            <a className="meta fw500 text-start">
-              Location
-              <br />
-              <span className="fz14 fw400">London</span>
-            </a>
-            <a className="meta fw500 text-start">
-              Rate
-              <br />
-              <span className="fz14 fw400">$90 / hr</span>
-            </a>
-            <a className="meta fw500 text-start">
-              Job Success
-              <br />
-              <span className="fz14 fw400">%98</span>
-            </a>
-          </div>
-        </div>
-        <div className="d-grid mt30">
-          <Link href="/freelancer-single" className="ud-btn btn-thm-border">
-            Contact Me
-            <i className="fal fa-arrow-right-long" />
-          </Link>
+    <div
+      className="freelancer-style1 service-single mb-0 p-3"
+      style={{
+        borderRadius: "12px",
+        border: "1px solid #e0e0e0",
+        boxShadow: "0 4px 10px rgba(0,0,0,0.05)",
+        transition: "all 0.3s ease",
+      }}
+      onMouseEnter={(e) =>
+        (e.currentTarget.style.boxShadow = "0 8px 20px rgba(0,0,0,0.1)")
+      }
+      onMouseLeave={(e) =>
+        (e.currentTarget.style.boxShadow = "0 4px 10px rgba(0,0,0,0.05)")
+      }
+    >
+      {/* Top: Logo + Name */}
+      <div className="d-flex align-items-center mb-3">
+        <img
+          src={company.logo}
+          alt={`${company.name} logo`}
+          style={{
+            width: "90px",
+            height: "90px",
+            borderRadius: "50%",
+            objectFit: "cover",
+            marginRight: "15px",
+          }}
+        />
+        <h5 style={{ fontSize: "20px", fontWeight: "600", margin: 0 }}>
+          {company.name}
+        </h5>
+      </div>
+
+      {/* Services */}
+      <div>
+        <p
+          style={{
+            fontSize: "16px",
+            fontWeight: "500",
+            marginBottom: "8px",
+          }}
+        >
+          Service Categories
+        </p>
+        <div className="d-flex flex-column gap-2">
+          {company.services.map((service, index) => (
+            <span
+              key={index}
+              style={{
+                backgroundColor: "#f0f0f0",
+                padding: "8px 10px",
+                borderRadius: "8px",
+                fontSize: "14px",
+                textAlign: "center",
+                display: "block",
+                width: "100%", // Full width inside the container
+              }}
+            >
+              {service}
+            </span>
+          ))}
         </div>
       </div>
-    </>
+    </div>
   );
 }
