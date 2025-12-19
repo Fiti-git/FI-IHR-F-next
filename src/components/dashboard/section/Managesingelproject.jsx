@@ -275,33 +275,42 @@ export default function ManageSingleProject() {
     }
   };
 
-  // Handle create payment for completed milestone
-  const handleCreatePayment = async (milestoneId, milestoneName, budget) => {
-    if (!confirm(`Create payment of $${formatBudget(budget)} for milestone "${milestoneName}"?`)) return;
+// Handle create payment for completed milestone
+const handleCreatePayment = async (milestoneId, milestoneName, budget) => {
+  // 1. Check if we have an accepted proposal to get the freelancer ID
+  const freelancerId = acceptedProposal?.freelancer?.id;
 
-    setProcessingMilestone(milestoneId);
-    try {
-      const milestone = milestones.find(m => m.id === milestoneId);
-      await api.post('/api/project/payments/', {
-        project: parseInt(projectId),
-        milestone: milestoneId,
-        freelancer: milestone?.freelancer,
-        payment_amount: budget,
-        payment_status: 'pending',
-        payment_method: 'platform_wallet',
-      });
-      setSuccess("Payment created successfully! You can now release it.");
-      setTimeout(() => setSuccess(null), 3000);
-      await fetchPayments();
-    } catch (err) {
-      const errorMsg = err.response?.data?.detail || err.message || "Failed to create payment";
-      console.error("Error creating payment:", err);
-      setError(errorMsg);
-      setTimeout(() => setError(null), 3000);
-    } finally {
-      setProcessingMilestone(null);
-    }
-  };
+  if (!freelancerId) {
+    setError("Could not identify the freelancer for this project. Please refresh and try again.");
+    return;
+  }
+
+  if (!confirm(`Create payment of $${formatBudget(budget)} for milestone "${milestoneName}"?`)) return;
+
+  setProcessingMilestone(milestoneId);
+  try {
+    // 2. Send the freelancerId from the acceptedProposal
+    await api.post('/api/project/payments/', {
+      project: parseInt(projectId),
+      milestone: milestoneId,
+      freelancer: freelancerId, // Use the ID from the accepted proposal
+      payment_amount: budget,
+      payment_status: 'pending',
+      payment_method: 'platform_wallet',
+    });
+
+    setSuccess("Payment created successfully! You can now release it.");
+    setTimeout(() => setSuccess(null), 3000);
+    await fetchPayments();
+  } catch (err) {
+    const errorMsg = err.response?.data?.detail || err.message || "Failed to create payment";
+    console.error("Error creating payment:", err);
+    setError(errorMsg);
+    setTimeout(() => setError(null), 3000);
+  } finally {
+    setProcessingMilestone(null);
+  }
+};
 
   // Handle payout (release payment)
   const handlePayout = async (paymentId, amount) => {

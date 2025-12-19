@@ -48,48 +48,68 @@ function ProjectRow({ project, onDelete }) {
     });
   };
 
+    // Styling for the green action buttons
+  const actionBtnStyle = {
+    width: '35px',
+    height: '35px',
+    lineHeight: '35px',
+    textAlign: 'center',
+    borderRadius: '8px',
+    display: 'inline-block',
+    transition: 'all 0.3s',
+    fontSize: '14px'
+  };
+
   return (
     <tr>
-      <td>
+      <td className="align-middle">
         <div>
           <h6 className="mb-1">{project.title}</h6>
           <small className="text-muted">{project.category}</small>
         </div>
       </td>
-      <td>{formatDate(project.created_at)}</td>
-      <td>
+      <td className="align-middle">{formatDate(project.created_at)}</td>
+      <td className="align-middle">
         <StatusBadge status={project.status} />
       </td>
-      <td>
-        <div className="fw500">
+      <td className="align-middle">
+        <div className="fw500 text-dark">
           ${parseFloat(project.budget).toLocaleString()}
         </div>
         <small className="text-muted">
           {project.project_type === 'fixed_price' ? 'Fixed Price' : 'Hourly'}
         </small>
       </td>
-      <td>
-        <div className="d-flex align-items-center gap-3">
+      <td className="align-middle">
+        <div className="d-flex align-items-center gap-2">
+          {/* View Icon - Light Green Style */}
           <Link
             href={`/projects/${project.id}`}
-            className="text-primary p-1"
+            style={{ ...actionBtnStyle, backgroundColor: '#e8f5e9', color: '#2e7d32' }}
+            className="action-icon-hover"
             title="View Details"
           >
-            <i className="fal fa-eye fa-lg"></i>
+            <i className="fal fa-eye"></i>
           </Link>
+
+          {/* Edit Icon - Light Green Style */}
           <Link
             href={`/edit-project/${project.id}`}
-            className="text-secondary p-1"
+            style={{ ...actionBtnStyle, backgroundColor: '#f1f8e9', color: '#558b2f' }}
+            className="action-icon-hover"
             title="Edit Project"
           >
-            <i className="fal fa-edit fa-lg"></i>
+            <i className="fal fa-edit"></i>
           </Link>
+
+          {/* Delete Icon - Soft Red (standard for delete, but styled to match) */}
           <button
-            className="text-danger border-0 bg-transparent p-1"
             onClick={() => onDelete(project.id)}
+            style={{ ...actionBtnStyle, backgroundColor: '#ffebee', color: '#c62828', border: 'none' }}
+            className="action-icon-hover"
             title="Delete Project"
           >
-            <i className="fal fa-trash fa-lg"></i>
+            <i className="fal fa-trash-alt"></i>
           </button>
         </div>
       </td>

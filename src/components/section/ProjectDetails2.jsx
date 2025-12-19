@@ -473,7 +473,7 @@ export default function EditProject() {
                         <button
                           type="submit"
                           className="ud-btn btn-thm"
-                          disabled={saving || !isOwner}
+                          disabled={saving}
                         >
                           {saving ? (
                             <>
