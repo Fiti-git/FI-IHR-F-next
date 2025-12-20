@@ -291,7 +291,7 @@ export default function FreelancerProjects() {
                             {filter === "All" && (
                               <Link
                                 href="/project-1"
-                                className="btn btn-primary mt-3"
+                                className="btn btn-success mt-3"
                               >
                                 Browse Projects
                               </Link>

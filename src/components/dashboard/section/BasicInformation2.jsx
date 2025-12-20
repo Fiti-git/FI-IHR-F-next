@@ -27,6 +27,35 @@ export default function BasicInformation2() {
   const [userRole, setUserRole] = useState(null); // 'freelancer' or 'job-provider'
   const [isCheckingRole, setIsCheckingRole] = useState(true);
 
+  const iconResetStyle = {
+  transform: 'none',
+  WebkitTransform: 'none',
+  MozTransform: 'none',
+  msTransform: 'none',
+  display: 'inline-block',
+};
+
+  const subtleBadgeStyle = (colorType) => {
+  const colors = {
+    success: { bg: '#e1f7ed', text: '#198754' }, // Light Green
+    primary: { bg: '#e7f1ff', text: '#0d6efd' }, // Light Blue
+    warning: { bg: '#fff3cd', text: '#856404' }, // Light Yellow
+    secondary: { bg: '#f1f1f1', text: '#6c757d' }
+  };
+  const selected = colors[colorType] || colors.secondary;
+  return {
+    backgroundColor: selected.bg,
+    color: selected.text,
+    padding: '6px 14px',
+    borderRadius: '10px',
+    fontWeight: '500',
+    display: 'inline-block',
+    fontSize: '13px',
+    textTransform: 'capitalize',
+    border: 'none'
+  };
+};
+
   useEffect(() => {
     const checkUserAccess = async () => {
       const token = localStorage.getItem('access_token');
@@ -509,7 +538,7 @@ export default function BasicInformation2() {
         <h5 className="list-title">Create New Project</h5>
       </div>
 
-      <div className="col-xl-8">
+      <div className={success ? "col-xl-12" : "col-xl-8"}>
         {!isAuthenticated && (
           <div className="alert alert-warning mb20 d-flex align-items-center" role="alert">
             <i className="fal fa-exclamation-triangle me-2"></i>
@@ -532,100 +561,89 @@ export default function BasicInformation2() {
           </div>
         )} */}
 
-        {/* SUCCESS MESSAGE - Enhanced with project details and action buttons */}
+        {/* SUCCESS MESSAGE - Now in a col-12 for full width */}
         {success && createdProject && (
-          <div className="alert alert-success mb30 border-0 shadow-sm" role="alert">
-            <div className="d-flex align-items-start">
+          <div className="mb30 border-0 w-100" role="alert">
+            <div className="d-flex align-items-start w-100">
               <div className="flex-shrink-0">
-                <i className="fal fa-check-circle fa-3x text-success me-3"></i>
+                <i className="fal fa-check-circle fa-3x text-success me-4"></i>
               </div>
-              <div className="flex-grow-1">
-                <h4 className="alert-heading mb-3">
-                  <i className="fal fa-party-horn me-2"></i>
+              <div className="flex-grow-1 w-100">
+                <h4 className="alert-heading mb-2 text-success" style={{ fontSize: '24px' }}>
                   Project Created Successfully!
                 </h4>
-                <p className="mb-3">
+                <p className="mb-4 fz18 text-dark">
                   <strong>"{createdProject.title}"</strong> has been created and is now live on the platform.
                 </p>
 
-                {/* Project Details Preview */}
-                <div className="bg-light p-3 rounded mb-3">
-                  <div className="row g-2">
-                    <div className="col-md-6">
-                      <small className="text-muted d-block">Category</small>
-                      <strong>{createdProject.category}</strong>
+                {/* Project Details Preview - Full width background */}
+                <div className="bgc-f7 p-4 rounded mb-4 w-100">
+                  <div className="row g-4">
+                    <div className="col-md-3">
+                      <small className="text-muted d-block mb-1">Category</small>
+                      <span className="fw600">{createdProject.category}</span>
                     </div>
-                    <div className="col-md-6">
-                      <small className="text-muted d-block">Budget</small>
-                      <strong>${createdProject.budget}</strong>
+                    <div className="col-md-3">
+                      <small className="text-muted d-block mb-1">Budget</small>
+                      <span className="fw600 text-success">${createdProject.budget}</span>
                     </div>
-                    <div className="col-md-6">
-                      <small className="text-muted d-block">Project Type</small>
-                      <strong className="text-capitalize">{createdProject.project_type?.replace('_', ' ')}</strong>
+                    <div className="col-md-3">
+                      <small className="text-muted d-block mb-1">Project Type</small>
+                      <span className="fw600 text-capitalize">{createdProject.project_type?.replace('_', ' ')}</span>
                     </div>
-                    <div className="col-md-6">
-                      <small className="text-muted d-block">Status</small>
-                      <span className="badge bg-success text-capitalize">{createdProject.status}</span>
+                    <div className="col-md-3">
+                      <small className="text-muted d-block mb-1">Status</small> 
+                      <span style={subtleBadgeStyle('success')}>
+                        {createdProject.status || 'Open'}
+                      </span>
                     </div>
                   </div>
-
-                  {createdProject.image_url && (
-                    <div className="mt-3">
-                      <small className="text-muted d-block mb-2">Project Image</small>
-                      <img
-                        src={createdProject.image_url}
-                        alt={createdProject.title}
-                        className="img-fluid rounded"
-                        style={{ maxHeight: '150px', objectFit: 'cover' }}
-                      />
-                    </div>
-                  )}
                 </div>
 
-                <hr className="my-3" />
+                <hr className="my-4" />
 
                 {/* Action Buttons */}
-                <div className="d-flex gap-2 flex-wrap">
+                <div className="d-flex gap-3 flex-wrap">
                   <Link
-                    href={`/project/${createdProject.id}`}
-                    className="btn btn-success"
+                    href={`/project-single/${createdProject.id}`}
+                    className="ud-btn btn-success"
                   >
-                    <i className="fal fa-eye me-2"></i>
+                    <i className="fal fa-eye me-2" style={iconResetStyle}></i>
                     View Project
                   </Link>
 
                   <Link
-                    href="/my-projects"
-                    className="btn btn-primary"
+                    href="/manage-projects"
+                    className="ud-btn btn-success"
                   >
-                    <i className="fal fa-briefcase me-2"></i>
+                    <i className="fal fa-briefcase me-2" style={iconResetStyle}></i>
                     My Projects
                   </Link>
 
                   <button
                     type="button"
-                    className="btn btn-outline-success"
+                    className="ud-btn btn-outline-success"
                     onClick={handleCreateAnother}
                   >
-                    <i className="fal fa-plus-circle me-2"></i>
+                    <i className="fal fa-plus-circle me-2" style={iconResetStyle}></i>
                     Create Another Project
                   </button>
 
                   <Link
                     href="/dashboard"
-                    className="btn btn-outline-secondary"
+                    className="ud-btn btn-outline-secondary"
                   >
-                    <i className="fal fa-home me-2"></i>
+                    <i className="fal fa-home me-2" style={iconResetStyle}></i>
                     Dashboard
                   </Link>
                 </div>
 
-                <div className="mt-3 p-2 bg-info bg-opacity-10 rounded">
-                  <small className="text-info">
-                    <i className="fal fa-info-circle me-1"></i>
+                <div className="mt-4">
+                  <p className="text-muted fz15">
+                    <i className="fal fa-info-circle me-2 text-success"></i>
                     <strong>What's Next?</strong> Your project is now visible to freelancers.
-                    You'll receive proposals soon. Check your notifications and email for updates.
-                  </small>
+                    You'll receive proposals soon. Check your notifications for updates.
+                  </p>
                 </div>
               </div>
             </div>

@@ -32,6 +32,36 @@ const iconStyle = {
   margin: '0 auto'
 };
 
+const getStatusBadge = (status) => {
+  const statusConfig = {
+    // Project & Milestone Statuses
+    'pending': { color: 'warning', label: 'Pending Approval' },
+    'approved': { color: 'success', label: 'Approved' },
+    'in_progress': { color: 'primary', label: 'In Progress' },
+    'completed': { color: 'info', label: 'Completed' },
+    'paid': { color: 'success', label: 'Paid' },
+    'revision_requested': { color: 'danger', label: 'Revision Requested' },
+    'open': { color: 'success', label: 'Open' },
+    
+    // Proposal Specific Statuses
+    'submitted': { color: 'warning', label: 'Submitted' },
+    'accepted': { color: 'success', label: 'Accepted' },
+    'rejected': { color: 'danger', label: 'Rejected' },
+
+    // Payment Specific Statuses
+    'released': { color: 'success', label: 'Released' }
+  };
+
+  const config = statusConfig[status?.toLowerCase()] || { color: 'secondary', label: status };
+
+  return (
+    <span style={subtleBadgeStyle(config.color)}>
+      {config.label}
+    </span>
+  );
+};
+
+
 export default function ManageSingleProject() {
   const params = useParams();
   const projectId = params.id;
@@ -369,39 +399,44 @@ const handleCreatePayment = async (milestoneId, milestoneName, budget) => {
   };
 
   // Get status badge class
-  const getStatusClass = (status) => {
-    switch (status?.toLowerCase()) {
-      case "open": return "badge bg-success";
-      case "in_progress": return "badge bg-primary";
-      case "completed": return "badge bg-info";
-      case "accepted": return "badge bg-success";
-      case "rejected": return "badge bg-danger";
-      case "submitted": return "badge bg-warning";
-      case "paid": case "released": return "badge bg-success";
-      case "pending": return "badge bg-warning";
-      case "approved": return "badge bg-success";
-      case "revision_requested": return "badge bg-danger";
-      default: return "badge bg-secondary";
-    }
+  // Add this helper style object at the top with other styles
+  const subtleBadgeStyle = (colorType) => {
+    const colors = {
+      primary: { bg: '#e7f1ff', text: '#0d6efd' },
+      success: { bg: '#e1f7ed', text: '#198754' },
+      warning: { bg: '#fff3cd', text: '#856404' },
+      danger: { bg: '#f8d7da', text: '#dc3545' },
+      info: { bg: '#d1ecf1', text: '#0c5460' },
+      secondary: { bg: '#f1f1f1', text: '#6c757d' }
+    };
+    const selected = colors[colorType] || colors.secondary;
+    return {
+      backgroundColor: selected.bg,
+      color: selected.text,
+      padding: '8px 16px',
+      borderRadius: '10px',
+      fontWeight: '500',
+      display: 'inline-block',
+      fontSize: '14px',
+      border: 'none'
+    };
   };
 
-  // Get status badge with icon
+  // Update getStatusBadge to use the new style
   const getStatusBadge = (status) => {
     const statusConfig = {
-      'pending': { class: 'bg-warning text-dark', icon: 'fa-clock', label: 'Pending Approval' },
-      'approved': { class: 'bg-success', icon: 'fa-check-circle', label: 'Approved' },
-      'in_progress': { class: 'bg-primary', icon: 'fa-spinner', label: 'In Progress' },
-      'completed': { class: 'bg-info', icon: 'fa-flag-checkered', label: 'Completed - Review' },
-      'payment_requested': { class: 'bg-warning', icon: 'fa-money-bill-wave', label: 'Payment Requested' },
-      'paid': { class: 'bg-success', icon: 'fa-check-double', label: 'Paid' },
-      'revision_requested': { class: 'bg-danger', icon: 'fa-redo', label: 'Revision Requested' }
+      'pending': { color: 'warning', label: 'Pending Approval' },
+      'approved': { color: 'success', label: 'Approved' },
+      'in_progress': { color: 'primary', label: 'In Progress' },
+      'completed': { color: 'info', label: 'Completed' },
+      'paid': { color: 'success', label: 'Paid' },
+      'revision_requested': { color: 'danger', label: 'Revision Requested' }
     };
 
-    const config = statusConfig[status] || { class: 'bg-secondary', icon: 'fa-question', label: status };
+    const config = statusConfig[status?.toLowerCase()] || { color: 'secondary', label: status };
 
     return (
-      <span className={`badge ${config.class}`}>
-        <i className={`fal ${config.icon} me-1`}></i>
+      <span style={subtleBadgeStyle(config.color)}>
         {config.label}
       </span>
     );
@@ -502,7 +537,12 @@ const handleCreatePayment = async (milestoneId, milestoneName, budget) => {
             <div className="row">
               <div className="col-md-6 mb-3">
                 <p className="mb-2"><strong>Description:</strong></p>
-                <p className="text-muted">{project.description}</p>
+                <p 
+                  className="text-muted"
+                  style={{ textAlign: 'justify', lineHeight: '1.6' }}
+                  >
+                    {project.description}
+                </p>
               </div>
               <div className="col-md-6">
                 <div className="row">
@@ -512,9 +552,7 @@ const handleCreatePayment = async (milestoneId, milestoneName, budget) => {
                   </div>
                   <div className="col-sm-6 mb-3">
                     <p className="mb-1"><strong>Status:</strong></p>
-                    <span className={getStatusClass(project.status)}>
-                      {project.status?.replace('_', ' ').toUpperCase()}
-                    </span>
+                    {getStatusBadge(project.status)}
                   </div>
                   <div className="col-sm-6 mb-3">
                     <p className="mb-1"><strong>Category:</strong></p>
@@ -586,10 +624,9 @@ const handleCreatePayment = async (milestoneId, milestoneName, budget) => {
                                   </div>
                                   <div>
                                     <h6 className="mb-0">
-                                      {proposal.freelancer?.first_name?.trim() &&
-                                      proposal.freelancer?.last_name?.trim()
-                                        ? `${proposal.freelancer.first_name} ${proposal.freelancer.last_name}`
-                                        : "Anonymous"}
+                                      {proposal.freelancer?.first_name || proposal.freelancer?.last_name
+                                        ? `${proposal.freelancer.first_name || ''} ${proposal.freelancer.last_name || ''}`.trim()
+                                        : proposal.freelancer?.username || "Anonymous"}
                                     </h6>
                                     {/* <small className="text-muted">{proposal.freelancer?.email}</small> */}
                                   </div>
@@ -597,9 +634,7 @@ const handleCreatePayment = async (milestoneId, milestoneName, budget) => {
                               </td>
                               <td className="fw-bold text-success">${formatBudget(proposal.budget)}</td>
                               <td>
-                                <span className={getStatusClass(proposal.status)}>
-                                  {proposal.status?.toUpperCase()}
-                                </span>
+                                {getStatusBadge(proposal.status)}
                               </td>
                               <td>
                                 <div className="d-flex align-items-center gap-2">
@@ -663,7 +698,7 @@ const handleCreatePayment = async (milestoneId, milestoneName, budget) => {
                                     <i className="fal fa-comments" style={iconStyle}></i>
                                   </button>
                                   <Link
-                                    href={`/freelancer/${proposal.freelancer?.id}`}
+                                    href={`/freelancer-single/${proposal.freelancer?.id}`}
                                     className="ud-btn btn-thm-border"
                                     style={btnStyle}
                                     title="View Profile"
@@ -735,7 +770,7 @@ const handleCreatePayment = async (milestoneId, milestoneName, budget) => {
                           Chat <i className="fal fa-comment-dots" />
                         </button>
                         <Link
-                          href={`/freelancer/${acceptedProposal.freelancer?.id}`}
+                          href={`freelancer-single/${acceptedProposal.freelancer?.id}`}
                           className="ud-btn btn-dark"
                         >
                           View Profile <i className="fal fa-user" />
@@ -1014,9 +1049,7 @@ const handleCreatePayment = async (milestoneId, milestoneName, budget) => {
                               <td>{payment.milestone_name || milestones.find(m => m.id === payment.milestone)?.name || 'N/A'}</td>
                               <td className="fw-bold text-success">${formatBudget(payment.payment_amount)}</td>
                               <td>
-                                <span className={getStatusClass(payment.payment_status)}>
-                                  {payment.payment_status?.toUpperCase()}
-                                </span>
+                                {getStatusBadge(payment.payment_status)}
                               </td>
                               <td className="text-capitalize">{payment.payment_method?.replace('_', ' ') || 'Platform Wallet'}</td>
                               <td>{formatDate(payment.created_at)}</td>
