@@ -370,18 +370,16 @@ const handleCreatePayment = async (milestoneId, milestoneName, budget) => {
   };
 
   // Open cover letter modal
+  {/* Inside openCoverLetterModal function */}
   const openCoverLetterModal = (proposal) => {
     setSelectedCoverLetter({
-      freelancerName: proposal.freelancer?.first_name && proposal.freelancer?.last_name
-        ? `${proposal.freelancer.first_name} ${proposal.freelancer.last_name}`
-        : proposal.freelancer?.username,
+      freelancerName: proposal.freelancer_full_name || proposal.freelancer?.username || "Anonymous",
       coverLetter: proposal.cover_letter,
       budget: proposal.budget,
       submittedAt: proposal.submitted_at
     });
     setShowCoverLetterModal(true);
   };
-
   // Format date
   const formatDate = (dateString) => {
     if (!dateString) return "N/A";
@@ -616,19 +614,15 @@ const handleCreatePayment = async (milestoneId, milestoneName, budget) => {
                                 <div className="d-flex align-items-center">
                                   <div className="thumb w40 position-relative rounded-circle me-2">
                                     <img
-                                      src={proposal.freelancer?.profile_image || "/images/team/default-avatar.png"}
-                                      // alt={proposal.freelancer?.username}
+                                      src={proposal.freelancer_profile_image || "/images/team/default-avatar.png"}
                                       className="rounded-circle"
                                       style={{ width: '40px', height: '40px', objectFit: 'cover' }}
                                     />
                                   </div>
                                   <div>
                                     <h6 className="mb-0">
-                                      {proposal.freelancer?.first_name || proposal.freelancer?.last_name
-                                        ? `${proposal.freelancer.first_name || ''} ${proposal.freelancer.last_name || ''}`.trim()
-                                        : proposal.freelancer?.username || "Anonymous"}
+                                      {proposal.freelancer_full_name || proposal.freelancer?.username || "Anonymous"}
                                     </h6>
-                                    {/* <small className="text-muted">{proposal.freelancer?.email}</small> */}
                                   </div>
                                 </div>
                               </td>
@@ -636,23 +630,19 @@ const handleCreatePayment = async (milestoneId, milestoneName, budget) => {
                               <td>
                                 {getStatusBadge(proposal.status)}
                               </td>
-                              <td>
-                                <div className="d-flex align-items-center gap-2">
-                                  <div style={{ maxWidth: '150px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                    {proposal.cover_letter?.substring(0, 50)}
-                                    {proposal.cover_letter?.length > 50 && '...'}
-                                  </div>
-                                  {proposal.cover_letter && (
-                                    <button
-                                      className="ud-btn btn-thm-border"
-                                      style={btnStyle}
-                                      onClick={() => openCoverLetterModal(proposal)}
-                                      title="View full cover letter"
-                                    >
-                                      <i className="fal fa-eye" style={iconStyle}></i>
-                                    </button>
-                                  )}
-                                </div>
+                              <td className="text-center">
+                                {proposal.cover_letter ? (
+                                  <button
+                                    className="ud-btn btn-thm-border"
+                                    style={btnStyle}
+                                    onClick={() => openCoverLetterModal(proposal)}
+                                    title="View cover letter"
+                                  >
+                                    <i className="fal fa-eye" style={iconStyle}></i>
+                                  </button>
+                                ) : (
+                                  <span className="text-muted">-</span>
+                                )}
                               </td>
                               <td>{formatDate(proposal.submitted_at)}</td>
                               <td>
@@ -664,7 +654,7 @@ const handleCreatePayment = async (milestoneId, milestoneName, budget) => {
                                         style={btnStyle}
                                         onClick={() => handleAcceptProposal(
                                           proposal.id,
-                                          proposal.freelancer?.first_name || proposal.freelancer?.username
+                                          proposal.freelancer_full_name || proposal.freelancer?.username || "Freelancer"
                                         )}
                                         disabled={processingProposal === proposal.id}
                                         title="Accept Proposal"
@@ -680,7 +670,7 @@ const handleCreatePayment = async (milestoneId, milestoneName, budget) => {
                                         style={btnStyle}
                                         onClick={() => handleRejectProposal(
                                           proposal.id,
-                                          proposal.freelancer?.first_name || proposal.freelancer?.username
+                                          proposal.freelancer_full_name || proposal.freelancer?.username || "Freelancer"
                                         )}
                                         disabled={processingProposal === proposal.id}
                                         title="Reject Proposal"
@@ -750,10 +740,7 @@ const handleCreatePayment = async (milestoneId, milestoneName, budget) => {
                         </div>
                         <div>
                           <h5 className="mb-1">
-                            {acceptedProposal.freelancer?.first_name?.trim() &&
-                            acceptedProposal.freelancer?.last_name?.trim()
-                              ? `${acceptedProposal.freelancer.first_name} ${acceptedProposal.freelancer.last_name}`
-                              : "Anonymous"}
+                            {acceptedProposal.freelancer_full_name || acceptedProposal.freelancer?.username || "Anonymous"}
                           </h5>
                           {/* <p className="mb-0 text-muted">{acceptedProposal.freelancer?.email}</p> */}
                           <p className="mb-0 fw-bold text-success">Contract Budget: ${formatBudget(acceptedProposal.budget)}</p>
@@ -764,7 +751,7 @@ const handleCreatePayment = async (milestoneId, milestoneName, budget) => {
                           className="ud-btn btn-thm"
                           onClick={() => handleChat(
                             acceptedProposal.freelancer?.id,
-                            acceptedProposal.freelancer?.first_name || acceptedProposal.freelancer?.username
+                            acceptedProposal.freelancer_full_name || acceptedProposal.freelancer?.username || "Freelancer"
                           )}
                         >
                           Chat <i className="fal fa-comment-dots" />
@@ -853,7 +840,7 @@ const handleCreatePayment = async (milestoneId, milestoneName, budget) => {
                                   </div>
                                 </td>
                                 <td>
-                                  <strong className="text-primary">${formatBudget(milestone.budget)}</strong>
+                                  <strong>${formatBudget(milestone.budget)}</strong>
                                 </td>
                                 <td>
                                   {getStatusBadge(milestone.status)}

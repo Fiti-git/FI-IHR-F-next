@@ -81,8 +81,10 @@ function SelectInput({
 export default function ProfileDetails() {
   const [isEditMode, setIsEditMode] = useState(false);
   const [hasProfile, setHasProfile] = useState(false);
-  const EXCLUDED_FIELDS = ["education", "work_experience"];
+  const EXCLUDED_FIELDS = ["education", "work_experience", "user"];
   const [profileData, setProfileData] = useState({
+    first_name: "",
+    last_name: "",
     full_name: "",
     phone_number: "",
     professional_title: "",
@@ -117,7 +119,13 @@ export default function ProfileDetails() {
 
         if (data && Object.keys(data).length > 0) {
           const skillsArray = data.skills ? data.skills.split(',').map(s => s.trim()) : [];
-          const fullProfileData = { ...data, skills: skillsArray };
+          // Use first_name and last_name from top-level response (backend handles the nested user update)
+          const fullProfileData = { 
+            ...data, 
+            skills: skillsArray,
+            first_name: data.first_name || "",
+            last_name: data.last_name || ""
+          };
 
           setProfileData(fullProfileData);
           setInitialProfileData(fullProfileData);
@@ -239,7 +247,13 @@ export default function ProfileDetails() {
 
       const updatedProfile = response.data; // Get data from Axios response
       const skillsArray = updatedProfile.skills ? updatedProfile.skills.split(',').map(s => s.trim()) : [];
-      const fullProfileData = { ...updatedProfile, skills: skillsArray };
+      // Use first_name and last_name from top-level response (backend returns them after updating)
+      const fullProfileData = { 
+        ...updatedProfile, 
+        skills: skillsArray,
+        first_name: updatedProfile.first_name || "",
+        last_name: updatedProfile.last_name || ""
+      };
 
       setProfileData(fullProfileData);
       setInitialProfileData(fullProfileData);
@@ -328,6 +342,18 @@ export default function ProfileDetails() {
       <div className="col-lg-7">
         <form className="form-style1" onSubmit={(e) => e.preventDefault()}>
           <div className="row">
+            <div className="col-sm-6">
+              <div className="mb20">
+                <label className="heading-color ff-heading fw500 mb10">First Name</label>
+                <input type="text" className="form-control" name="first_name" value={profileData.first_name || ""} onChange={handleChange} disabled={!isEditMode} />
+              </div>
+            </div>
+            <div className="col-sm-6">
+              <div className="mb20">
+                <label className="heading-color ff-heading fw500 mb10">Last Name</label>
+                <input type="text" className="form-control" name="last_name" value={profileData.last_name || ""} onChange={handleChange} disabled={!isEditMode} />
+              </div>
+            </div>
             <div className="col-sm-6">
               <div className="mb20">
                 <label className="heading-color ff-heading fw500 mb10">Full Name</label>
