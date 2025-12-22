@@ -7,18 +7,18 @@ import ProposalModal1 from "../modal/ProposalModal1";
 import DeleteModal from "../modal/DeleteModal";
 import api from '@/lib/axios';
 
-// Status badge component for consistency
+// Status badge component for consistency with pending-style classes
 const StatusBadge = ({ status }) => {
   const getStatusClass = (status) => {
     switch (status?.toLowerCase()) {
       case "accepted":
-        return "badge bg-success";
+        return "pending-style style2"; // Light blue/green background
       case "submitted":
-        return "badge bg-warning text-dark";
+        return "pending-style style1"; // Yellow/Orange background
       case "rejected":
-        return "badge bg-danger";
+        return "pending-style style3"; // Pink/Red background
       default:
-        return "badge bg-secondary";
+        return "pending-style style5"; // Light orange/Default background
     }
   };
 
@@ -54,8 +54,17 @@ function ProjectRow({ proposal }) {
         <div className="d-flex gap-2 flex-wrap">
           <Link
             href={`/project-single/${proposal.project}`}
-            className="btn btn-sm btn-outline-primary"
+            className="pending-style style6"
             title="View Project"
+            style={{ 
+              textDecoration: 'none', 
+              display: 'inline-flex', 
+              alignItems: 'center',
+              padding: '6px 16px',
+              fontSize: '14px',
+              fontWeight: '500',
+              cursor: 'pointer'
+            }}
           >
             <i className="fal fa-eye me-1"></i>
             View
@@ -65,8 +74,17 @@ function ProjectRow({ proposal }) {
           {proposal.status === "accepted" && (
             <Link
               href={`/project/${proposal.project}/create-milestone`}
-              className="btn btn-sm btn-success"
+              className="pending-style style4"
               title="Create Milestone"
+              style={{ 
+                textDecoration: 'none', 
+                display: 'inline-flex', 
+                alignItems: 'center',
+                padding: '6px 16px',
+                fontSize: '14px',
+                fontWeight: '500',
+                cursor: 'pointer'
+              }}
             >
               <i className="fal fa-tasks me-1"></i>
               Milestone

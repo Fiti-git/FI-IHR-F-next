@@ -334,19 +334,19 @@ export default function CreateMilestone() {
   // Get status badge styling
   const getStatusBadge = (status) => {
     const statusConfig = {
-      'pending': { class: 'bg-warning text-dark', icon: 'fa-clock', label: 'Pending Approval' },
-      'approved': { class: 'bg-success', icon: 'fa-check-circle', label: 'Approved' },
-      'in_progress': { class: 'bg-primary', icon: 'fa-spinner', label: 'In Progress' },
-      'completed': { class: 'bg-info', icon: 'fa-flag-checkered', label: 'Completed' },
-      'payment_requested': { class: 'bg-warning', icon: 'fa-money-bill-wave', label: 'Payment Requested' },
-      'paid': { class: 'bg-success', icon: 'fa-check-double', label: 'Paid' },
-      'revision_requested': { class: 'bg-danger', icon: 'fa-redo', label: 'Revision Requested' }
+      'pending': { class: 'pending-style style1', icon: 'fa-clock', label: 'Pending Approval' },
+      'approved': { class: 'pending-style style4', icon: 'fa-check-circle', label: 'Approved' },
+      'in_progress': { class: 'pending-style style2', icon: 'fa-spinner', label: 'In Progress' },
+      'completed': { class: 'pending-style style4', icon: 'fa-flag-checkered', label: 'Completed' },
+      'payment_requested': { class: 'pending-style style1', icon: 'fa-money-bill-wave', label: 'Payment Requested' },
+      'paid': { class: 'pending-style style4', icon: 'fa-check-double', label: 'Paid' },
+      'revision_requested': { class: 'pending-style style3', icon: 'fa-redo', label: 'Revision Requested' }
     };
 
-    const config = statusConfig[status] || { class: 'bg-secondary', icon: 'fa-question', label: status };
+    const config = statusConfig[status] || { class: 'pending-style style5', icon: 'fa-question', label: status };
 
     return (
-      <span className={`badge ${config.class}`}>
+      <span className={config.class}>
         <i className={`fal ${config.icon} me-1`}></i>
         {config.label}
       </span>
@@ -502,7 +502,7 @@ export default function CreateMilestone() {
               )}
 
               {/* Workflow Info */}
-              <div className="alert alert-info mb-4" role="alert">
+              <div className="mb-4 p-3 border rounded">
                 <h6 className="mb-2">
                   <i className="fal fa-info-circle me-2"></i>
                   Milestone Workflow
@@ -558,7 +558,7 @@ export default function CreateMilestone() {
                               </div>
                             </td>
                             <td>
-                              <strong className="text-primary">${parseFloat(m.budget).toFixed(2)}</strong>
+                              <strong>${parseFloat(m.budget).toFixed(2)}</strong>
                             </td>
                             <td>
                               {getStatusBadge(m.status)}
