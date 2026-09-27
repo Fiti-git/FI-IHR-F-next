@@ -27,7 +27,7 @@ export default function RegisterPage() {
     setMessage("");
 
     try {
-      const res = await api.post('/myapi/signup/', {
+      const res = await api.post('/api/myapi/signup/', {
         email,
         password
       });

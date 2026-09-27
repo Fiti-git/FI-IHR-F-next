@@ -67,9 +67,10 @@ export default function FreelancerDetail1({ id }) {
                 {/* --- Description --- */}
                 <h4>Description</h4>
                 <div className="text mb30">
-                   <p>{freelancer.bio || "No description provided."}</p>
+                  <p style={{ textAlign: 'justify', marginBottom: '30px' }}>
+                      {freelancer.bio || "No description provided."}
+                  </p>
                 </div>
-
                 <hr className="opacity-100 mb60 mt60" />
 
                 {/* --- Education --- */}

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import api from '@/lib/axios';
+import { useRouter } from "next/navigation";
 
 export default function JobPostForm({ initialData = null, mode = "create", jobId = null, onSuccess = null }) {
   const [formData, setFormData] = useState(() => ({
@@ -33,6 +34,7 @@ export default function JobPostForm({ initialData = null, mode = "create", jobId
     interview_mode: "in-person",
     job_status: "open"
   }));
+  const router = useRouter();
 
   // If initialData provided (edit mode), populate form state
   useEffect(() => {
@@ -201,13 +203,17 @@ export default function JobPostForm({ initialData = null, mode = "create", jobId
 
       console.log('Success Response:', responseData);
       alert(mode === 'edit' ? 'Job posting updated successfully!' : 'Job posting created successfully!');
+      router.push("/manage-jobs");
+
 
       // Notify parent (e.g. page) that the operation succeeded so it can redirect or update UI.
       try {
+        // ... then your existing onSuccess call
         if (typeof onSuccess === 'function') {
-          const returnedId = responseData?.id || responseData?.pk || jobId || null;
+          const returnedId = responseData?.job_id || responseData?.id || jobId;
           onSuccess(returnedId);
         }
+
       } catch (e) {
         console.error('onSuccess callback threw:', e);
       }

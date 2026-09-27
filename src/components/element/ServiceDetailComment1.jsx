@@ -29,7 +29,7 @@ export default function ServiceContactSection() {
 
     try {
       const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/contact/`,
+        `${process.env.NEXT_PUBLIC_API_URL}/api/contact/`,
         {
           method: "POST",
           headers: {

@@ -15,13 +15,20 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
 
+  // Utility to get cookie value by name
+  function getCookie(name) {
+    const value = `; ${document.cookie}`;
+    const parts = value.split(`; ${name}=`);
+    if (parts.length === 2) return parts.pop().split(";").shift();
+  }
+
   // Helper: Redirect based on role
   const handleRedirect = (user) => {
-    const role = user?.role?.toLowerCase();
+    const role = user?.role;
 
-    if (role === "employer") {
+    if (role === "Job Provider") {
       router.push("/job-provider");
-    } else if (role === "employee") {
+    } else if (role === "Freelancer") {
       router.push("/freelancer");
     } else {
       router.push("/select-role");
@@ -50,34 +57,44 @@ export default function LoginPage() {
     setMessage("");
 
     try {
-      const res = await api.post("/myapi/login/", {
-        email,
-        password,
-      });
+      // 1. Fetch CSRF cookie first
+      await api.get("/api/myapi/csrf/");
+
+      // 2. Get CSRF token from cookie
+      const csrfToken = getCookie("csrftoken");
+
+      // 3. POST login with CSRF token header
+      const res = await api.post(
+        "/api/myapi/login/",
+        { email, password },
+        {
+          headers: {
+            "X-CSRFToken": csrfToken,
+          },
+        }
+      );
 
       const data = res.data;
 
-      // Axios throws on 4xx/5xx usually, but if structure is different:
       if (res.status !== 200) {
         setMessage(data.error || "Login failed.");
       } else {
         // Store Tokens
         localStorage.setItem("access_token", data.tokens.access);
         localStorage.setItem("refresh_token", data.tokens.refresh);
-        
-        // Store Cookie
+
+        // Store Cookie for other usages
         document.cookie = `token=${data.tokens.access}; path=/; max-age=${15 * 60}; SameSite=Lax`;
 
         // Store User ID
         const decodedUserId = decodeJwt(data.tokens.access);
         if (decodedUserId) {
-            localStorage.setItem("user_id", decodedUserId);
+          localStorage.setItem("user_id", decodedUserId);
         }
 
         handleRedirect(data.user);
       }
     } catch (error) {
-      // Handle backend errors
       setMessage(error.response?.data?.error || "An error occurred during login.");
     } finally {
       setLoading(false);
@@ -150,9 +167,7 @@ export default function LoginPage() {
                 </div>
 
                 {/* Error message */}
-                {message && (
-                  <div className="alert alert-danger mt-3">{message}</div>
-                )}
+                {message && <div className="alert alert-danger mt-3">{message}</div>}
               </div>
             </div>
           </div>

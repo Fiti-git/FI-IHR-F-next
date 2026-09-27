@@ -307,7 +307,7 @@ export default function SelectRolePage() {
 
     const handleRoleSelection = async (role) => {
         try {
-            const res = await api.post('/myapi/set-role/', { role });
+            const res = await api.post('/api/myapi/set-role/', { role });
             setSelectedRole(role);
         } catch (error) {
             setMessage("An error occurred. Please try again.");
@@ -320,8 +320,6 @@ export default function SelectRolePage() {
     const handleProfileSubmit = async (profileData) => {
         setLoading(true);
         setMessage("");
-        console.log(localStorage.getItem("access_token"))
-        console.log(localStorage)
 
         const access_token = localStorage.getItem("access_token");
         if (!access_token) {
@@ -399,7 +397,7 @@ export default function SelectRolePage() {
         // Default view: Role selection
         return (
             <div className="log-reg-form form-style1 bgc-white p50 p30-sm default-box-shadow1 bdrs12 text-center">
-                <h4>How will you be using HRHUB?</h4>
+                <h4>How will you be using IHRHUB?</h4>
                 <p className="text mt20 mb30">
                     This helps us customize your experience. This cannot be changed later.
                 </p>
@@ -409,14 +407,14 @@ export default function SelectRolePage() {
                         onClick={() => handleRoleSelection('Job Provider')}
                         disabled={loading}
                     >
-                        {loading ? "..." : "I am a Job Provider (Hiring)"}
+                        {loading ? "..." : "I am a Job Provider (Looking to Hire)"}
                     </button>
                     <button
                         className="ud-btn btn-dark"
                         onClick={() => handleRoleSelection('Freelancer')}
                         disabled={loading}
                     >
-                        {loading ? "..." : "I am a Freelancer (Offering Services)"}
+                        {loading ? "..." : "I am a Candidate (Looking for Work)"}
                     </button>
                 </div>
             </div>
